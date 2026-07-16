@@ -5,6 +5,7 @@ import { indexSymbols, buildCallGraph } from "./indexer.js";
 import { detectDrift } from "./drift.js";
 import { extractDataModel, extractProjectMeta, extractChangelog } from "./extractors.js";
 import { emitChart } from "./charts.js";
+import { renderReport } from "./report.js";
 
 const count = z.number().int().min(0);
 const emitChartsSchema = z.discriminatedUnion("kind", [
@@ -228,6 +229,23 @@ export function createServer(root: string): McpServer {
       inputSchema: emitChartsSchema,
     },
     async (params) => json(emitChart(params)),
+  );
+
+  server.registerTool(
+    "render_report",
+    {
+      description:
+        "Assemble the deliverables in a directory into one self-contained tabbed HTML page (REPORT.html), " +
+        "written next to them. Reads the known markdown deliverables, audit_log.jsonl, and charts/ (SVG " +
+        "inlined, PNG as data URIs). A mermaid fence in DOC.md is replaced by charts/DOC.<n>.svg|png when " +
+        "present, else kept as source. Returns a summary {path, bytes, tabs, charts_embedded, " +
+        "mermaid_fallbacks}, not the page itself. Deterministic: same inputs, same bytes.",
+      inputSchema: {
+        dir: z.string().optional().describe("Deliverables directory relative to the connector root (default '.')"),
+        title: z.string().optional().describe("Page title (default 'Reconstructed spec — report')"),
+      },
+    },
+    async (params) => json(renderReport(root, params)),
   );
 
   return server;

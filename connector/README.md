@@ -14,6 +14,7 @@ The deterministic engine behind `legacy-spec-agent`, packaged as a stdio MCP ser
 | `extract_project_meta` | Collects name, version, dependencies, run commands, and environment variables from manifests and code |
 | `extract_changelog` | Groups git history by conventional-commit type |
 | `emit_charts` | Renders coverage, drift, and benchmark SVGs plus architecture and ER diagrams from structured data |
+| `render_report` | Assembles a deliverables directory into one self-contained tabbed `REPORT.html` |
 
 Two properties hold across all tools:
 

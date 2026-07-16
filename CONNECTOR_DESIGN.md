@@ -296,6 +296,7 @@ SPEC.md의 M0–M4는 스킬 트랙으로 이미 상당 부분 달성되었다(d
 | **C4** | `emit_charts` + 플러그인 패키징 (방식 A) | `/plugin install` 한 번으로 전체 동작 | ✅ 차트 5종 + 플러그인 패키징. 실제 설치로 스킬 1개와 MCP 서버 1개 등록을 확인했고, 의존성 없는 사본에서 bootstrap이 자동 설치·빌드하는 것까지 검증. 스킬 사본 드리프트는 테스트가 잠근다 |
 | **C5** | 추가 산출물 추출기 | ERD·온보딩·CHANGELOG 생성 | ✅ `extract_data_model`, `extract_project_meta`, `extract_changelog` 구현. hookify에서 Rule/Condition 관계, 플러그인 메타데이터, 환경변수 복원을 검증 |
 | **C6** | 스케일 대응 | 대형 레포에서 토큰·가독성 한계 해소 | ✅ `limit`(절단 시 `truncated` 보고)과 `granularity:"package"` 추가, `architectureChart`에 `cluster` 옵션. hookify에서 파일 엣지 9개가 `hooks → core (weight 8)` 하나로 접히는 것을 검증 |
+| **C7** | `render_report` — 통합 HTML 리포트 | 산출물 폴더 하나 → 탭 뷰어 `REPORT.html` 자동 생성 | ✅ 마크다운 산출물·audit_log·charts/를 자체완결 HTML 한 장으로 조립(결정적, 같은 입력이면 같은 바이트). mermaid 펜스는 `charts/DOC.n.svg|png` 자산이 있으면 교체, 없으면 소스 블록으로 폴백. hookify 산출물 9종+차트 7개로 11탭 리포트 생성 검증 |
 
 최소 증명점은 C1이었다. `verify_citation` 하나만 동작해도 근거를 코드로 강제한다는 차별점(§9)이 성립하기 때문이다.
 
