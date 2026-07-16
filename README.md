@@ -1,5 +1,7 @@
 # Legacy Spec Agent
 
+**A plugin for [Claude Code](https://claude.com/claude-code)** — a skill plus a bundled MCP connector.
+
 Legacy Spec Agent reconstructs a specification from undocumented code. It reads the source, writes the spec that was never written, and attaches a `path:line` citation to every claim. When the code later changes, it re-checks each citation and reports what drifted.
 
 It never asks for an existing spec as input. In real legacy systems the documentation is missing or wrong, but the code is always there, so the code is treated as the only source of truth. Anything the tool cannot back with a citation goes into a separate "Unverified" section instead of being presented as fact.
