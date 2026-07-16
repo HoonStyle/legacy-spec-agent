@@ -1,0 +1,27 @@
+{
+  "skill_name": "legacy-spec-agent",
+  "notes": "with-skill vs baseline (no skill). Same task prompt both arms. Targets are undocumented modules from anthropics/claude-code @15a21e1, distinct from the hookify demo to avoid bias. Eval B is TypeScript to test cross-language generality.",
+  "evals": [
+    {
+      "id": "A",
+      "name": "inherited-python-diffstate",
+      "prompt": "I inherited this file and there's no documentation. Reconstruct a spec of what it actually does so I can safely refactor it: /workspace/claude-code/plugins/security-guidance/hooks/diffstate.py",
+      "target": "/workspace/claude-code/plugins/security-guidance/hooks/diffstate.py",
+      "language": "python"
+    },
+    {
+      "id": "B",
+      "name": "refactor-typescript-sweep",
+      "prompt": "Document the business rules in this undocumented script so my team can maintain it: /workspace/claude-code/scripts/sweep.ts",
+      "target": "/workspace/claude-code/scripts/sweep.ts",
+      "language": "typescript"
+    }
+  ],
+  "assertions": [
+    {"id": "citation_coverage", "desc": "Fraction of factual claims that carry a path:line citation. Target with-skill >= 0.9.", "type": "ratio"},
+    {"id": "citation_accuracy", "desc": "Of a sample of citations, fraction that point to a line actually supporting the claim.", "type": "ratio"},
+    {"id": "unverified_isolation", "desc": "Output has a dedicated section isolating ungroundable/inferred claims instead of stating them as fact.", "type": "bool"},
+    {"id": "structured_spec", "desc": "Output follows the reconstructed-spec structure (purpose / responsibilities / rules / constraints / unverified).", "type": "bool"},
+    {"id": "no_fabricated_metrics", "desc": "No invented numbers, perf figures, or domain terms not present in the code.", "type": "bool"}
+  ]
+}

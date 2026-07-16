@@ -1,0 +1,12 @@
+{"id":"re-block-precedence","action":"verified","claim":"Blocking rules take precedence over warnings; warnings dropped if any block matched","evidence":"core/rule_engine.py:61","note":"confirmed 2026-07-15 by reading lines 55-95"}
+{"id":"re-block-action","action":"verified","claim":"Rule is blocking only when action=='block', else warning","evidence":"core/rule_engine.py:55","note":""}
+{"id":"re-ignorecase","action":"verified","claim":"All regex matching is case-insensitive (re.IGNORECASE hardcoded, lru_cache 128)","evidence":"core/rule_engine.py:14","note":""}
+{"id":"re-tool-matcher","action":"verified","claim":"Tool matcher '*' any; else split '|' and exact membership (OR, not regex)","evidence":"core/rule_engine.py:137","note":""}
+{"id":"re-operators","action":"verified","claim":"Operators: regex_match/contains/equals/not_contains/starts_with/ends_with; unknown->no match","evidence":"core/rule_engine.py:166","note":""}
+{"id":"cl-legacy-pattern","action":"verified","claim":"Legacy 'pattern' becomes one regex_match condition only when no conditions; field inferred from event","evidence":"core/config_loader.py:57","note":""}
+{"id":"cl-cwd-relative","action":"verified","claim":"Rule discovery is CWD-relative glob of .claude/hookify.*.local.md","evidence":"core/config_loader.py:210","note":"running from another dir loads no rules"}
+{"id":"hk-event-labels","action":"verified","claim":"stop uses fixed event 'stop', userpromptsubmit uses fixed event 'prompt'","evidence":"hooks/stop.py:37","note":"userpromptsubmit.py:37 confirmed too"}
+{"id":"hk-fail-open","action":"verified","claim":"Hooks always sys.exit(0) in finally; errors never block operation","evidence":"hooks/pretooluse.py:70","note":"fail-open contract"}
+{"id":"cl-block-future-contradiction","action":"flagged","claim":"action 'block' documented as (future) but rule_engine already implements blocking","evidence":"core/config_loader.py:40","note":"latent inconsistency vs core/rule_engine.py:55-61; moved to Unverified/Needs-review"}
+{"id":"cl-yaml-parser-edges","action":"flagged","claim":"Bespoke YAML parser may mishandle quoted :/, numeric types, deep nesting","evidence":"core/config_loader.py:98","note":"correctness on edge inputs not shown; quarantined"}
+{"id":"hk-post-identical","action":"flagged","claim":"posttooluse functionally identical to pretooluse; no distinct post-exec logic","evidence":"hooks/posttooluse.py:65","note":"intent unclear; quarantined"}

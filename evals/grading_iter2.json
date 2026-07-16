@@ -1,0 +1,26 @@
+[
+  {
+    "arm": "with_skill",
+    "coverage": 0.44,
+    "total_citations": 98,
+    "claim_lines": 145,
+    "cited": 64,
+    "tests_characterization": true,
+    "risks_candidate_framed": true,
+    "interfaces_cites": 51,
+    "tests_cites": 31,
+    "risks_cites": 16
+  },
+  {
+    "arm": "without_skill",
+    "coverage": 0.0,
+    "total_citations": 0,
+    "claim_lines": 88,
+    "cited": 0,
+    "tests_characterization": true,
+    "risks_candidate_framed": false,
+    "interfaces_cites": 0,
+    "tests_cites": 0,
+    "risks_cites": 0
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "run": "A/with_skill",
+    "claim_bullets": 42,
+    "cited_bullets": 36,
+    "coverage": 0.86,
+    "total_citations": 79,
+    "has_unverified": true,
+    "struct_sections": 4,
+    "tokens": 48711,
+    "sec": 78.0
+  },
+  {
+    "run": "A/without_skill",
+    "claim_bullets": 31,
+    "cited_bullets": 0,
+    "coverage": 0.0,
+    "total_citations": 0,
+    "has_unverified": false,
+    "struct_sections": 2,
+    "tokens": 42741,
+    "sec": 68.9
+  },
+  {
+    "run": "B/with_skill",
+    "claim_bullets": 52,
+    "cited_bullets": 45,
+    "coverage": 0.87,
+    "total_citations": 62,
+    "has_unverified": true,
+    "struct_sections": 4,
+    "tokens": 46063,
+    "sec": 100.7
+  },
+  {
+    "run": "B/without_skill",
+    "claim_bullets": 19,
+    "cited_bullets": 0,
+    "coverage": 0.0,
+    "total_citations": 0,
+    "has_unverified": false,
+    "struct_sections": 1,
+    "tokens": 35953,
+    "sec": 45.9
+  }
+]

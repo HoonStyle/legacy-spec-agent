@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "legacy-spec-agent",
+  "owner": {
+    "name": "HoonStyle"
+  },
+  "plugins": [
+    {
+      "name": "legacy-spec-agent",
+      "description": "Citation-grounded spec reverse-engineering + drift tracking (skill + deterministic MCP connector)",
+      "source": "./",
+      "category": "development"
+    }
+  ]
+}

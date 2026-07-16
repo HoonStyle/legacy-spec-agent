@@ -1,0 +1,522 @@
+<title>Legacy Spec Agent — 실제 산출물 뷰어</title>
+<style>
+  :root {
+    --bg: #e9ece6; --surface: #f6f8f3; --surface-2: #eef1ea; --border: #d2d8cd;
+    --ink: #16211d; --ink-2: #33413b; --muted: #5d6b63;
+    --accent: #0d7d6f; --accent-2: #0a5f55; --accent-soft: rgba(13,125,111,0.10);
+    --good: #1f8a5b; --good-soft: rgba(31,138,91,0.13);
+    --warn: #ab7413; --warn-soft: rgba(171,116,19,0.15);
+    --bad: #ad4231; --bad-soft: rgba(173,66,49,0.12);
+    --code-bg: #ecefe7; --code-ink: #24312b;
+    --shadow: 0 1px 2px rgba(20,32,29,0.04), 0 6px 22px rgba(20,32,29,0.06);
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Menlo", "Consolas", monospace;
+    --wrap: 940px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0c1210; --surface: #121b18; --surface-2: #17211d; --border: #253430;
+      --ink: #e9efeb; --ink-2: #c3cec8; --muted: #8ea198;
+      --accent: #34b6a3; --accent-2: #4eccb9; --accent-soft: rgba(52,182,163,0.13);
+      --good: #43bd80; --good-soft: rgba(67,189,128,0.16);
+      --warn: #d19a41; --warn-soft: rgba(209,154,65,0.17);
+      --bad: #db6a55; --bad-soft: rgba(219,106,85,0.15);
+      --code-bg: #0f1714; --code-ink: #cdd8d2;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 28px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #e9ece6; --surface: #f6f8f3; --surface-2: #eef1ea; --border: #d2d8cd;
+    --ink: #16211d; --ink-2: #33413b; --muted: #5d6b63; --accent: #0d7d6f; --accent-2: #0a5f55;
+    --accent-soft: rgba(13,125,111,0.10); --good: #1f8a5b; --good-soft: rgba(31,138,91,0.13);
+    --warn: #ab7413; --warn-soft: rgba(171,116,19,0.15); --bad: #ad4231; --bad-soft: rgba(173,66,49,0.12);
+    --code-bg: #ecefe7; --code-ink: #24312b; --shadow: 0 1px 2px rgba(20,32,29,0.04), 0 6px 22px rgba(20,32,29,0.06);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c1210; --surface: #121b18; --surface-2: #17211d; --border: #253430;
+    --ink: #e9efeb; --ink-2: #c3cec8; --muted: #8ea198; --accent: #34b6a3; --accent-2: #4eccb9;
+    --accent-soft: rgba(52,182,163,0.13); --good: #43bd80; --good-soft: rgba(67,189,128,0.16);
+    --warn: #d19a41; --warn-soft: rgba(209,154,65,0.17); --bad: #db6a55; --bad-soft: rgba(219,106,85,0.15);
+    --code-bg: #0f1714; --code-ink: #cdd8d2; --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 28px rgba(0,0,0,0.35);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); line-height: 1.72; -webkit-font-smoothing: antialiased; word-break: keep-all; }
+  .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 24px; }
+
+  header.masthead { padding: 52px 0 24px; border-bottom: 1px solid var(--border); }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; display: flex; align-items: center; gap: 10px; }
+  .eyebrow::before { content: ""; width: 24px; height: 1px; background: var(--accent); display: inline-block; }
+  h1.title { font-size: clamp(28px, 5vw, 44px); line-height: 1.12; margin: 0 0 12px; letter-spacing: -0.02em; text-wrap: balance; font-weight: 700; }
+  .lede { font-size: clamp(15.5px, 2vw, 18px); color: var(--ink-2); max-width: 48ch; margin: 0 0 12px; }
+  .note-real { font-size: 13px; color: var(--muted); margin: 0 0 22px; max-width: 58ch; line-height: 1.66; }
+  .note-real b { color: var(--accent-2); font-weight: 600; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px 10px; }
+  .tag { font-family: var(--mono); font-size: 12px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 4px 11px; background: var(--surface); }
+  .tag strong { color: var(--ink-2); font-weight: 600; }
+
+  nav.tabs { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); margin-bottom: 28px; }
+  .tabs-inner { display: flex; gap: 4px; max-width: var(--wrap); margin: 0 auto; padding: 0 16px; overflow-x: auto; }
+  .tab-btn { appearance: none; background: none; border: none; cursor: pointer; font-family: var(--sans); font-size: 14.5px; font-weight: 600; color: var(--muted); padding: 15px 13px 13px; position: relative; white-space: nowrap; letter-spacing: -0.01em; transition: color .15s; }
+  .tab-btn .idx { font-family: var(--mono); font-size: 11px; color: var(--accent); margin-right: 7px; opacity: .8; }
+  .tab-btn:hover { color: var(--ink-2); }
+  .tab-btn[aria-selected="true"] { color: var(--ink); }
+  .tab-btn[aria-selected="true"]::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px; background: var(--accent); border-radius: 2px 2px 0 0; }
+  .tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+  section.panel { display: none; padding-bottom: 60px; animation: fade .26s ease; }
+  section.panel.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { section.panel { animation: none; } }
+
+  .filebar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-family: var(--mono); font-size: 12.5px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 9px 14px; margin: 0 0 22px; }
+  .filebar .path { color: var(--ink-2); font-weight: 600; }
+  .filebar .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 3px var(--good-soft); }
+  .filebar .badge { margin-left: auto; font-size: 11px; letter-spacing: .04em; color: var(--accent-2); }
+
+  .doc h1 { font-size: 24px; letter-spacing: -0.02em; margin: 4px 0 4px; font-weight: 700; text-wrap: balance; }
+  .doc h2 { font-size: 19px; letter-spacing: -0.01em; margin: 30px 0 8px; font-weight: 660; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .doc h3 { font-size: 16px; margin: 22px 0 6px; font-weight: 640; color: var(--ink); }
+  .doc h3 .cite { font-weight: 500; }
+  .doc p { max-width: 68ch; margin: 10px 0; color: var(--ink-2); }
+  .doc .blockquote { border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; padding: 10px 16px; margin: 12px 0; color: var(--ink-2); }
+  .doc ul { padding-left: 0; list-style: none; margin: 8px 0; }
+  .doc ul li { position: relative; padding-left: 20px; margin: 7px 0; max-width: 70ch; color: var(--ink-2); }
+  .doc ul li::before { content: ""; position: absolute; left: 3px; top: 12px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+  .doc ul ul { margin: 4px 0; }
+  .doc ul ul li::before { background: transparent; border: 1px solid var(--accent); }
+  .doc .meta-list li::before { display: none; }
+  .doc .meta-list li { padding-left: 0; font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+  code { font-family: var(--mono); font-size: 0.85em; background: var(--code-bg); color: var(--code-ink); padding: 1px 5px; border-radius: 5px; word-break: break-word; }
+  .cite { font-family: var(--mono); font-size: 12px; color: var(--accent-2); background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent); padding: 0 6px; border-radius: 6px; white-space: nowrap; }
+  .warnsec { border-left: 3px solid var(--warn); background: var(--warn-soft); border-radius: 0 8px 8px 0; padding: 4px 16px 10px; margin: 14px 0; }
+  .warnsec h2 { border: none; color: var(--warn); }
+
+  pre.mermaid { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin: 16px 0; text-align: center; overflow-x: auto; box-shadow: var(--shadow); }
+  pre.code { background: var(--code-bg); color: var(--code-ink); border: 1px solid var(--border); border-radius: 12px; padding: 15px 17px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.65; margin: 14px 0; white-space: pre; }
+  pre.code .cm { color: var(--muted); }
+
+  .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; margin: 14px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 10px 13px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  thead th { font-size: 11.5px; letter-spacing: .03em; color: var(--muted); font-weight: 600; background: var(--surface-2); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num, th.num { font-family: var(--mono); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .win { color: var(--good); font-weight: 600; } .zero { color: var(--bad); font-weight: 600; }
+  .chk { color: var(--good); font-weight: 700; } .x { color: var(--bad); font-weight: 700; }
+  .pill { font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
+  .pill.v { color: var(--good); background: var(--good-soft); }
+  .pill.f { color: var(--warn); background: var(--warn-soft); }
+
+  footer { border-top: 1px solid var(--border); padding: 24px 0 44px; color: var(--muted); font-size: 12.5px; }
+  footer .wrap { max-width: 62ch; line-height: 1.66; }
+  .theme-toggle { position: fixed; top: 14px; right: 16px; z-index: 40; font-family: var(--mono); font-size: 12px; background: var(--surface); color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  .theme-toggle:hover { color: var(--ink); }
+</style>
+
+<button class="theme-toggle" id="themeToggle" aria-label="테마 전환">◐ 테마</button>
+
+<header class="masthead">
+  <div class="wrap">
+    <p class="eyebrow">Legacy Spec Agent · 실제 산출물 뷰어</p>
+    <h1 class="title">Legacy Spec Agent</h1>
+    <p class="lede">명세를 대조하는 도구가 아니라, 없는 명세서를 코드에서 뽑아내는 기계.</p>
+    <p class="note-real">아래 각 탭은 저장소에 <b>커밋된 실제 파일의 내용</b>이다 — 스킬 정의, 역생성된 명세, 감사로그, 벤치마크. 읽기 편하게 <b>한글로 옮겼을 뿐</b> 없는 사실을 더하지 않았고, 코드·인용(<code>path:line</code>)·수치·다이어그램은 원문 그대로다.</p>
+    <div class="meta-row">
+      <span class="tag"><strong>대상</strong> · anthropics/claude-code · plugins/hookify @15a21e1</span>
+      <span class="tag"><strong>실행</strong> · Mode A · 서브에이전트 2개 병렬</span>
+      <span class="tag"><strong>검증</strong> · Python + TypeScript</span>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="산출물">
+  <div class="tabs-inner" role="tablist">
+    <button class="tab-btn" role="tab" aria-selected="true"  id="t-0" data-tab="p-0"><span class="idx">01</span>스킬</button>
+    <button class="tab-btn" role="tab" aria-selected="false" id="t-1" data-tab="p-1"><span class="idx">02</span>명세</button>
+    <button class="tab-btn" role="tab" aria-selected="false" id="t-2" data-tab="p-2"><span class="idx">03</span>아키텍처 · 감사로그</button>
+    <button class="tab-btn" role="tab" aria-selected="false" id="t-3" data-tab="p-3"><span class="idx">04</span>인터페이스</button>
+    <button class="tab-btn" role="tab" aria-selected="false" id="t-4" data-tab="p-4"><span class="idx">05</span>테스트</button>
+    <button class="tab-btn" role="tab" aria-selected="false" id="t-5" data-tab="p-5"><span class="idx">06</span>리스크</button>
+    <button class="tab-btn" role="tab" aria-selected="false" id="t-6" data-tab="p-6"><span class="idx">07</span>벤치마크</button>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- ===== 01 · SKILL.md ===== -->
+  <section class="panel active" id="p-0" role="tabpanel" aria-labelledby="t-0">
+    <div class="filebar"><span class="dot"></span><span class="path">SKILL.md</span><span>· 커밋된 스킬 정의</span><span class="badge">한글 번역</span></div>
+    <div class="doc">
+      <h1>Legacy Spec Agent</h1>
+      <p>쓸 만한 문서가 전혀 없는 코드에서 <strong>근거 있는 명세</strong>를 복원하고, 이후 코드가 바뀔 때 <strong>어긋남(drift)</strong>을 감지해 그 명세를 정직하게 유지한다.</p>
+      <p>전제가 의도된 것이다 — 현실의 레거시에서 명세는 없지만 <strong>코드는 언제나 있다.</strong> 그래서 이 스킬은 명세를 입력으로 요구하지 않고 소스에서 캐낸다. 그리고 내놓는 모든 주장은 <span class="cite">file:line</span> 인용으로 뒷받침돼야 한다. 코드로 근거를 댈 수 없는 것은 <em>unverified</em>로 격리되며, 사실인 양 제시되지 않는다.</p>
+      <div class="blockquote">원칙 — <strong>근거 없는 문장은 실리지 않는다.</strong> 인용 없는 규칙은 추측이고, 명세 속 추측은 빈칸보다 나쁘다. "Fact First" 규율을 그대로 옮긴 것으로, 근거가 모든 줄을 통제한다.</div>
+
+      <h2>두 가지 모드</h2>
+      <ul>
+        <li><strong>Mode A — 역생성</strong> (기본, 레포 첫 실행): <code>SPEC.md</code>, <code>ARCHITECTURE.md</code>, <code>audit_log.jsonl</code>을 처음부터 만든다.</li>
+        <li><strong>Mode B — Drift 추적</strong> (이 스킬이 만든 <code>SPEC.md</code>가 이미 있을 때): 각 주장의 인용을 <em>현재</em> 코드에 다시 대조하고 <code>DRIFT_REPORT.md</code>를 내며 <code>audit_log.jsonl</code>에 덧붙인다.</li>
+      </ul>
+
+      <h2>워크플로 (Mode A)</h2>
+      <h3>Phase 0 — 스코프 &amp; 인제스트</h3>
+      <ul>
+        <li>Glob으로 트리를 훑어 주 언어와 최상위 모듈/패키지를 식별한다.</li>
+        <li>코드베이스가 크거나 다중 언어면 몰래 샘플링하지 말고 <strong>사용자에게 범위를 확인</strong>한다. 커버리지를 조용히 줄이지 않는다 — 범위를 좁혔으면 무엇을 뺐는지 밝힌다.</li>
+        <li>모듈 목록을 만든다. 이 목록이 Phase 1의 fan-out을 이끈다.</li>
+      </ul>
+      <h3>Phase 1 — 추출 (fan-out)</h3>
+      <p>모듈마다 <em>실제로 하는 일</em>을 뽑는다: 엔트리포인트, 비즈니스 규칙, 입출력, 부수효과, 외부 호출, 제약. <strong>모든 항목은 <span class="cite">path:line</span> 인용을 단다.</strong></p>
+      <ul>
+        <li>모듈이 여럿이면 Task 툴로 모듈당 <code>general-purpose</code> 서브에이전트를 하나씩 띄워 병렬 실행한다.</li>
+        <li>작은 레포는 Read/Grep으로 인라인 추출한다.</li>
+      </ul>
+      <h3>Phase 2 — 아키텍트</h3>
+      <p>모듈별 결과를 시스템 구조로 종합한다: 모듈 경계, 호출/데이터 흐름 엣지, 외부 의존성. <code>ARCHITECTURE.md</code>에 Mermaid 다이어그램을 낸다.</p>
+      <h3>Phase 3 — Critic 게이트 (필수)</h3>
+      <ul>
+        <li>인용된 <span class="cite">path:line</span>을 연다. 코드가 주장을 뒷받침하면 → <strong>verified</strong>.</li>
+        <li>인용이 없거나 틀렸거나 뒷받침되지 않으면 → <strong>Unverified / Needs-review</strong> 섹션으로 옮긴다. 조용히 삭제하지 <strong>않고</strong>, 본문으로 승격하지 <strong>않는다</strong>.</li>
+        <li>각 verified/flagged 결정을 <code>audit_log.jsonl</code> 항목으로 기록한다.</li>
+      </ul>
+      <p style="color:var(--muted);font-size:13.5px">이 게이트가 "LLM에게 레포 요약시키기"와 이 스킬을 가른다. 건너뛰지 않는다.</p>
+      <h3>Phase 4 — 산출</h3>
+      <p>세 산출물을 쓴다. 한 문단으로 요약 보고한다: 모듈 수, verified 주장 수, unverified 수, 그리고 상위 3개 리스크/미지수.</p>
+
+      <h2>하드 룰</h2>
+      <ul>
+        <li><strong>인용 없으면 안 실린다.</strong> 독자가 열어 확인할 수 있는 <span class="cite">path:line</span> 없이는 어떤 주장도 본문 명세에 넣지 않는다.</li>
+        <li><strong>격리하되 지어내지 않는다.</strong> 근거 못 대는 추론은 <em>Unverified</em>로 — 본문에 넣지 않고, 조용히 삭제하지도 않는다.</li>
+        <li><strong>Drift 모드에서 자동 수정 금지.</strong> diff만 제안하고, 병합은 사람이 소유한다.</li>
+        <li><strong>건너뛴 것은 밝힌다.</strong> 범위를 줄였으면 커버리지 줄에 적고 숨기지 않는다.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== 02 · demo-hookify/SPEC.md ===== -->
+  <section class="panel" id="p-1" role="tabpanel" aria-labelledby="t-1">
+    <div class="filebar"><span class="dot"></span><span class="path">demo-hookify/SPEC.md</span><span>· 스킬이 역생성한 실제 명세</span><span class="badge">한글 번역</span></div>
+    <div class="doc">
+      <h1>hookify — 역생성 명세</h1>
+      <div class="blockquote">legacy-spec-agent가 소스에서 생성. 모든 규칙이 코드를 인용한다. Unverified 항목은 아래에 격리한다.</div>
+      <ul class="meta-list">
+        <li>Source: <code>hoonstyle/claude-code</code> → <code>plugins/hookify/</code> @ <code>15a21e1</code></li>
+        <li>Generated: 2026-07-15 (Mode A — 역생성)</li>
+        <li>Coverage: 6 / 6 코드 모듈 (Python) — <code>rule_engine.py</code>, <code>config_loader.py</code>, <code>hooks/{pretooluse,posttooluse,stop,userpromptsubmit}.py</code>. <code>matchers/</code>, <code>utils/</code>는 빈 stub.</li>
+      </ul>
+
+      <h2>시스템 목적</h2>
+      <p>hookify는 사용자가 작성한 룰 파일을, 대화/툴 페이로드를 패턴 매칭해 툴 호출·프롬프트·정지 이벤트를 <strong>경고하거나 차단</strong>하는 Claude Code 훅으로 바꾼다. 훅 엔트리포인트가 stdin에서 이벤트 페이로드를 읽고, 해당 이벤트에 맞는 룰을 로드해 평가한 뒤, JSON 결정을 출력한다 — 동작을 절대 죽이지 않으면서. <span class="cite">hooks/pretooluse.py:39</span> <span class="cite">config_loader.py:198</span> <span class="cite">rule_engine.py:35</span></p>
+
+      <h2>모듈</h2>
+      <h3>Rule Engine — <code>core/rule_engine.py</code></h3>
+      <ul>
+        <li><strong>책임</strong>: Rule 객체를 훅의 <code>input_data</code>에 대해 평가하고 이벤트에 맞는 응답(block / warn / allow)을 반환. <span class="cite">rule_engine.py:35</span></li>
+        <li><strong>비즈니스 규칙</strong>:
+          <ul>
+            <li>매칭된 룰은 <strong><code>rule.action == 'block'</code>일 때만 blocking</strong>이고, 그 외 action 값은 warning으로 취급. <span class="cite">rule_engine.py:55</span></li>
+            <li><strong>우선순위 — blocking 우선</strong>: blocking 룰이 하나라도 매칭되면 blocking 분기만 실행되고 warning은 버려진다. <span class="cite">rule_engine.py:61</span></li>
+            <li>이벤트별 block 응답: <code>Stop</code> → <code>{decision:'block', reason, systemMessage}</code>; <code>PreToolUse</code>/<code>PostToolUse</code> → <code>permissionDecision:'deny'</code> + <code>systemMessage</code>; 그 외 → <code>{systemMessage}</code>만. <span class="cite">rule_engine.py:66</span></li>
+            <li>조건이 <strong>없는 룰은 절대 매칭되지 않는다</strong>; 조건은 <strong>AND 결합</strong>. <span class="cite">rule_engine.py:117</span></li>
+            <li>Tool matcher: <code>'*'</code>는 모든 툴; 아니면 <code>|</code>로 나눠 <code>tool_name</code>이 <strong>정확히</strong> 그 멤버여야 함(OR, 정규식/부분일치 아님). <span class="cite">rule_engine.py:137</span></li>
+            <li>지원 연산자: <code>regex_match, contains, equals, not_contains, starts_with, ends_with</code>; 미지원 → 매칭 안 됨. <span class="cite">rule_engine.py:166</span></li>
+            <li>필드 추출은 툴 인지형: <code>Bash</code>→<code>command</code>; <code>Write/Edit</code>→<code>content</code>(<code>new_string</code>로 폴백); <code>MultiEdit</code>→ 각 edit의 <code>new_string</code>을 공백으로 연결. <span class="cite">rule_engine.py:231</span></li>
+          </ul>
+        </li>
+        <li><strong>부수효과</strong>: <code>transcript</code> 필드는 <code>input_data['transcript_path']</code>를 읽음; 파일 오류는 잡혀 stderr에 경고되고 <code>''</code> 반환. <span class="cite">rule_engine.py:207</span></li>
+        <li><strong>제약</strong>: <strong>모든 정규식 매칭은 대소문자 무시</strong> — <code>compile_regex</code>가 <code>re.IGNORECASE</code>를 하드코딩(메모이즈, 최대 128). 비정규식 연산자는 <strong>대소문자 구분</strong>. <span class="cite">rule_engine.py:14</span> <span class="cite">rule_engine.py:169</span></li>
+      </ul>
+
+      <h3>Config Loader — <code>core/config_loader.py</code></h3>
+      <ul>
+        <li><strong>책임</strong>: <code>.claude/hookify.*.local.md</code> 룰 파일(YAML frontmatter + 마크다운 본문)을 발견·읽기·파싱해 <code>Condition</code>/<code>Rule</code> 데이터클래스로 만들고, 이벤트·활성 상태로 필터. <span class="cite">config_loader.py:198</span></li>
+        <li><strong>비즈니스 규칙</strong>:
+          <ul>
+            <li>신형 <code>conditions</code> 리스트를 우선; <strong>레거시 <code>pattern</code></strong>은 <strong><code>conditions</code>가 없을 때만</strong> 단일 <code>regex_match</code> 조건으로 변환되며 필드는 이벤트에서 추론. <span class="cite">config_loader.py:57</span></li>
+            <li><code>load_rules(event)</code>는 룰 파일을 glob하고, <code>rule.event == 'all'</code> 또는 <code>== event</code>인 <strong>활성</strong> 룰을 반환. <span class="cite">config_loader.py:221</span></li>
+            <li>Frontmatter는 <strong>자체 라인 기반 파서(PyYAML 아님)</strong>로 파싱: 따옴표 제거; <code>true</code>/<code>false</code>를 bool로 변환; 인라인 list-dict 항목은 <code>:</code>와 <code>,</code>를 모두 요구. <span class="cite">config_loader.py:98</span></li>
+          </ul>
+        </li>
+        <li><strong>제약</strong>: 탐색은 <strong>CWD 상대</strong> — 프로세스 작업 디렉토리의 <code>.claude</code> 밖 룰은 안 잡힘. <code>load_rule_file</code>은 <strong>파일당 Rule 하나</strong> 반환. <span class="cite">config_loader.py:210</span> <span class="cite">config_loader.py:250</span></li>
+      </ul>
+
+      <h3>Hook Entrypoints — <code>hooks/{pretooluse,posttooluse,stop,userpromptsubmit}.py</code></h3>
+      <ul>
+        <li><strong>비즈니스 규칙</strong>:
+          <ul>
+            <li><strong>이벤트 해석이 훅마다 다름</strong>: <code>pretooluse</code>/<code>posttooluse</code>는 <code>Bash</code>→<code>bash</code>, <code>Edit|Write|MultiEdit</code>→<code>file</code>, 그 외는 없음. <span class="cite">hooks/pretooluse.py:46</span></li>
+            <li><code>stop</code>은 고정 이벤트 <code>'stop'</code>, <code>userpromptsubmit</code>은 고정 이벤트 <code>'prompt'</code>를 로드. <span class="cite">hooks/stop.py:37</span> <span class="cite">hooks/userpromptsubmit.py:37</span></li>
+            <li><strong>Fail-open 보장</strong>: 예외 발생 시 Hookify 에러 메시지를 출력하고 <strong>언제나 <code>sys.exit(0)</code></strong> — 훅 오류가 동작을 막지 않음. <span class="cite">hooks/pretooluse.py:63</span></li>
+          </ul>
+        </li>
+        <li><strong>제약</strong>: <code>hookify</code> 패키지 해석을 위해 <code>CLAUDE_PLUGIN_ROOT</code>로 <code>sys.path</code> 주입 필요; import 실패 시 에러 출력 후 exit 0. <span class="cite">hooks/pretooluse.py:14</span></li>
+      </ul>
+
+      <h2>제약 &amp; 가정 (시스템 전역)</h2>
+      <ul>
+        <li>룰은 <strong>프로세스 CWD의 <code>.claude/</code></strong> 아래에만 존재; 다른 디렉토리에서 실행하면 룰이 조용히 하나도 안 잡힘. <span class="cite">config_loader.py:210</span></li>
+        <li>정규식은 항상 대소문자 무시; 부분일치/동등 연산자는 아님. <span class="cite">rule_engine.py:14</span></li>
+        <li>훅은 계약상 <strong>fail-open</strong> — 설정 오류는 세션을 깨뜨리는 대신 강제력을 약화시킴. <span class="cite">hooks/pretooluse.py:70</span></li>
+      </ul>
+
+      <div class="warnsec">
+        <h2>⚠️ Unverified / Needs-review</h2>
+        <div class="blockquote" style="border-color:var(--warn);background:var(--warn-soft)">코드로 완전히 근거를 댈 수 없는 항목. 사실로 취급하지 말 것.</div>
+        <ul>
+          <li><strong><code>action:'block'</code>의 성숙도가 모순적.</strong> <code>config_loader.py:40</code>은 <code>action</code>을 <code>"warn" or "block" (future)</code>로 문서화했지만, <code>rule_engine.py:55-61</code>은 이미 blocking 분기를 완전히 구현. 코드는 오늘 blocking을 지원함 — 의도된 안정성 수준이 모호. <em>(역생성이 드러낸 잠재 불일치 — 유지보수자 판단 필요)</em></li>
+          <li><strong>자체 YAML 파서의 엣지 입력 정확성.</strong> 이 파서는 <code>:</code>/<code>,</code>를 포함한 따옴표 값, 숫자 타입, 더 깊은 중첩을 다루지 않음; 그런 파일에서의 동작은 정확하다고 확인되지 않음. <span class="cite">config_loader.py:98</span></li>
+          <li><strong><code>posttooluse</code>와 <code>pretooluse</code>는 docstring만 빼면 기능적으로 동일</strong>; 의도된 것인지 코드에 명시 없음. <span class="cite">hooks/posttooluse.py</span></li>
+          <li><strong><code>stop</code>/<code>prompt</code> 룰이 실제로 에이전트를 멈출 수 있는지</strong>는 이 패키지 밖의 Claude Code 훅 계약에 달림. <span class="cite">hooks/stop.py</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 03 · ARCHITECTURE.md + audit_log.jsonl ===== -->
+  <section class="panel" id="p-2" role="tabpanel" aria-labelledby="t-2">
+    <div class="filebar"><span class="dot"></span><span class="path">demo-hookify/ARCHITECTURE.md</span><span class="badge">다이어그램 원문</span></div>
+    <div class="doc">
+      <h1>hookify — 아키텍처 (역생성)</h1>
+      <div class="blockquote"><code>plugins/hookify/</code> @ <code>15a21e1</code> 기준. 엣지는 코드로 추적됨; 인용은 SPEC.md 참조.</div>
+      <pre class="mermaid">
+flowchart TD
+    CC[Claude Code hook event] -->|stdin JSON| PRE["hooks/pretooluse.py<br/>Bash&rarr;bash, Edit/Write/MultiEdit&rarr;file"]
+    CC -->|stdin JSON| POST["hooks/posttooluse.py<br/>same mapping as pretooluse"]
+    CC -->|stdin JSON| STOP["hooks/stop.py<br/>event='stop' (fixed)"]
+    CC -->|stdin JSON| UPS["hooks/userpromptsubmit.py<br/>event='prompt' (fixed)"]
+    PRE --> LR[core/config_loader.load_rules]
+    POST --> LR
+    STOP --> LR
+    UPS --> LR
+    LR -->|glob .claude/hookify.*.local.md| FS[(.claude/*.local.md<br/>rule files, CWD-relative)]
+    LR --> RE[core/rule_engine.evaluate_rules]
+    PRE --> RE
+    POST --> RE
+    STOP --> RE
+    UPS --> RE
+    RE -->|reads transcript_path| TR[(transcript file)]
+    RE -->|block / warn / allow JSON| OUT[[stdout JSON decision]]
+    PRE -.always exit 0.-> OUT
+    POST -.always exit 0.-> OUT
+    STOP -.always exit 0.-> OUT
+    UPS -.always exit 0.-> OUT
+    ENV{{CLAUDE_PLUGIN_ROOT<br/>required for sys.path}} -.imports.-> PRE
+    ENV -.imports.-> POST
+    ENV -.imports.-> STOP
+    ENV -.imports.-> UPS
+      </pre>
+      <p><strong>그래프 읽기</strong></p>
+      <ul>
+        <li>네 엔트리포인트 모두 같은 두 코어 함수(<code>load_rules</code>, <code>evaluate_rules</code>)를 감싼 얇은 디스패처. 훅별 유일한 차이는 <strong>이벤트 라벨</strong>을 고르는 방식.</li>
+        <li>외부 I/O 표면 두 개: CWD 상대 룰 파일, 그리고 룰별 <code>transcript_path</code> 읽기.</li>
+        <li>점선 <code>always exit 0</code> 엣지는 <strong>fail-open</strong> 계약을 뜻함.</li>
+      </ul>
+
+      <div class="filebar" style="margin-top:32px"><span class="dot"></span><span class="path">demo-hookify/audit_log.jsonl</span><span>· append-only · 12줄 전부</span><span class="badge">원문</span></div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>action</th><th>claim (원문)</th><th class="num">evidence</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pill v">verified</span></td><td>Blocking rules take precedence over warnings; warnings dropped if any block matched</td><td class="num">rule_engine.py:61</td></tr>
+            <tr><td><span class="pill v">verified</span></td><td>Rule is blocking only when action=='block', else warning</td><td class="num">rule_engine.py:55</td></tr>
+            <tr><td><span class="pill v">verified</span></td><td>All regex matching is case-insensitive (re.IGNORECASE hardcoded, lru_cache 128)</td><td class="num">rule_engine.py:14</td></tr>
+            <tr><td><span class="pill v">verified</span></td><td>Tool matcher '*' any; else split '|' and exact membership (OR, not regex)</td><td class="num">rule_engine.py:137</td></tr>
+            <tr><td><span class="pill v">verified</span></td><td>Operators: regex_match/contains/equals/not_contains/starts_with/ends_with; unknown→no match</td><td class="num">rule_engine.py:166</td></tr>
+            <tr><td><span class="pill v">verified</span></td><td>Legacy 'pattern' becomes one regex_match condition only when no conditions; field inferred from event</td><td class="num">config_loader.py:57</td></tr>
+            <tr><td><span class="pill v">verified</span></td><td>Rule discovery is CWD-relative glob of .claude/hookify.*.local.md</td><td class="num">config_loader.py:210</td></tr>
+            <tr><td><span class="pill v">verified</span></td><td>stop uses fixed event 'stop', userpromptsubmit uses fixed event 'prompt'</td><td class="num">hooks/stop.py:37</td></tr>
+            <tr><td><span class="pill v">verified</span></td><td>Hooks always sys.exit(0) in finally; errors never block operation</td><td class="num">hooks/pretooluse.py:70</td></tr>
+            <tr><td><span class="pill f">flagged</span></td><td>action 'block' documented as (future) but rule_engine already implements blocking</td><td class="num">config_loader.py:40</td></tr>
+            <tr><td><span class="pill f">flagged</span></td><td>Bespoke YAML parser may mishandle quoted :/, numeric types, deep nesting</td><td class="num">config_loader.py:98</td></tr>
+            <tr><td><span class="pill f">flagged</span></td><td>posttooluse functionally identical to pretooluse; no distinct post-exec logic</td><td class="num">hooks/posttooluse.py:65</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="color:var(--muted);font-size:13px">verified 9 · flagged 3. flagged 항목은 삭제되지 않고 위 명세의 "Unverified / Needs-review"로 격리된다.</p>
+    </div>
+  </section>
+
+  <!-- ===== 04 · INTERFACES.md ===== -->
+  <section class="panel" id="p-3" role="tabpanel" aria-labelledby="t-3">
+    <div class="filebar"><span class="dot"></span><span class="path">demo-hookify/INTERFACES.md</span><span>· 인터페이스정의서</span><span class="badge">시그니처 원문</span></div>
+    <div class="doc">
+      <h1>hookify — 인터페이스정의서 (역생성)</h1>
+      <div class="blockquote">공개 API 표면을 소스에서 역생성. 시그니처·동작이 코드를 인용한다. <code>_</code> 접두 헬퍼는 internal로 표기 — 계약 아님.</div>
+      <h2>공개 함수 &amp; 엔트리포인트</h2>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Symbol</th><th>Signature (원문)</th><th>Output</th><th class="num">Evidence</th></tr></thead>
+          <tbody>
+            <tr><td><code>RuleEngine.evaluate_rules</code></td><td><code>(self, rules: List[Rule], input_data: Dict[str, Any]) -> Dict[str, Any]</code></td><td>block/warn/allow 응답 dict (<code>{}</code>=allow)</td><td class="num">rule_engine.py:35</td></tr>
+            <tr><td><code>compile_regex</code></td><td><code>(pattern: str) -> re.Pattern</code></td><td>컴파일된 패턴 · IGNORECASE · lru_cache(128)</td><td class="num">rule_engine.py:15</td></tr>
+            <tr><td><code>load_rules</code></td><td><code>(event: Optional[str] = None) -> List[Rule]</code></td><td>이벤트에 맞는 활성 룰</td><td class="num">config_loader.py:198</td></tr>
+            <tr><td><code>load_rule_file</code></td><td><code>(file_path: str) -> Optional[Rule]</code></td><td>Rule 하나 또는 <code>None</code></td><td class="num">config_loader.py:244</td></tr>
+            <tr><td><code>extract_frontmatter</code></td><td><code>(content: str) -> tuple[Dict[str, Any], str]</code></td><td>(frontmatter, body)</td><td class="num">config_loader.py:87</td></tr>
+            <tr><td><code>Rule.from_dict</code></td><td><code>(cls, frontmatter, message: str) -> Rule</code></td><td>Rule 데이터클래스</td><td class="num">config_loader.py:45</td></tr>
+            <tr><td><code>Condition.from_dict</code></td><td><code>(cls, data: Dict) -> Condition</code></td><td>Condition (op 기본 regex_match)</td><td class="num">config_loader.py:23</td></tr>
+            <tr><td><code>main</code> (×4 훅)</td><td><code>() -> None</code> (exits 0)</td><td>stdin JSON → stdout JSON 결정</td><td class="num">hooks/pretooluse.py:35</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h2>훅 I/O 계약 (엔트리포인트 4종 공통)</h2>
+      <ul>
+        <li><strong>In</strong>: <strong>stdin</strong>의 JSON 객체. 최소 <code>tool_name</code>과 룰이 참조하는 필드(<code>transcript_path</code>, <code>reason</code>, <code>user_prompt</code>, <code>tool_input</code>). <span class="cite">hooks/pretooluse.py:39</span></li>
+        <li><strong>Out</strong>: <strong>stdout</strong>의 JSON 결정. 비어도 항상 출력. <span class="cite">hooks/pretooluse.py:59</span></li>
+        <li><strong>Exit</strong>: 항상 <code>0</code> (fail-open). <span class="cite">hooks/pretooluse.py:70</span></li>
+        <li><strong>Env</strong>: <code>hookify</code> 패키지 해석 위해 <code>CLAUDE_PLUGIN_ROOT</code> 필요. <span class="cite">hooks/pretooluse.py:14</span></li>
+      </ul>
+      <h2>Internal (공개 계약 아님)</h2>
+      <p><code>_rule_matches</code> <span class="cite">rule_engine.py:96</span> · <code>_matches_tool</code> <span class="cite">rule_engine.py:127</span> · <code>_check_condition</code> <span class="cite">rule_engine.py:144</span> · <code>_extract_field</code> <span class="cite">rule_engine.py:182</span> · <code>_regex_match</code> <span class="cite">rule_engine.py:256</span>. 구현 세부사항 — 리팩토링이 위 공개 표면을 깨지 않고 바꿔도 되는 부분.</p>
+      <div class="warnsec">
+        <h2>⚠️ Unverified</h2>
+        <ul><li>Claude Code가 실제로 소비하는 <strong>결정 JSON 스키마</strong>(어떤 키가 툴 호출을 막는지)는 호스트 훅 계약이 정의 — 이 패키지 밖, 외부로 취급. SPEC.md 참조.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 05 · TESTCASES.md ===== -->
+  <section class="panel" id="p-4" role="tabpanel" aria-labelledby="t-4">
+    <div class="filebar"><span class="dot"></span><span class="path">demo-hookify/TESTCASES.md</span><span>· 특성화 테스트케이스</span><span class="badge">한글 번역</span></div>
+    <div class="doc">
+      <h1>hookify — 특성화 테스트케이스 (역생성)</h1>
+      <div class="blockquote"><strong>요구사항 테스트가 아니라 특성화 테스트다.</strong> 코드의 <em>현재</em> 동작을 고정해, 리팩토링이 아무것도 바꾸지 않았음을 증명하게 한다. 각 케이스는 SPEC.md의 검증된 규칙에서 도출되고 그 라인을 인용한다. "코드가 오늘 뭘 하는지"를 단언하지, "무엇을 해야 하는지"가 아니다.</div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>#</th><th>Given</th><th>When</th><th>Then (현재 동작)</th><th class="num">고정 규칙</th></tr></thead>
+          <tbody>
+            <tr><td>TC-01</td><td>매칭되는 <code>action:'block'</code> 룰 1 + 매칭되는 warning 룰 1</td><td><code>evaluate_rules</code> 실행</td><td><strong>block</strong> 응답 반환; warning 메시지는 <strong>버려짐</strong></td><td class="num">rule_engine.py:61</td></tr>
+            <tr><td>TC-02</td><td><code>conditions</code>가 빈 룰</td><td>임의 페이로드로 평가</td><td>룰 <strong>매칭 안 됨</strong> (절대 발화 안 함)</td><td class="num">rule_engine.py:117</td></tr>
+            <tr><td>TC-03</td><td><code>tool_matcher="Edit|Write"</code>, <code>tool_name="Read"</code></td><td>룰 평가</td><td><strong>매칭 안 됨</strong> (정확 OR 멤버십, 부분/정규 아님)</td><td class="num">rule_engine.py:137</td></tr>
+            <tr><td>TC-04</td><td><code>tool_matcher="Edit|Write"</code>, <code>tool_name="Edit"</code></td><td>룰 평가</td><td><strong>매칭</strong></td><td class="num">rule_engine.py:137</td></tr>
+            <tr><td>TC-05</td><td>패턴 <code>"ERROR"</code>의 regex_match, 필드값 <code>"internal error"</code></td><td>조건 검사</td><td><strong>매칭</strong> (IGNORECASE로 대소문자 무시)</td><td class="num">rule_engine.py:14</td></tr>
+            <tr><td>TC-06</td><td>지원 목록에 없는 연산자(예 <code>"gt"</code>)</td><td>조건 검사</td><td><strong>매칭 안 됨</strong> (미지원 → False)</td><td class="num">rule_engine.py:166</td></tr>
+            <tr><td>TC-07</td><td>작업 디렉토리에 <code>.claude/hookify.*.local.md</code> <strong>없음</strong></td><td><code>load_rules()</code> 호출</td><td><strong><code>[]</code> 반환</strong> (CWD 상대 탐색)</td><td class="num">config_loader.py:210</td></tr>
+            <tr><td>TC-08</td><td>레거시 <code>pattern</code> + <code>conditions</code> 없음, <code>event: bash</code></td><td><code>Rule.from_dict</code></td><td>필드 <code>command</code>의 regex_match 조건 1개 생성</td><td class="num">config_loader.py:57</td></tr>
+            <tr><td>TC-09</td><td>비정상/비-JSON stdin</td><td>훅 <code>main()</code> 실행</td><td><code>Hookify error</code> 메시지 출력 후 <strong>exit 0</strong> (절대 차단 안 함)</td><td class="num">hooks/pretooluse.py:70</td></tr>
+            <tr><td>TC-10</td><td>조건에 잘못된 정규식 패턴</td><td><code>_regex_match</code> 실행</td><td>오류 잡혀 stderr 경고, <strong>False</strong> 반환</td><td class="num">rule_engine.py:269</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li><strong>커버리지는 동작 기반이지 전수가 아님.</strong> 검증된 규칙을 따라가며, 분기 커버리지를 주장하지 않는다.</li>
+        <li><strong>verified 항목에서만</strong> 도출. flagged/unverified에 기대는 케이스는 없음 — 그건 RISKS.md에.</li>
+        <li>외부 호스트 훅 계약에 의존하는 케이스(예 "stop 룰이 실제로 에이전트를 멈춤")는 <strong>의도적으로 제외</strong> — 이 패키지만으론 단언 불가.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== 06 · RISKS.md ===== -->
+  <section class="panel" id="p-5" role="tabpanel" aria-labelledby="t-5">
+    <div class="filebar"><span class="dot"></span><span class="path">demo-hookify/RISKS.md</span><span>· 리스크 · 결함후보 대장</span><span class="badge">한글 번역</span></div>
+    <div class="doc">
+      <h1>hookify — 리스크 · 결함후보 대장 (역생성)</h1>
+      <div class="blockquote"><code>flagged</code> 감사 항목과 <code>Unverified</code> 명세 항목을 리뷰 대장으로 형식화. <strong>역생성이 드러낸 후보</strong>이지 확정 결함이 아니며, 각 항목은 유지보수자 판단이 필요하다. 여기 있는 어떤 것도 본문 명세에 사실로 실리지 않았다.</div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>ID</th><th>심각도</th><th>발견</th><th class="num">Evidence</th></tr></thead>
+          <tbody>
+            <tr><td>RK-01</td><td><span class="pill f">Med</span></td><td><strong>문서–코드 모순.</strong> <code>action:'block'</code>이 <code>(future)</code>로 문서화됐지만 blocking 분기는 이미 완전 구현. 호출자는 <code>block</code> 지원 여부를 알 수 없음.</td><td class="num">config_loader.py:40 ↔ rule_engine.py:55-61</td></tr>
+            <tr><td>RK-02</td><td><span class="pill f">Low</span></td><td><strong>자체 YAML 파서 엣지케이스.</strong> <code>:</code>/<code>,</code> 포함 따옴표값, 숫자 타입, 깊은 중첩 미처리. 잘못된 룰 파일이 조용히 오파싱될 수 있음.</td><td class="num">config_loader.py:98</td></tr>
+            <tr><td>RK-03</td><td><span class="pill f">Low</span></td><td><strong><code>posttooluse</code>가 <code>pretooluse</code> 중복.</strong> docstring 빼고 기능 동일, 별도 post-exec 로직 없음. 두 파일이 어긋날 유지보수 리스크.</td><td class="num">hooks/posttooluse.py:65</td></tr>
+            <tr><td>RK-04</td><td><span class="pill v">Info</span></td><td><strong>루트 밖 실행 시 조용한 no-op.</strong> CWD 상대 탐색이라 다른 디렉토리에서 실행하면 룰 0개 로드 + 경고 없음 — 강제력 조용히 무력화.</td><td class="num">config_loader.py:210</td></tr>
+            <tr><td>RK-05</td><td><span class="pill v">Info</span></td><td><strong>정지 의미 검증 불가.</strong> <code>stop</code>/<code>prompt</code> 룰이 실제로 에이전트를 멈추는지는 이 패키지 밖 호스트 훅 계약에 달림.</td><td class="num">hooks/stop.py</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h2>이 대장을 만든 방법</h2>
+      <ul>
+        <li>RK-01~03 = <code>audit_log.jsonl</code>의 <code>action:"flagged"</code> 3건을 리뷰 항목으로 승격.</li>
+        <li>RK-04~05 = SPEC.md의 <strong>Unverified / Needs-review</strong> 섹션에서.</li>
+        <li>심각도는 <strong>역생성 시점 판단</strong>이지 측정치가 아님 — 판정이 아니라 트리아지 힌트로 볼 것.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== 07 · BENCHMARK.md ===== -->
+  <section class="panel" id="p-6" role="tabpanel" aria-labelledby="t-6">
+    <div class="filebar"><span class="dot"></span><span class="path">evals/BENCHMARK.md</span><span>· with-skill vs baseline</span><span class="badge">한글 번역</span></div>
+    <div class="doc">
+      <h1>벤치마크 — legacy-spec-agent vs baseline (iteration-1)</h1>
+      <p><strong>질문</strong>: 스킬이 실제로 출력을 바꾸는가, 아니면 순수 LLM도 똑같이 하는가?</p>
+      <p><strong>방법</strong>: 같은 프롬프트, 두 갈래 — <em>with-skill</em>(Mode A 준수) vs <em>baseline</em>(동일 프롬프트, 스킬 없음). <code>anthropics/claude-code @15a21e1</code>의 미문서화 타겟 2개, hookify 데모와 별개. Eval B는 TypeScript로 크로스 언어 일반성 테스트.</p>
+
+      <h2>결과</h2>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>지표</th><th class="num">A · skill</th><th class="num">A · base</th><th class="num">B · skill</th><th class="num">B · base</th></tr></thead>
+          <tbody>
+            <tr><td>Claim bullets</td><td class="num">42</td><td class="num">31</td><td class="num">52</td><td class="num">19</td></tr>
+            <tr><td><strong>Citation coverage</strong></td><td class="num win">0.86</td><td class="num zero">0.00</td><td class="num win">0.87</td><td class="num zero">0.00</td></tr>
+            <tr><td>Total <span class="cite">path:line</span> citations</td><td class="num win">79</td><td class="num zero">0</td><td class="num win">62</td><td class="num zero">0</td></tr>
+            <tr><td>Unverified section (모르는 것 격리)</td><td class="chk">✓</td><td class="x">✕</td><td class="chk">✓</td><td class="x">✕</td></tr>
+            <tr><td>Structured spec</td><td class="chk">✓</td><td>partial</td><td class="chk">✓</td><td class="x">✕</td></tr>
+            <tr><td>Fabricated metrics</td><td>none</td><td>none</td><td>none</td><td>none</td></tr>
+            <tr><td>Tokens</td><td class="num">48.7k</td><td class="num">42.7k</td><td class="num">46.1k</td><td class="num">36.0k</td></tr>
+            <tr><td>Wall time (s)</td><td class="num">78.0</td><td class="num">68.9</td><td class="num">100.7</td><td class="num">45.9</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Citation accuracy (스팟체크, with-skill)</h3>
+      <p>샘플 인용을 소스에 다시 열어 대조한 결과 주장과 정확히 일치:</p>
+      <pre class="code">diffstate.py:260 → if len(sha) == 40 and all(c in "0123456789abcdef" for c in sha)   <span class="cm">"40 lowercase-hex" ✓</span>
+diffstate.py:296 → merged = merged[:_REVIEWED_SHAS_CAP][::-1]                        <span class="cm">"cap to last 500" ✓</span>
+diffstate.py:426 → review_set = (dirty_now &amp; changed_since) if changed_since ...    <span class="cm">"don't intersect with ∅" ✓</span>
+sweep.ts:100     → for (let page = 1; page &lt;= 10; page++)                            <span class="cm">"up to 10 pages" ✓</span></pre>
+      <p>샘플 정확도: <strong>6/6 일치</strong>. 샘플에서 환각 라인번호는 발견되지 않음.</p>
+
+      <h2>해석</h2>
+      <ul>
+        <li><strong>스킬의 가치는 "구조"가 아니라 근거성이다.</strong> Baseline A도 읽기 좋은 섹션 스펙을 냈지만 <strong>검증 가능한 인용이 0개</strong>였고 <strong>모르는 것을 격리하지 않았다</strong>. 잘 읽히지만 확인이 불가능하다. with-skill은 주장의 ~86–87%를 리뷰어가 열어볼 수 있는 라인에 묶고, 근거 못 대는 것은 격리한다.</li>
+        <li><strong>크로스 언어 성립.</strong> TypeScript(Eval B)도 Python과 같게 동작: 동일 커버리지, 동일 정확도, 올바른 크로스 파일 근거(import한 <code>issue-lifecycle.ts</code> 설정 소스를 인용).</li>
+        <li><strong>비용은 적당.</strong> with-skill은 토큰 ~14–28%와 시간을 더 쓴다 — Critic 게이트에서 라인을 다시 여는 값이다. 그 오버헤드가 곧 검증이다.</li>
+        <li><strong>baseline의 실패 양상이 더 위험하다</strong>: 자신 있고 유창하며 반증 불가능한 문서. 안전한 리팩토링에 쓸 명세라면, 확인 못 하는 주장은 편의가 아니라 부채다.</li>
+      </ul>
+
+      <div class="warnsec">
+        <h2>이 벤치마크의 정직한 한계</h2>
+        <ul>
+          <li>타겟 n=2, 각 단일 파일; fan-out 경로는 여기서 부하 테스트 안 함(hookify 데모가 커버).</li>
+          <li>커버리지는 불릿에 <span class="cite">path:line</span>이 있으면 인용으로 셈 — 중요도 가중은 없음.</li>
+          <li>정확도는 6개 인용 샘플이지 전수 감사가 아님.</li>
+          <li>1 iteration, 단일 모델. 테스트셋을 넓혀 규모 있게 재실행하는 게 다음 엄밀화 단계.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">각 탭은 이 저장소에 커밋된 실제 파일을 옮긴 것이다. 서술은 한글로 번역했고, 수치·인용·코드·다이어그램은 원문 그대로이므로 모두 소스에서 추적할 수 있다.</div>
+</footer>
+
+<script>
+  const tabs = Array.from(document.querySelectorAll('.tab-btn'));
+  const panels = Array.from(document.querySelectorAll('.panel'));
+  function select(id) {
+    tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === id ? 'true' : 'false'));
+    panels.forEach(p => p.classList.toggle('active', p.id === id));
+    window.scrollTo({ top: 0 });
+  }
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => select(t.dataset.tab));
+    t.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const dir = e.key === 'ArrowRight' ? 1 : -1;
+        const next = (i + dir + tabs.length) % tabs.length;
+        tabs[next].focus(); select(tabs[next].dataset.tab);
+      }
+    });
+  });
+  const root = document.documentElement;
+  const btn = document.getElementById('themeToggle');
+  btn.addEventListener('click', () => {
+    const cur = root.getAttribute('data-theme');
+    const next = cur === 'dark' ? 'light' : cur === 'light' ? 'dark' : (matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark');
+    root.setAttribute('data-theme', next);
+    btn.textContent = next === 'dark' ? '☾ 다크' : '☀ 라이트';
+  });
+</script>
