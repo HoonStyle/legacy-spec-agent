@@ -26,6 +26,7 @@ An LLM summary is fluent but unverifiable. This tool adds two checks on top of t
 | `DRIFT_REPORT.md` | Per-citation drift classification: intact, moved, drifted, orphaned, or unresolved |
 | `audit_log.jsonl` | Append-only record of every verify/flag decision |
 | Charts | Coverage, drift, and benchmark charts, plus architecture and ER diagrams |
+| `REPORT.html` | Everything above assembled into one self-contained tabbed page (connector-generated) |
 
 The tool intentionally does not generate ADRs, PRDs, or user manuals. Code shows what a system does, not why a decision was made or what the business intended. Those documents cannot be grounded in a citation, so they are left to humans rather than fabricated.
 
@@ -35,7 +36,7 @@ The tool intentionally does not generate ADRs, PRDs, or user manuals. Code shows
 
 **Mode B (drift check)** takes the commit recorded in an existing spec, reads each cited line as it was at that commit, and looks for that content in the current tree. Every citation is classified deterministically, and the tool proposes diffs instead of rewriting the spec.
 
-The connector exposes eight tools: `verify_citation`, `index_symbols`, `build_call_graph`, `detect_drift`, `extract_data_model`, `extract_project_meta`, `extract_changelog`, and `emit_charts`. The skill uses them when they are available and falls back to plain LLM operation when they are not.
+The connector exposes nine tools: `verify_citation`, `index_symbols`, `build_call_graph`, `detect_drift`, `extract_data_model`, `extract_project_meta`, `extract_changelog`, `emit_charts`, and `render_report`. The skill uses them when they are available and falls back to plain LLM operation when they are not.
 
 Large repositories are handled with two mechanisms. Item-level outputs accept a `limit` and report exactly how much was omitted when they truncate, and a `package` granularity option collapses file-level graphs into package-level edges so a diagram with hundreds of nodes stays readable.
 
@@ -58,8 +59,8 @@ Alternatively, copy this directory into a skills location Claude Code discovers,
 SKILL.md             Skill definition: workflow, output templates, hard rules
 references/          Extraction, architect, and critic contracts used by the skill
 SPEC.md              Original design document (v0.1)
-CONNECTOR_DESIGN.md  Connector design and milestone record (C0–C6)
-connector/           TypeScript MCP server: eight tools, 46 tests
+CONNECTOR_DESIGN.md  Connector design and milestone record (C0–C7)
+connector/           TypeScript MCP server: nine tools, 49 tests
 demo-hookify/        A real Mode A run against a third-party package, full artifact set
 evals/               With-skill vs. baseline benchmarks
 skills/              Plugin-layout copy of the skill, kept in sync by a test
@@ -72,7 +73,7 @@ showcase.html        Tabbed viewer for the demo artifacts
 
 - `demo-hookify/` is an unmodified run against an unfamiliar third-party package. It produced the full artifact set and, along the way, caught a comment in the original code claiming a feature was "(future)" when the engine already implemented it.
 - `evals/BENCHMARK.md` compares runs with and without the skill on the same prompts: 86–87% citation coverage versus 0% for the baseline, with 6 of 6 sampled citations accurate. The second iteration honestly documents where the gap narrows.
-- The connector's test suite replays all 12 citations from the demo's audit log against the pinned commit and verifies each one mechanically. The suite has 46 tests, including regression cases for every finding from an adversarial code review.
+- The connector's test suite replays all 12 citations from the demo's audit log against the pinned commit and verifies each one mechanically. The suite has 49 tests, including regression cases for every finding from an adversarial code review.
 
 ## Contributing
 

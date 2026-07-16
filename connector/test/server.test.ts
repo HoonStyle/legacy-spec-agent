@@ -18,6 +18,7 @@ const EXPECTED_TOOLS = [
   "extract_project_meta",
   "extract_changelog",
   "emit_charts",
+  "render_report",
 ];
 
 test("stdio smoke: lists all tools and answers verify_citation", async () => {
