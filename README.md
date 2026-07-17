@@ -85,8 +85,7 @@ Legacy Spec Agent is designed to avoid overwhelming reports on large codebases:
 Install the plugin from a Claude Code marketplace source:
 
 ```bash
-claude plugin marketplace add hoonstyle/legacy-spec-agent
-claude plugin install legacy-spec-agent@legacy-spec-agent
+codex plugin marketplace add "$(pwd)"
 ```
 
 The connector builds itself on first launch and rebuilds when plugin updates include newer connector sources. This first build requires network access.

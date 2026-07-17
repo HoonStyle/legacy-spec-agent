@@ -1,0 +1,41 @@
+{
+  "name": "legacy-spec-agent",
+  "version": "0.1.0",
+  "description": "Reverse-engineer a citation-grounded spec from undocumented legacy code and track drift with a bundled MCP connector.",
+  "author": {
+    "name": "HoonStyle"
+  },
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "legacy-code",
+    "specification",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "mcpServers": {
+    "legacy-spec": {
+      "command": "node",
+      "args": [
+        "connector/bootstrap.mjs"
+      ],
+      "cwd": "."
+    }
+  },
+  "interface": {
+    "displayName": "Legacy Spec Agent",
+    "shortDescription": "Reconstruct citation-grounded specs from legacy code.",
+    "longDescription": "Generate verified specs, architecture notes, interfaces, data models, drift reports, charts, and a report from undocumented code using Codex plus the bundled deterministic MCP connector.",
+    "developerName": "HoonStyle",
+    "category": "Developer tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use Legacy Spec Agent to document this repo.",
+      "Check this spec for drift against the code."
+    ],
+    "brandColor": "#10A37F"
+  }
+}
