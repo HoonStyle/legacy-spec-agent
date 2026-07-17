@@ -5,6 +5,9 @@
   <a href="README.ko.md"><img alt="언어: 한국어" src="https://img.shields.io/badge/lang-%ED%95%9C%EA%B5%AD%EC%96%B4-blue"></a>
   <img alt="버전 0.1.0" src="https://img.shields.io/badge/version-0.1.0-informational">
   <a href="LICENSE"><img alt="라이선스: MIT" src="https://img.shields.io/badge/license-MIT-green"></a>
+  <br>
+  <a href="https://claude.com/claude-code"><img alt="Claude Code 플러그인" src="https://img.shields.io/badge/Claude%20Code-plugin-D97757?logo=claude&logoColor=white"></a>
+  <a href="https://openai.com/codex/"><img alt="Codex 플러그인" src="https://img.shields.io/badge/Codex-plugin-000000?logo=openai&logoColor=white"></a>
 </p>
 
 [Claude Code](https://claude.com/claude-code)와 Codex / ChatGPT Work mode에서 쓸 수 있는 플러그인입니다. 스킬과 번들 MCP 커넥터로 구성되어 있습니다.
