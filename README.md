@@ -1,6 +1,13 @@
 # Legacy Spec Agent
 
-> A [Claude Code](https://claude.com/claude-code) plugin that reconstructs evidence-backed specifications from undocumented codebases.
+<p align="center">
+  <a href="README.md"><img alt="Language: English" src="https://img.shields.io/badge/lang-English-blue"></a>
+  <a href="README.ko.md"><img alt="Language: Korean" src="https://img.shields.io/badge/lang-%ED%95%9C%EA%B5%AD%EC%96%B4-blue"></a>
+  <img alt="Version 0.1.0" src="https://img.shields.io/badge/version-0.1.0-informational">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green"></a>
+</p>
+
+**A plugin for [Claude Code](https://claude.com/claude-code)** — a skill plus a bundled MCP connector.
 
 Legacy Spec Agent treats the source tree as the source of truth. It reads existing code, extracts behavior, and writes specification artifacts where every factual claim is backed by a `path:line` citation. If a claim cannot be verified against code, it is moved to an **Unverified** section instead of being presented as fact.
 
