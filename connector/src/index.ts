@@ -4,7 +4,14 @@ import { existsSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { createServer } from "./server.js";
 
-const root = resolve(process.argv[2] ?? process.cwd());
+const rootArg = process.argv[2] && !process.argv[2].startsWith("${") ? process.argv[2] : undefined;
+const root = resolve(
+  rootArg ??
+    process.env.LEGACY_SPEC_ROOT ??
+    process.env.CLAUDE_PROJECT_DIR ??
+    process.env.CODEX_PROJECT_DIR ??
+    process.cwd(),
+);
 
 if (!existsSync(root) || !statSync(root).isDirectory()) {
   console.error(`legacy-spec-connector: root is not a directory: ${root}`);
