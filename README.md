@@ -1,6 +1,6 @@
 # Legacy Spec Agent
 
-**A plugin for [Claude Code](https://claude.com/claude-code)** — a skill plus a bundled MCP connector.
+**A plugin for Codex and ChatGPT Work mode** — a skill plus a bundled MCP connector. A legacy-compatible Claude Code manifest remains for existing users.
 
 Legacy Spec Agent reconstructs a specification from undocumented code. It reads the source, writes the spec that was never written, and attaches a `path:line` citation to every claim. When the code later changes, it re-checks each citation and reports what drifted.
 
@@ -44,16 +44,15 @@ Large repositories are handled with two mechanisms. Item-level outputs accept a 
 
 ## Installation
 
-As a plugin, which installs the skill and the connector together:
+As a Codex plugin, this repository now includes the required `.codex-plugin/plugin.json`, a bundled `skills/` directory, and inline Codex MCP connector metadata. For local testing from this checkout, add the repo marketplace and then install the plugin from the ChatGPT desktop app Plugins Directory:
 
 ```bash
-claude plugin marketplace add hoonstyle/legacy-spec-agent
-claude plugin install legacy-spec-agent@legacy-spec-agent
+codex plugin marketplace add "$(pwd)"
 ```
 
-The connector builds itself on first launch (network required once) and rebuilds when a plugin update ships newer sources. Without the connector, the skill still works in LLM-only mode.
+The marketplace file at `.agents/plugins/marketplace.json` points Codex at this repository root. Codex reads its MCP connector config inline from `.codex-plugin/plugin.json`, where `connector/bootstrap.mjs` is launched from the installed plugin root with `cwd: "."`. The root `.mcp.json` remains Claude Code-specific and uses Claude Code's `${CLAUDE_PLUGIN_ROOT}` and `${CLAUDE_PROJECT_DIR}` substitutions. The connector chooses the target project root from an explicit argument, `LEGACY_SPEC_ROOT`, `CLAUDE_PROJECT_DIR`, `CODEX_PROJECT_DIR`, or finally its current working directory. The connector builds itself on first launch (network required once) and rebuilds when a plugin update ships newer sources. Without the connector, the skill still works in LLM-only mode.
 
-Alternatively, copy this directory into a skills location Claude Code discovers, such as `.claude/skills/legacy-spec-agent/`, and ask Claude to reconstruct a spec for an undocumented file or directory.
+For existing Claude Code users, the legacy `.claude-plugin/` manifest is still present. You can also copy this directory into a skill location discovered by your agent, such as `.codex/skills/legacy-spec-agent/`, and ask it to reconstruct a spec for an undocumented file or directory.
 
 ## Repository layout
 
@@ -67,7 +66,10 @@ demo-hookify/        A real Mode A run against a third-party package, full artif
 evals/               With-skill vs. baseline benchmarks
 skills/              Plugin-layout copy of the skill, kept in sync by a test
 scripts/             Utility to re-sync the plugin copy after editing SKILL.md
-.claude-plugin/      Plugin and marketplace manifests; .mcp.json wires the connector
+.codex-plugin/      Codex plugin manifest
+.agents/plugins/     Repo-local Codex marketplace for local installation
+.claude-plugin/      Legacy Claude Code plugin and marketplace manifests
+.mcp.json            Claude Code MCP config for the bundled connector
 showcase.html        Tabbed viewer for the demo artifacts
 ```
 
