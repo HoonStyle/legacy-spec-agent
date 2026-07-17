@@ -8,9 +8,7 @@
 </p>
 
 
-> 문서가 부족한 레거시 코드베이스에서 근거 기반 명세서를 재구성하는 [Claude Code](https://claude.com/claude-code) 플러그인입니다.
-
-Codex / ChatGPT Work mode 지원은 저장소 내 Codex 플러그인 및 마켓플레이스 매니페스트로 제공합니다.
+> 문서가 부족한 레거시 코드베이스에서 근거 기반 명세서를 재구성하는 플러그인입니다. [Claude Code](https://claude.com/claude-code)와 Codex / ChatGPT Work mode를 모두 지원합니다.
 
 Legacy Spec Agent는 소스 트리를 유일한 진실의 원천으로 다룹니다. 기존 코드를 읽고 동작을 추출한 뒤, 모든 사실성 주장에 `path:line` 형태의 코드 인용을 붙여 명세 산출물을 작성합니다. 코드로 검증할 수 없는 주장은 사실처럼 표시하지 않고 **Unverified** 섹션으로 분리합니다.
 

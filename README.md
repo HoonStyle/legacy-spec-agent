@@ -7,9 +7,7 @@
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green"></a>
 </p>
 
-**A plugin for [Claude Code](https://claude.com/claude-code)** — a skill plus a bundled MCP connector.
-
-Codex / ChatGPT Work mode support is provided by the repo-local Codex plugin and marketplace manifests.
+**A plugin for [Claude Code](https://claude.com/claude-code) and Codex / ChatGPT Work mode** — a skill plus a bundled MCP connector.
 
 Legacy Spec Agent treats the source tree as the source of truth. It reads existing code, extracts behavior, and writes specification artifacts where every factual claim is backed by a `path:line` citation. If a claim cannot be verified against code, it is moved to an **Unverified** section instead of being presented as fact.
 
