@@ -1,91 +1,147 @@
 # Legacy Spec Agent
 
-**A plugin for Codex and ChatGPT Work mode** — a skill plus a bundled MCP connector. A legacy-compatible Claude Code manifest remains for existing users.
+<p align="center">
+  <a href="README.md"><img alt="Language: English" src="https://img.shields.io/badge/lang-English-blue"></a>
+  <a href="README.ko.md"><img alt="Language: Korean" src="https://img.shields.io/badge/lang-%ED%95%9C%EA%B5%AD%EC%96%B4-blue"></a>
+  <img alt="Version 0.1.0" src="https://img.shields.io/badge/version-0.1.0-informational">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green"></a>
+</p>
 
-Legacy Spec Agent reconstructs a specification from undocumented code. It reads the source, writes the spec that was never written, and attaches a `path:line` citation to every claim. When the code later changes, it re-checks each citation and reports what drifted.
+**A plugin for [Claude Code](https://claude.com/claude-code)** — a skill plus a bundled MCP connector.
 
-It never asks for an existing spec as input. In real legacy systems the documentation is missing or wrong, but the code is always there, so the code is treated as the only source of truth. Anything the tool cannot back with a citation goes into a separate "Unverified" section instead of being presented as fact.
+Legacy Spec Agent treats the source tree as the source of truth. It reads existing code, extracts behavior, and writes specification artifacts where every factual claim is backed by a `path:line` citation. If a claim cannot be verified against code, it is moved to an **Unverified** section instead of being presented as fact.
 
-## How it differs from asking an LLM to summarize a repo
+When the code changes later, Legacy Spec Agent can re-check the recorded citations and report whether each one is still intact, moved, drifted, orphaned, or unresolved.
 
-An LLM summary is fluent but unverifiable. This tool adds two checks on top of the model:
+## Why not just ask an LLM to summarize the repo?
 
-1. **Critic gate.** Before anything ships, a mandatory review pass reopens every cited line. Claims the code supports are marked verified; the rest are quarantined, not deleted and not promoted.
-2. **Deterministic connector.** A TypeScript MCP server handles the parts that should never vary between runs: verifying citations against actual source, indexing symbols, classifying drift, extracting facts from manifests, and rendering charts. The model does the reasoning; the connector enforces the evidence.
+A normal LLM summary can be helpful, but it is difficult to audit. Legacy Spec Agent adds two guardrails:
 
-## What it produces
+1. **Critic gate** — before artifacts are emitted, a review pass reopens every cited line and verifies that the source supports the claim.
+2. **Deterministic MCP connector** — repeatable tasks such as citation verification, symbol indexing, drift detection, manifest extraction, and chart rendering are handled by a TypeScript MCP server instead of free-form model output.
 
-| Deliverable | Contents |
-|---|---|
-| `SPEC.md` | Purpose, business rules, I/O, and constraints, with a citation on every rule |
-| `ARCHITECTURE.md` | Dependency graph plus a control-flow flowchart, both traced to code |
-| `INTERFACES.md` | Public API surface with real signatures |
-| `DATA_MODEL.md` | Entities, fields, and relations, with a Mermaid ER diagram |
-| `ONBOARDING.md` | Build and run commands, dependencies, and environment variables |
-| `TESTCASES.md` | Characterization tests that lock in current behavior before a refactor |
-| `RISKS.md` | Register of defect candidates flagged during verification |
-| `CHANGELOG.md` | Git history grouped by conventional-commit type |
-| `DRIFT_REPORT.md` | Per-citation drift classification: intact, moved, drifted, orphaned, or unresolved |
-| `audit_log.jsonl` | Append-only record of every verify/flag decision |
-| Charts | Coverage, drift, and benchmark charts, plus architecture and ER diagrams |
-| `REPORT.html` | Everything above assembled into one self-contained tabbed page (connector-generated) |
+The model performs the reasoning; the connector enforces the evidence.
 
-The tool intentionally does not generate ADRs, PRDs, or user manuals. Code shows what a system does, not why a decision was made or what the business intended. Those documents cannot be grounded in a citation, so they are left to humans rather than fabricated.
+## Outputs
 
-## How it works
+| Artifact | Description |
+| --- | --- |
+| `SPEC.md` | Purpose, business rules, inputs, outputs, and constraints. |
+| `ARCHITECTURE.md` | Dependency graph and control-flow flowchart traced to code. |
+| `INTERFACES.md` | Public API surface with real signatures. |
+| `DATA_MODEL.md` | Entities, fields, relations, and a Mermaid ER diagram. |
+| `ONBOARDING.md` | Build/run commands, dependencies, and environment variables. |
+| `TESTCASES.md` | Characterization tests that preserve current behavior before refactoring. |
+| `RISKS.md` | Defect candidates found during verification. |
+| `CHANGELOG.md` | Git history grouped by conventional-commit type. |
+| `DRIFT_REPORT.md` | Per-citation drift classifications. |
+| `audit_log.jsonl` | Append-only verification and flagging history. |
+| Charts | Coverage, drift, benchmark, architecture, and ER diagrams. |
+| `REPORT.html` | A self-contained tabbed report generated by the connector. |
 
-**Mode A (reverse-spec)** runs a five-phase pipeline: scope the codebase, extract behavior module by module (one subagent per module), synthesize the architecture, pass everything through the Critic gate, then emit the artifacts.
+Legacy Spec Agent intentionally does **not** generate ADRs, PRDs, or user manuals. Those documents describe intent and decision-making, which usually cannot be proven from source code alone.
 
-**Mode B (drift check)** takes the commit recorded in an existing spec, reads each cited line as it was at that commit, and looks for that content in the current tree. Every citation is classified deterministically, and the tool proposes diffs instead of rewriting the spec.
+## Modes
 
-The connector exposes nine tools: `verify_citation`, `index_symbols`, `build_call_graph`, `detect_drift`, `extract_data_model`, `extract_project_meta`, `extract_changelog`, `emit_charts`, and `render_report`. The skill uses them when they are available and falls back to plain LLM operation when they are not.
+### Mode A: reverse-spec
 
-Large repositories are handled with two mechanisms. Item-level outputs accept a `limit` and report exactly how much was omitted when they truncate, and a `package` granularity option collapses file-level graphs into package-level edges so a diagram with hundreds of nodes stays readable.
+Runs the full reconstruction pipeline:
+
+1. Scope the codebase.
+2. Extract behavior module by module.
+3. Synthesize architecture and interfaces.
+4. Run the Critic gate against every citation.
+5. Emit the final artifacts.
+
+### Mode B: drift check
+
+Starts from an existing spec and its recorded commit. The connector compares each cited source line with the current tree, classifies the drift, and proposes updates instead of silently rewriting the spec.
+
+## Connector tools
+
+The bundled MCP connector exposes these deterministic tools:
+
+- `verify_citation`
+- `index_symbols`
+- `build_call_graph`
+- `detect_drift`
+- `extract_data_model`
+- `extract_project_meta`
+- `extract_changelog`
+- `emit_charts`
+- `render_report`
+
+If the connector is unavailable, the skill can still run in LLM-only mode with reduced guarantees.
+
+## Large repository support
+
+Legacy Spec Agent is designed to avoid overwhelming reports on large codebases:
+
+- Item-level outputs accept a `limit` and explicitly report omitted content when truncated.
+- Graphs can be rendered at `package` granularity so large dependency diagrams remain readable.
 
 ## Installation
 
-As a Codex plugin, this repository now includes the required `.codex-plugin/plugin.json`, a bundled `skills/` directory, and inline Codex MCP connector metadata. For local testing from this checkout, add the repo marketplace and then install the plugin from the ChatGPT desktop app Plugins Directory:
+Install the plugin from a Claude Code marketplace source:
 
 ```bash
 codex plugin marketplace add "$(pwd)"
 ```
 
-The marketplace file at `.agents/plugins/marketplace.json` points Codex at this repository root. Codex reads its MCP connector config inline from `.codex-plugin/plugin.json`, where `connector/bootstrap.mjs` is launched from the installed plugin root with `cwd: "."`. The root `.mcp.json` remains Claude Code-specific and uses Claude Code's `${CLAUDE_PLUGIN_ROOT}` and `${CLAUDE_PROJECT_DIR}` substitutions. The connector chooses the target project root from an explicit argument, `LEGACY_SPEC_ROOT`, `CLAUDE_PROJECT_DIR`, `CODEX_PROJECT_DIR`, or finally its current working directory. The connector builds itself on first launch (network required once) and rebuilds when a plugin update ships newer sources. Without the connector, the skill still works in LLM-only mode.
+The connector builds itself on first launch and rebuilds when plugin updates include newer connector sources. This first build requires network access.
 
-For existing Claude Code users, the legacy `.claude-plugin/` manifest is still present. You can also copy this directory into a skill location discovered by your agent, such as `.codex/skills/legacy-spec-agent/`, and ask it to reconstruct a spec for an undocumented file or directory.
+You can also copy this repository into a Claude Code skills directory, for example:
+
+```text
+.claude/skills/legacy-spec-agent/
+```
+
+Then ask Claude to reconstruct a spec for an undocumented file or directory.
 
 ## Repository layout
 
-```
-SKILL.md             Skill definition: workflow, output templates, hard rules
-references/          Extraction, architect, and critic contracts used by the skill
+```text
+SKILL.md             Skill workflow, templates, and hard rules
+references/          Extraction, architecture, and critic contracts
 SPEC.md              Original design document (v0.1)
-CONNECTOR_DESIGN.md  Connector design and milestone record (C0–C7)
-connector/           TypeScript MCP server: nine tools, 49 tests
-demo-hookify/        A real Mode A run against a third-party package, full artifact set
-evals/               With-skill vs. baseline benchmarks
-skills/              Plugin-layout copy of the skill, kept in sync by a test
-scripts/             Utility to re-sync the plugin copy after editing SKILL.md
-.codex-plugin/      Codex plugin manifest
-.agents/plugins/     Repo-local Codex marketplace for local installation
-.claude-plugin/      Legacy Claude Code plugin and marketplace manifests
-.mcp.json            Claude Code MCP config for the bundled connector
-showcase.html        Tabbed viewer for the demo artifacts
+CONNECTOR_DESIGN.md  Connector design and milestone record (C0-C7)
+connector/           TypeScript MCP server with nine tools and tests
+demo-hookify/        Example Mode A run against a third-party package
+evals/               With-skill vs. baseline benchmark results
+skills/              Plugin-layout copy of the skill
+scripts/             Utilities, including plugin skill synchronization
+.claude-plugin/      Plugin and marketplace manifests; .mcp.json wiring
+showcase.html        Tabbed viewer for demo artifacts
 ```
 
 ## Evidence
 
-- `demo-hookify/` is an unmodified run against an unfamiliar third-party package. It produced the full artifact set and, along the way, caught a comment in the original code claiming a feature was "(future)" when the engine already implemented it.
-- `evals/BENCHMARK.md` compares runs with and without the skill on the same prompts: 86–87% citation coverage versus 0% for the baseline, with 6 of 6 sampled citations accurate. The second iteration honestly documents where the gap narrows.
-- The connector's test suite replays all 12 citations from the demo's audit log against the pinned commit and verifies each one mechanically. The suite has 49 tests, including regression cases for every finding from an adversarial code review.
+- `demo-hookify/` contains an unmodified run against an unfamiliar third-party package. It produced the full artifact set and caught a stale source comment that described an already-implemented feature as future work.
+- `evals/BENCHMARK.md` compares with-skill and baseline runs on the same prompts: 86-87% citation coverage for the skill versus 0% for the baseline, with 6 of 6 sampled citations accurate.
+- The connector test suite replays all 12 citations from the demo audit log against the pinned commit and verifies them mechanically. The suite has 49 tests, including regression cases for adversarial-review findings.
+
+## Development
+
+Run connector tests before submitting changes:
+
+```bash
+cd connector
+npm test
+```
+
+Optional acceptance tests require `HOOKIFY_ROOT` to point to a Claude Code checkout's `plugins/hookify` directory.
+
+If you edit `SKILL.md` or files in `references/`, sync the plugin copy:
+
+```bash
+node scripts/sync-plugin-skill.mjs
+```
+
+A test fails if the root skill files and plugin-layout copy diverge.
 
 ## Contributing
 
-Issues and pull requests are welcome.
-
-- Run the tests before submitting: `cd connector && npm test`. Set `HOOKIFY_ROOT` to a claude-code checkout's `plugins/hookify` directory to enable the acceptance tests.
-- If you edit `SKILL.md` or `references/`, run `node scripts/sync-plugin-skill.mjs` to update the plugin copy. A test fails if the copies diverge.
-- When you claim something about behavior, cite the line. The review standard here is the same one the tool enforces.
+Issues and pull requests are welcome. When documenting behavior, follow the same standard the tool enforces: cite the exact source line that supports the claim.
 
 ## License
 
