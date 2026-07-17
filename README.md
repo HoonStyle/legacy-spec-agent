@@ -1,6 +1,15 @@
 # Legacy Spec Agent
 
-> A [Claude Code](https://claude.com/claude-code) plugin that reconstructs evidence-backed specifications from undocumented codebases.
+<p align="center">
+  <a href="README.md"><img alt="Language: English" src="https://img.shields.io/badge/lang-English-blue"></a>
+  <a href="README.ko.md"><img alt="Language: Korean" src="https://img.shields.io/badge/lang-%ED%95%9C%EA%B5%AD%EC%96%B4-blue"></a>
+  <img alt="Version 0.1.0" src="https://img.shields.io/badge/version-0.1.0-informational">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green"></a>
+</p>
+
+**A plugin for [Claude Code](https://claude.com/claude-code)** — a skill plus a bundled MCP connector.
+
+Codex / ChatGPT Work mode support is provided by the repo-local Codex plugin and marketplace manifests.
 
 Legacy Spec Agent treats the source tree as the source of truth. It reads existing code, extracts behavior, and writes specification artifacts where every factual claim is backed by a `path:line` citation. If a claim cannot be verified against code, it is moved to an **Unverified** section instead of being presented as fact.
 
@@ -75,21 +84,13 @@ Legacy Spec Agent is designed to avoid overwhelming reports on large codebases:
 
 ## Installation
 
-Install the plugin from a Claude Code marketplace source:
+For local Codex / ChatGPT Work mode testing, add this checkout as a local plugin marketplace and install **Legacy Spec Agent** from the Plugins Directory:
 
 ```bash
 codex plugin marketplace add "$(pwd)"
 ```
 
-The connector builds itself on first launch and rebuilds when plugin updates include newer connector sources. This first build requires network access.
-
-You can also copy this repository into a Claude Code skills directory, for example:
-
-```text
-.claude/skills/legacy-spec-agent/
-```
-
-Then ask Claude to reconstruct a spec for an undocumented file or directory.
+Existing Claude Code users can continue using the legacy `.claude-plugin/` manifest and root `.mcp.json`. Both runtimes share the same connector implementation, but keep separate launch metadata so each can use its own path handling. Without the connector, the skill still works in LLM-only mode.
 
 ## Repository layout
 
@@ -103,7 +104,10 @@ demo-hookify/        Example Mode A run against a third-party package
 evals/               With-skill vs. baseline benchmark results
 skills/              Plugin-layout copy of the skill
 scripts/             Utilities, including plugin skill synchronization
-.claude-plugin/      Plugin and marketplace manifests; .mcp.json wiring
+.codex-plugin/       Codex plugin manifest
+.agents/plugins/     Repo-local Codex marketplace for local installation
+.claude-plugin/      Legacy Claude Code plugin and marketplace manifests
+.mcp.json            Claude Code MCP config for the bundled connector
 showcase.html        Tabbed viewer for demo artifacts
 ```
 
@@ -111,7 +115,7 @@ showcase.html        Tabbed viewer for demo artifacts
 
 - `demo-hookify/` contains an unmodified run against an unfamiliar third-party package. It produced the full artifact set and caught a stale source comment that described an already-implemented feature as future work.
 - `evals/BENCHMARK.md` compares with-skill and baseline runs on the same prompts: 86-87% citation coverage for the skill versus 0% for the baseline, with 6 of 6 sampled citations accurate.
-- The connector test suite replays all 12 citations from the demo audit log against the pinned commit and verifies them mechanically. The suite has 49 tests, including regression cases for adversarial-review findings.
+- The connector test suite replays all 12 citations from the demo audit log against the pinned commit and verifies them mechanically. It also includes regression cases for plugin packaging and adversarial-review findings.
 
 ## Development
 
