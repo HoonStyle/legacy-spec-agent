@@ -1,5 +1,12 @@
 # Legacy Spec Agent
 
+<p align="center">
+  <a href="README.md"><img alt="Language: English" src="https://img.shields.io/badge/lang-English-blue"></a>
+  <a href="README.ko.md"><img alt="Language: Korean" src="https://img.shields.io/badge/lang-%ED%95%9C%EA%B5%AD%EC%96%B4-blue"></a>
+  <img alt="Version 0.1.0" src="https://img.shields.io/badge/version-0.1.0-informational">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green"></a>
+</p>
+
 **A plugin for [Claude Code](https://claude.com/claude-code)** — a skill plus a bundled MCP connector.
 
 Legacy Spec Agent reconstructs a specification from undocumented code. It reads the source, writes the spec that was never written, and attaches a `path:line` citation to every claim. When the code later changes, it re-checks each citation and reports what drifted.
