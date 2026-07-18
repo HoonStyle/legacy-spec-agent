@@ -97,6 +97,10 @@ if git -C "$tmpdir/wiki-repo" diff --cached --quiet; then
   exit 0
 fi
 
+if ! git -C "$tmpdir/wiki-repo" config user.email >/dev/null; then
+  git -C "$tmpdir/wiki-repo" config user.name "github-actions[bot]"
+  git -C "$tmpdir/wiki-repo" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+fi
 git -C "$tmpdir/wiki-repo" commit -m "$message"
 git -C "$tmpdir/wiki-repo" push origin HEAD
 
