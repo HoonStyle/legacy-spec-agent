@@ -13,6 +13,7 @@
  */
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { CitationLineCache, type CitationRange, citationsOverlap, isCitation, parseCitation } from "./citations.js";
 import { resolveWithinRoot } from "./matching.js";
 
 const DOCS: Array<{ file: string; label: string }> = [
@@ -30,12 +31,10 @@ const DOCS: Array<{ file: string; label: string }> = [
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-const CITE_RE = /^[\w./\\-]+\.(py|ts|js|jsx|tsx|md|json|jsonl|sh|mjs):\d+(-\d+)?$/;
-
 function inline(s: string): string {
   return s
     .replace(/`([^`]+)`/g, (_, c: string) =>
-      CITE_RE.test(c) ? `<code class="cite">${c}</code>` : `<code>${c}</code>`)
+      isCitation(c) ? `<code class="cite">${c}</code>` : `<code>${c}</code>`)
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/(^|[\s(])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>")
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, `<a href="$2">$1</a>`);
@@ -191,22 +190,27 @@ function readAudit(path: string): AuditEntry[] {
   return readFileSync(path, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l));
 }
 
-function citationsIn(markdown: string): string[] {
-  return Array.from(markdown.matchAll(/`([^`]+)`/g))
-    .map((m) => m[1])
-    .filter((c) => CITE_RE.test(c));
+interface DocCitation {
+  doc: string;
+  parsed: CitationRange;
 }
 
-function citationPath(citation: string): { path: string; line: number } {
-  const [path, line] = citation.replace(/-\d+$/, "").split(/:(?=\d+$)/);
-  return { path, line: Number(line) };
+function citationsIn(markdown: string): CitationRange[] {
+  return Array.from(markdown.matchAll(/`([^`]+)`/g))
+    .map((m) => parseCitation(m[1]))
+    .filter((c): c is CitationRange => c !== undefined);
 }
 
 function qualityTab(root: string, docs: DocTab[], audit: AuditEntry[]): string {
-  const citations = docs.flatMap((doc) =>
-    citationsIn(doc.markdown).map((citation) => ({ doc: doc.file, citation })),
+  const citations: DocCitation[] = docs.flatMap((doc) =>
+    citationsIn(doc.markdown).map((parsed) => ({ doc: doc.file, parsed })),
   );
-  const auditEvidence = new Set(audit.map((e) => e.evidence).filter((e): e is string => !!e));
+  const auditEvidence = audit
+    .map((e) => e.evidence)
+    .filter((e): e is string => !!e)
+    .map(parseCitation)
+    .filter((e): e is CitationRange => e !== undefined);
+  const lineCache = new CitationLineCache();
   let missing = 0;
   let lineMismatch = 0;
   const byDoc = new Map<string, { citations: number; missing: number; lineMismatch: number; auditCovered: number }>();
@@ -214,28 +218,21 @@ function qualityTab(root: string, docs: DocTab[], audit: AuditEntry[]): string {
   for (const item of citations) {
     const entry = byDoc.get(item.doc) ?? { citations: 0, missing: 0, lineMismatch: 0, auditCovered: 0 };
     entry.citations++;
-    if (auditEvidence.has(item.citation)) entry.auditCovered++;
-    const { path, line } = citationPath(item.citation);
-    try {
-      const file = resolveWithinRoot(root, path);
-      if (!existsSync(file) || !statSync(file).isFile()) {
-        missing++;
-        entry.missing++;
-      } else {
-        const lines = readFileSync(file, "utf8").split(/\r?\n/);
-        if (line < 1 || line > lines.length) {
-          lineMismatch++;
-          entry.lineMismatch++;
-        }
-      }
-    } catch {
+    if (auditEvidence.some((e) => citationsOverlap(item.parsed, e))) entry.auditCovered++;
+    const check = lineCache.check(root, item.parsed);
+    if (check.verdict === "file_missing") {
       missing++;
       entry.missing++;
+    } else if (check.verdict === "line_mismatch") {
+      lineMismatch++;
+      entry.lineMismatch++;
     }
     byDoc.set(item.doc, entry);
   }
 
-  const auditCovered = citations.filter((c) => auditEvidence.has(c.citation)).length;
+  const auditCovered = citations.filter((c) =>
+    auditEvidence.some((e) => citationsOverlap(c.parsed, e)),
+  ).length;
   const verified = audit.filter((e) => e.action === "verified").length;
   const flagged = audit.filter((e) => e.action === "flagged").length;
   const score = citations.length === 0
