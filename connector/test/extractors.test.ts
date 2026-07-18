@@ -99,6 +99,7 @@ test("extractProjectMeta: manifest facts, run commands, env surface", () => {
       JSON.stringify({ name: "demo", version: "2.1.0", description: "d", dependencies: { zod: "^3" }, scripts: { build: "tsc", test: "node" } }),
     );
     writeFileSync(join(root, "app.py"), "import os\nKEY = os.environ.get('API_KEY')\nDB = os.getenv('DB_URL')\n");
+    writeFileSync(join(root, "app.ts"), "export const token = process.env.API_TOKEN;\n");
     mkdirSync(join(root, "test"));
     writeFileSync(
       join(root, "test", "server.test.ts"),
@@ -127,9 +128,18 @@ test("extractProjectMeta: manifest facts, run commands, env surface", () => {
     writeFileSync(
       join(root, "test", "test_models.py"),
       [
+        "import os",
         "import pytest",
         "",
+        "@pytest.mark.skipif(",
+        "    not os.getenv('PY_FIXTURE_ROOT'),",
+        "    reason='PY_FIXTURE_ROOT not set',",
+        ")",
         "def test_extracts_model():",
+        "    assert True",
+        "def helper_with_skip_word():",
+        "    return 'skip but not a decorator'",
+        "def test_ungated_python_case():",
         "    assert True",
         "",
       ].join("\n"),
@@ -151,12 +161,12 @@ test("extractProjectMeta: manifest facts, run commands, env surface", () => {
     assert.equal(pm.version, "2.1.0");
     assert.ok(pm.dependencies.includes("zod"));
     assert.ok(pm.run_commands.includes("npm run build"));
-    assert.deepEqual(pm.env_vars.map((e) => e.key), ["API_KEY", "DB_URL"]);
+    assert.deepEqual(pm.env_vars.map((e) => e.key), ["API_KEY", "API_TOKEN", "DB_URL"]);
     assert.equal(pm.env_vars[0].path, "app.py");
     assert.ok(pm.has.readme);
     assert.ok(pm.has.tests);
     assert.equal(pm.tests.total_files, 4);
-    assert.equal(pm.tests.total_cases, 10);
+    assert.equal(pm.tests.total_cases, 11);
     assert.deepEqual(pm.tests.files.map((f) => f.path), ["test/integration.ts", "test/server.test.ts", "test/test_models.py", "test/test_units.py"]);
     assert.equal(pm.tests.files[0].framework, "node:test");
     assert.deepEqual(pm.tests.files[0].cases.map((c) => c.name), ["root test directory file"]);
@@ -177,9 +187,14 @@ test("extractProjectMeta: manifest facts, run commands, env surface", () => {
     assert.deepEqual(pm.tests.files[1].cases[4].requires_env_vars, ["HOOKIFY_ROOT"]);
     assert.equal(pm.tests.files[1].cases[5].skipped, false);
     assert.equal(pm.tests.files[1].cases[6].skipped, false);
-    assert.equal(pm.tests.skipped_cases, 3);
+    assert.equal(pm.tests.skipped_cases, 4);
     assert.deepEqual(pm.tests.files[1].env_vars.map((e) => e.key), ["HOOKIFY_ROOT"]);
     assert.equal(pm.tests.files[2].framework, "pytest");
+    assert.deepEqual(pm.tests.files[2].cases.map((c) => c.name), ["test_extracts_model", "test_ungated_python_case"]);
+    assert.equal(pm.tests.files[2].cases[0].skipped, true);
+    assert.deepEqual(pm.tests.files[2].cases[0].requires_env_vars, ["PY_FIXTURE_ROOT"]);
+    assert.equal(pm.tests.files[2].cases[1].skipped, false);
+    assert.deepEqual(pm.tests.files[2].env_vars.map((e) => e.key), ["PY_FIXTURE_ROOT"]);
     assert.equal(pm.tests.files[3].framework, "unittest");
     assert.ok(!pm.has.dockerfile);
   } finally {
