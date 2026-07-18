@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { basename, extname, join, resolve, sep } from "node:path";
 import type Parser from "tree-sitter";
 import { parsePython, pythonFiles } from "./indexer.js";
 
@@ -132,6 +132,23 @@ export interface EnvVar {
   path: string;
   line: number;
 }
+export interface TestCaseMeta {
+  name: string;
+  line: number;
+  skipped?: boolean;
+}
+export interface TestFileMeta {
+  path: string;
+  framework: "node:test" | "pytest" | "unittest" | "unknown";
+  cases: TestCaseMeta[];
+  env_vars: EnvVar[];
+}
+export interface TestInventory {
+  files: TestFileMeta[];
+  total_files: number;
+  total_cases: number;
+  skipped_cases: number;
+}
 export interface ProjectMeta {
   root: string;
   name?: string;
@@ -142,6 +159,7 @@ export interface ProjectMeta {
   dependencies: string[];
   run_commands: string[];
   env_vars: EnvVar[];
+  tests: TestInventory;
   has: { readme: boolean; dockerfile: boolean; ci: boolean; tests: boolean };
 }
 
@@ -188,6 +206,129 @@ function scanEnvVars(rootAbs: string, files: string[]): EnvVar[] {
   return out.sort((a, b) => a.key.localeCompare(b.key));
 }
 
+const TEST_EXTS = new Set([".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".py"]);
+const WALK_SKIP_DIRS = new Set([".git", "node_modules", "dist", "__pycache__", ".venv", "venv", ".tox"]);
+
+function walkTextFiles(rootAbs: string): string[] {
+  const files: string[] = [];
+  const stack = [rootAbs];
+  while (stack.length > 0) {
+    const dir = stack.pop()!;
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const abs = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!WALK_SKIP_DIRS.has(entry.name)) stack.push(abs);
+      } else if (entry.isFile()) {
+        files.push(abs);
+      }
+    }
+  }
+  return files.sort().map((f) => f.slice(rootAbs.length + 1).split(sep).join("/"));
+}
+
+function looksLikeTestFile(rel: string): boolean {
+  const base = basename(rel);
+  const ext = extname(base);
+  if (!TEST_EXTS.has(ext)) return false;
+  return (
+    rel.startsWith("test/") ||
+    rel.startsWith("tests/") ||
+    rel.includes("/test/") ||
+    rel.includes("/tests/") ||
+    /\.test\.[cm]?[jt]sx?$/.test(base) ||
+    /\.spec\.[cm]?[jt]sx?$/.test(base) ||
+    /^test_.*\.py$/.test(base) ||
+    /_test\.py$/.test(base)
+  );
+}
+
+function scanEnvVarsInSource(rel: string, src: string): EnvVar[] {
+  const out: EnvVar[] = [];
+  const seen = new Set<string>();
+  src.split(/\r?\n/).forEach((line, i) => {
+    for (const { re } of ENV_PATTERNS) {
+      for (const m of line.matchAll(re)) {
+        const key = m[1];
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({ key, path: rel, line: i + 1 });
+      }
+    }
+  });
+  return out.sort((a, b) => a.key.localeCompare(b.key));
+}
+
+function testFramework(src: string, rel: string): TestFileMeta["framework"] {
+  if (src.includes("node:test")) return "node:test";
+  if (/\bpytest\b/.test(src)) return "pytest";
+  if (/\bunittest\b/.test(src)) return "unittest";
+  if (rel.endsWith(".py")) return "unknown";
+  return "unknown";
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function skippedOptionVars(src: string): Set<string> {
+  const vars = new Set<string>();
+  const re = /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\{([\s\S]*?)\}/g;
+  for (const m of src.matchAll(re)) {
+    if (/\bskip\s*:/.test(m[2])) vars.add(m[1]);
+  }
+  return vars;
+}
+
+function extractTestCases(src: string, rel: string): TestCaseMeta[] {
+  const cases: TestCaseMeta[] = [];
+  const lines = src.split(/\r?\n/);
+  const skippedVars = skippedOptionVars(src);
+  lines.forEach((line, i) => {
+    const js = /\b(test|it)(\.skip|\.only)?\(\s*(["'`])([^"'`]+)\3([^;]*)/g;
+    for (const m of line.matchAll(js)) {
+      const options = m[5] ?? "";
+      const usesSkippedVar = [...skippedVars].some((name) => new RegExp(`,\\s*${escapeRegExp(name)}\\b`).test(options));
+      cases.push({ name: m[4], line: i + 1, skipped: m[2] === ".skip" || /,\s*\{[^)]*\bskip\s*:/.test(options) || usesSkippedVar });
+    }
+    const py = /^\s*def\s+(test_[A-Za-z0-9_]+)\s*\(/.exec(line);
+    if (py) cases.push({ name: py[1], line: i + 1, skipped: /skip|xfail/.test(lines.slice(Math.max(0, i - 3), i + 1).join("\n")) });
+  });
+  return cases;
+}
+
+function extractTestInventory(rootAbs: string): TestInventory {
+  const files: TestFileMeta[] = [];
+  for (const rel of walkTextFiles(rootAbs).filter(looksLikeTestFile)) {
+    let src: string;
+    try {
+      src = readFileSync(join(rootAbs, rel), "utf8");
+    } catch {
+      continue;
+    }
+    const cases = extractTestCases(src, rel);
+    files.push({
+      path: rel,
+      framework: testFramework(src, rel),
+      cases,
+      env_vars: scanEnvVarsInSource(rel, src),
+    });
+  }
+  const totalCases = files.reduce((n, f) => n + f.cases.length, 0);
+  const skippedCases = files.reduce((n, f) => n + f.cases.filter((c) => c.skipped).length, 0);
+  return {
+    files,
+    total_files: files.length,
+    total_cases: totalCases,
+    skipped_cases: skippedCases,
+  };
+}
+
 export function extractProjectMeta(root: string): ProjectMeta {
   const rootAbs = resolve(root);
   const has = (p: string) => existsSync(join(rootAbs, p));
@@ -197,11 +338,12 @@ export function extractProjectMeta(root: string): ProjectMeta {
     dependencies: [],
     run_commands: [],
     env_vars: [],
+    tests: { files: [], total_files: 0, total_cases: 0, skipped_cases: 0 },
     has: {
       readme: has("README.md") || has("readme.md"),
       dockerfile: has("Dockerfile"),
       ci: existsSync(join(rootAbs, ".github/workflows")),
-      tests: has("tests") || has("test"),
+      tests: false,
     },
   };
 
@@ -252,6 +394,8 @@ export function extractProjectMeta(root: string): ProjectMeta {
   }
   if (meta.has.dockerfile) meta.run_commands.push("docker build .");
 
+  meta.tests = extractTestInventory(rootAbs);
+  meta.has.tests = meta.tests.total_files > 0;
   meta.env_vars = scanEnvVars(rootAbs, pyFiles);
   meta.dependencies = [...new Set(meta.dependencies)].sort();
   meta.run_commands = [...new Set(meta.run_commands)];

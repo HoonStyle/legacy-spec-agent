@@ -51,7 +51,7 @@ test("renderReport: writes a tabbed page with stats, charts, and doc-bound diagr
   withDeliverables((root) => {
     const r = renderReport(root, { title: "demo report" });
     assert.ok(r.path.endsWith("REPORT.html"));
-    assert.deepEqual(r.tabs, ["Overview", "SPEC", "Architecture", "Audit log"]);
+    assert.deepEqual(r.tabs, ["Overview", "SPEC", "Architecture", "Quality", "Audit log"]);
     assert.equal(r.charts_embedded, 2); // coverage.svg + SPEC.1.svg
     assert.equal(r.mermaid_fallbacks, 1); // ARCHITECTURE.md fence had no asset
 
@@ -62,6 +62,8 @@ test("renderReport: writes a tabbed page with stats, charts, and doc-bound diagr
     assert.ok(html.includes("flowchart TD\n  X --&gt; Y")); // fallback keeps mermaid source
     assert.ok(html.includes(`class="cite"`)); // citation styling applied
     assert.ok(html.includes(`badge verified`) && html.includes(`badge flagged`));
+    assert.ok(html.includes("Generated documentation quality"));
+    assert.ok(html.includes("audit coverage"));
     // doc-bound asset must not also appear as an overview card
     const diagCount = html.split(">DIAG1<").length - 1;
     assert.equal(diagCount, 1);
