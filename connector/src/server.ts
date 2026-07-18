@@ -196,7 +196,7 @@ export function createServer(root: string): McpServer {
         "Extract onboarding facts from manifests and code: name/version/description (package.json, pyproject, " +
         ".claude-plugin/plugin.json), dependencies, run commands (npm scripts, plugin hooks, Dockerfile), the " +
         "env/config var surface (os.environ/getenv, process.env — each with path:line), test inventory " +
-        "(test files, test case names, framework, and test-scoped env vars), and which of README/Dockerfile/CI/tests " +
+        "(test files, test case names, framework, case-level required env vars, and test-scoped env vars), and which of README/Dockerfile/CI/tests " +
         "exist. Basis for README.md / ONBOARDING.md / TESTCASES.md.",
       inputSchema: {},
     },

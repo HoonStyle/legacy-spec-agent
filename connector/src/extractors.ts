@@ -136,6 +136,7 @@ export interface TestCaseMeta {
   name: string;
   line: number;
   skipped?: boolean;
+  requires_env_vars?: string[];
 }
 export interface TestFileMeta {
   path: string;
@@ -276,30 +277,77 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function skippedOptionVars(src: string): Set<string> {
-  const vars = new Set<string>();
+function envKeysInText(src: string): string[] {
+  const keys = new Set<string>();
+  for (const { re } of ENV_PATTERNS) {
+    for (const m of src.matchAll(re)) keys.add(m[1]);
+  }
+  return [...keys].sort();
+}
+
+function skippedOptionVars(src: string): Map<string, string[]> {
+  const vars = new Map<string, string[]>();
   const re = /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\{([\s\S]*?)\}/g;
   for (const m of src.matchAll(re)) {
-    if (/\bskip\s*:/.test(m[2])) vars.add(m[1]);
+    if (/\bskip\s*:/.test(m[2])) vars.set(m[1], envKeysInText(m[2]));
   }
   return vars;
+}
+
+function lineNumberAt(src: string, index: number): number {
+  return src.slice(0, index).split(/\r?\n/).length;
+}
+
+function callExpressionEnd(src: string, openParen: number): number {
+  let depth = 0;
+  let quote = "";
+  for (let i = openParen; i < src.length; i += 1) {
+    const ch = src[i];
+    const next = src[i + 1];
+    if (quote) {
+      if (ch === "\\") i += 1;
+      else if (ch === quote) quote = "";
+      continue;
+    }
+    if ((ch === "/" && next === "/") || (ch === "/" && next === "*")) {
+      const end = next === "/" ? src.indexOf("\n", i + 2) : src.indexOf("*/", i + 2);
+      i = end === -1 ? src.length : end + (next === "*" ? 1 : 0);
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === "`") quote = ch;
+    else if (ch === "(") depth += 1;
+    else if (ch === ")") {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
 }
 
 function extractTestCases(src: string, rel: string): TestCaseMeta[] {
   const cases: TestCaseMeta[] = [];
   const lines = src.split(/\r?\n/);
   const skippedVars = skippedOptionVars(src);
+  const js = /\b(test|it)(\.skip|\.only)?\(\s*(["'`])([^"'`]+)\3/g;
+  for (const m of src.matchAll(js)) {
+    const openParen = (m.index ?? 0) + m[0].indexOf("(");
+    const end = callExpressionEnd(src, openParen);
+    const call = end === -1 ? m[0] : src.slice(openParen, end + 1);
+    const usedSkippedVars = [...skippedVars.entries()].filter(([name]) => new RegExp(`,\\s*${escapeRegExp(name)}\\b`).test(call));
+    const inlineSkip = /,\s*\{[\s\S]*?\bskip\s*:/.test(call);
+    const requiresEnvVars = [...new Set([...envKeysInText(call), ...usedSkippedVars.flatMap(([, vars]) => vars)])].sort();
+    cases.push({
+      name: m[4],
+      line: lineNumberAt(src, m.index ?? 0),
+      skipped: m[2] === ".skip" || inlineSkip || usedSkippedVars.length > 0,
+      ...(requiresEnvVars.length > 0 ? { requires_env_vars: requiresEnvVars } : {}),
+    });
+  }
   lines.forEach((line, i) => {
-    const js = /\b(test|it)(\.skip|\.only)?\(\s*(["'`])([^"'`]+)\3([^;]*)/g;
-    for (const m of line.matchAll(js)) {
-      const options = m[5] ?? "";
-      const usesSkippedVar = [...skippedVars].some((name) => new RegExp(`,\\s*${escapeRegExp(name)}\\b`).test(options));
-      cases.push({ name: m[4], line: i + 1, skipped: m[2] === ".skip" || /,\s*\{[^)]*\bskip\s*:/.test(options) || usesSkippedVar });
-    }
     const py = /^\s*def\s+(test_[A-Za-z0-9_]+)\s*\(/.exec(line);
     if (py) cases.push({ name: py[1], line: i + 1, skipped: /skip|xfail/.test(lines.slice(Math.max(0, i - 3), i + 1).join("\n")) });
   });
-  return cases;
+  return cases.sort((a, b) => a.line - b.line || a.name.localeCompare(b.name));
 }
 
 function extractTestInventory(rootAbs: string): TestInventory {
