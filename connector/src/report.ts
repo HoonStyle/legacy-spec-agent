@@ -170,6 +170,104 @@ export interface ReportResult {
   mermaid_fallbacks: number;
 }
 
+interface AuditEntry {
+  id?: string;
+  action?: string;
+  claim?: string;
+  evidence?: string;
+  note?: string;
+}
+
+interface DocTab {
+  id: string;
+  label: string;
+  file: string;
+  markdown: string;
+  html: string;
+}
+
+function readAudit(path: string): AuditEntry[] {
+  if (!existsSync(path)) return [];
+  return readFileSync(path, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l));
+}
+
+function citationsIn(markdown: string): string[] {
+  return Array.from(markdown.matchAll(/`([^`]+)`/g))
+    .map((m) => m[1])
+    .filter((c) => CITE_RE.test(c));
+}
+
+function citationPath(citation: string): { path: string; line: number } {
+  const [path, line] = citation.replace(/-\d+$/, "").split(/:(?=\d+$)/);
+  return { path, line: Number(line) };
+}
+
+function qualityTab(root: string, docs: DocTab[], audit: AuditEntry[]): string {
+  const citations = docs.flatMap((doc) =>
+    citationsIn(doc.markdown).map((citation) => ({ doc: doc.file, citation })),
+  );
+  const auditEvidence = new Set(audit.map((e) => e.evidence).filter((e): e is string => !!e));
+  let missing = 0;
+  let lineMismatch = 0;
+  const byDoc = new Map<string, { citations: number; missing: number; lineMismatch: number; auditCovered: number }>();
+
+  for (const item of citations) {
+    const entry = byDoc.get(item.doc) ?? { citations: 0, missing: 0, lineMismatch: 0, auditCovered: 0 };
+    entry.citations++;
+    if (auditEvidence.has(item.citation)) entry.auditCovered++;
+    const { path, line } = citationPath(item.citation);
+    try {
+      const file = resolveWithinRoot(root, path);
+      if (!existsSync(file) || !statSync(file).isFile()) {
+        missing++;
+        entry.missing++;
+      } else {
+        const lines = readFileSync(file, "utf8").split(/\r?\n/);
+        if (line < 1 || line > lines.length) {
+          lineMismatch++;
+          entry.lineMismatch++;
+        }
+      }
+    } catch {
+      missing++;
+      entry.missing++;
+    }
+    byDoc.set(item.doc, entry);
+  }
+
+  const auditCovered = citations.filter((c) => auditEvidence.has(c.citation)).length;
+  const verified = audit.filter((e) => e.action === "verified").length;
+  const flagged = audit.filter((e) => e.action === "flagged").length;
+  const score = citations.length === 0
+    ? 0
+    : Math.round(((citations.length - missing - lineMismatch) / citations.length) * 100);
+  const coverage = citations.length === 0 ? 0 : Math.round((auditCovered / citations.length) * 100);
+  const rows = [...byDoc.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(
+      ([file, r]) =>
+        `<tr><td><code>${esc(file)}</code></td><td>${r.citations}</td><td>${r.auditCovered}</td>` +
+        `<td>${r.missing}</td><td>${r.lineMismatch}</td></tr>`,
+    )
+    .join("");
+
+  return (
+    `<h2>Generated documentation quality</h2>` +
+    `<p>This tab is produced by <code>render_report</code> from the markdown deliverables and <code>audit_log.jsonl</code>; it is not a hand-authored output file.</p>` +
+    `<div class="stats"><div class="stat"><div class="n">${docs.length}</div><div class="l">markdown docs</div></div>` +
+    `<div class="stat"><div class="n">${citations.length}</div><div class="l">citations</div></div>` +
+    `<div class="stat"><div class="n ok">${score}%</div><div class="l">line-valid citations</div></div>` +
+    `<div class="stat"><div class="n">${coverage}%</div><div class="l">audit coverage</div></div>` +
+    `<div class="stat"><div class="n ok">${verified}</div><div class="l">verified audit rows</div></div>` +
+    `<div class="stat"><div class="n warn">${flagged}</div><div class="l">flagged audit rows</div></div></div>` +
+    `<h3>Per-document citation checks</h3>` +
+    `<div class="tablewrap"><table><thead><tr><th>document</th><th>citations</th><th>audit-covered</th><th>missing files</th><th>line mismatches</th></tr></thead>` +
+    `<tbody>${rows}</tbody></table></div>` +
+    `<h3>Remaining review caveat</h3>` +
+    `<p>Line-valid citations prove the target file and line exist. They do not prove that every natural-language claim is semantically supported; that remains a critic/reviewer responsibility.</p>`
+  );
+}
+
 export function renderReport(root: string, params: ReportParams = {}): ReportResult {
   const base = resolveWithinRoot(root, params.dir ?? ".");
   if (!existsSync(base) || !statSync(base).isDirectory()) {
@@ -184,8 +282,8 @@ export function renderReport(root: string, params: ReportParams = {}): ReportRes
   // Overview: audit stats + every chart in charts/ (sorted, deterministic).
   let overview = "";
   const auditPath = join(base, "audit_log.jsonl");
-  if (existsSync(auditPath)) {
-    const audit = readFileSync(auditPath, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l));
+  const audit = readAudit(auditPath);
+  if (audit.length > 0) {
     const verified = audit.filter((e) => e.action === "verified").length;
     const flagged = audit.filter((e) => e.action === "flagged").length;
     overview +=
@@ -213,6 +311,7 @@ export function renderReport(root: string, params: ReportParams = {}): ReportRes
   }
   if (overview) tabs.push({ id: "overview", label: "Overview", html: overview });
 
+  const docTabs: DocTab[] = [];
   for (const doc of DOCS) {
     const p = join(base, doc.file);
     if (!existsSync(p)) continue;
@@ -225,13 +324,19 @@ export function renderReport(root: string, params: ReportParams = {}): ReportRes
       chartsEmbedded++;
     }
     const { html, mermaidFallbacks: mf } = mdToHtml(readFileSync(p, "utf8"), diagrams);
+    const markdown = readFileSync(p, "utf8");
     mermaidFallbacks += mf;
-    tabs.push({ id: docBase.toLowerCase(), label: doc.label, html });
+    const tab = { id: docBase.toLowerCase(), label: doc.label, file: doc.file, markdown, html };
+    docTabs.push(tab);
+    tabs.push(tab);
+  }
+
+  if (docTabs.length > 0) {
+    tabs.push({ id: "quality", label: "Quality", html: qualityTab(root, docTabs, audit) });
   }
 
   // Audit log as its own tab.
-  if (existsSync(auditPath)) {
-    const audit = readFileSync(auditPath, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l));
+  if (audit.length > 0) {
     const rows = audit
       .map(
         (e) =>
