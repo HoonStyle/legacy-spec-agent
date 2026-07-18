@@ -109,10 +109,17 @@ test("extractProjectMeta: manifest facts, run commands, env surface", () => {
         "  skip: !process.env.HOOKIFY_ROOT ? 'HOOKIFY_ROOT not set' : false,",
         "};",
         'test("lists tools", () => {});',
+        "test(",
+        '  "multi-line call",',
+        "  () => {},",
+        ");",
         'test.skip("disabled integration", () => {});',
         'test("hookify acceptance", gated, () => {});',
         'test("multiline gated", multilineGated, () => {});',
         'test("skip word in name is still active", () => {});',
+        'test("body call without semicolon", () => {',
+        "  helper();",
+        "})",
         "",
       ].join("\n"),
     );
@@ -149,22 +156,27 @@ test("extractProjectMeta: manifest facts, run commands, env surface", () => {
     assert.ok(pm.has.readme);
     assert.ok(pm.has.tests);
     assert.equal(pm.tests.total_files, 4);
-    assert.equal(pm.tests.total_cases, 8);
+    assert.equal(pm.tests.total_cases, 10);
     assert.deepEqual(pm.tests.files.map((f) => f.path), ["test/integration.ts", "test/server.test.ts", "test/test_models.py", "test/test_units.py"]);
     assert.equal(pm.tests.files[0].framework, "node:test");
     assert.deepEqual(pm.tests.files[0].cases.map((c) => c.name), ["root test directory file"]);
     assert.equal(pm.tests.files[1].framework, "node:test");
     assert.deepEqual(pm.tests.files[1].cases.map((c) => c.name), [
       "lists tools",
+      "multi-line call",
       "disabled integration",
       "hookify acceptance",
       "multiline gated",
       "skip word in name is still active",
+      "body call without semicolon",
     ]);
-    assert.equal(pm.tests.files[1].cases[1].skipped, true);
     assert.equal(pm.tests.files[1].cases[2].skipped, true);
     assert.equal(pm.tests.files[1].cases[3].skipped, true);
-    assert.equal(pm.tests.files[1].cases[4].skipped, false);
+    assert.deepEqual(pm.tests.files[1].cases[3].requires_env_vars, ["HOOKIFY_ROOT"]);
+    assert.equal(pm.tests.files[1].cases[4].skipped, true);
+    assert.deepEqual(pm.tests.files[1].cases[4].requires_env_vars, ["HOOKIFY_ROOT"]);
+    assert.equal(pm.tests.files[1].cases[5].skipped, false);
+    assert.equal(pm.tests.files[1].cases[6].skipped, false);
     assert.equal(pm.tests.skipped_cases, 3);
     assert.deepEqual(pm.tests.files[1].env_vars.map((e) => e.key), ["HOOKIFY_ROOT"]);
     assert.equal(pm.tests.files[2].framework, "pytest");
