@@ -89,3 +89,32 @@ test("renderReport: empty directory and escaping dir are rejected", () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("renderReport: Quality validates citation ranges and normalized audit evidence", () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-report-quality-"));
+  try {
+    mkdirSync(join(root, "core"));
+    writeFileSync(join(root, "core", "loader.py"), ["one", "two", "three", "four", "five"].join("\n") + "\n");
+    writeFileSync(
+      join(root, "SPEC.md"),
+      [
+        "# spec",
+        "",
+        "- good range `core/loader.py:2-4`",
+        "- bad range `core/loader.py:4-500`",
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(root, "audit_log.jsonl"),
+      `{"id":"a","action":"verified","claim":"range","evidence":"./core/loader.py:3","note":"covered inside emitted range"}\n`,
+    );
+
+    renderReport(root);
+    const html = readFileSync(join(root, "REPORT.html"), "utf8");
+    assert.match(html, /<div class="n ok">50%<\/div><div class="l">line-valid citations<\/div>/);
+    assert.match(html, /<div class="n">50%<\/div><div class="l">audit coverage<\/div>/);
+    assert.match(html, /<td><code>SPEC\.md<\/code><\/td><td>2<\/td><td>1<\/td><td>0<\/td><td>1<\/td>/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
