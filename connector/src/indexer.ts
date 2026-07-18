@@ -295,6 +295,13 @@ function resolveRelative(rootAbs: string, fromFile: string, dots: number, dotted
   return undefined;
 }
 
+function importedModuleNames(importFromNode: Parser.SyntaxNode, moduleNode: Parser.SyntaxNode): string[] {
+  return importFromNode.namedChildren
+    .filter((child) => child.startIndex >= moduleNode.endIndex)
+    .map((child) => (child.type === "aliased_import" ? child.childForFieldName("name")?.text : child.text))
+    .filter((name): name is string => !!name && /^[A-Za-z_]\w*$/.test(name));
+}
+
 export function buildCallGraph(
   root: string,
   opts: { subdir?: string; limit?: number; granularity?: "file" | "package" } = {},
@@ -331,22 +338,53 @@ export function buildCallGraph(
           else addExternal(dotted, file);
         }
       } else {
-        // from X import ... — X may be dotted_name or relative_import
+        // from X import ... — X may be dotted_name or relative_import.
+        // Prefer concrete imported submodules when they exist, so
+        // `from pkg import util` produces an edge to pkg/util.py instead of
+        // stopping at pkg/__init__.py (or misclassifying pkg as external when
+        // the package is namespace-style and has no __init__.py).
         const moduleNode = node.childForFieldName("module_name");
         if (!moduleNode) continue;
+        const importedNames = importedModuleNames(node, moduleNode);
         if (moduleNode.type === "relative_import") {
           const dots = (moduleNode.text.match(/^\.+/)?.[0] ?? ".").length;
           const dotted = moduleNode.text.replace(/^\.+/, "");
-          const resolved = resolveRelative(rootAbs, file, dots, dotted);
-          if (resolved) addEdge(file, resolved, moduleNode.text, line);
-          // unresolvable relative imports stay silent-external-free: they can
-          // only point inside the tree, so report as external "." for visibility
-          else addExternal(".", file);
+          const baseResolved = resolveRelative(rootAbs, file, dots, dotted);
+          let matched = false;
+          for (const name of importedNames) {
+            const submodule = resolveRelative(rootAbs, file, dots, [dotted, name].filter(Boolean).join("."));
+            if (submodule) {
+              addEdge(file, submodule, `${moduleNode.text} import ${name}`, line);
+              matched = true;
+            } else if (baseResolved) {
+              addEdge(file, baseResolved, moduleNode.text, line);
+              matched = true;
+            }
+          }
+          if (!matched) {
+            if (baseResolved) addEdge(file, baseResolved, moduleNode.text, line);
+            // unresolvable relative imports stay silent-external-free: they can
+            // only point inside the tree, so report as external "." for visibility
+            else addExternal(".", file);
+          }
         } else {
           const dotted = moduleNode.text;
-          const resolved = resolveModule(rootAbs, dotted);
-          if (resolved) addEdge(file, resolved, dotted, line);
-          else addExternal(dotted, file);
+          const baseResolved = resolveModule(rootAbs, dotted);
+          let matched = false;
+          for (const name of importedNames) {
+            const submodule = resolveModule(rootAbs, `${dotted}.${name}`);
+            if (submodule) {
+              addEdge(file, submodule, `${dotted}.${name}`, line);
+              matched = true;
+            } else if (baseResolved) {
+              addEdge(file, baseResolved, dotted, line);
+              matched = true;
+            }
+          }
+          if (!matched) {
+            if (baseResolved) addEdge(file, baseResolved, dotted, line);
+            else addExternal(dotted, file);
+          }
         }
       }
     }

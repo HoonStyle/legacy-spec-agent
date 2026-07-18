@@ -145,6 +145,41 @@ test("buildCallGraph: limit truncates file edges and reports it", () => {
   }
 });
 
+test("buildCallGraph: from package import submodule resolves the imported file", () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-cg-submodule-"));
+  try {
+    mkdirSync(join(root, "pkg"));
+    writeFileSync(join(root, "pkg", "util.py"), "VALUE = 1\n");
+    writeFileSync(join(root, "pkg", "extra.py"), "VALUE = 2\n");
+    writeFileSync(join(root, "pkg", "__init__.py"), "ROOT = 1\n");
+    writeFileSync(join(root, "main.py"), "from pkg import (util, extra as renamed)\n");
+
+    const g = buildCallGraph(root);
+    assert.deepEqual(g.edges, [
+      { from: "main.py", to: "pkg/extra.py", import: "pkg.extra", line: 1 },
+      { from: "main.py", to: "pkg/util.py", import: "pkg.util", line: 1 },
+    ]);
+    assert.ok(!g.externals.some((e) => e.module === "pkg"));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("buildCallGraph: namespace package submodule imports are internal", () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-cg-namespace-"));
+  try {
+    mkdirSync(join(root, "pkg"));
+    writeFileSync(join(root, "pkg", "util.py"), "VALUE = 1\n");
+    writeFileSync(join(root, "main.py"), "from pkg import util\n");
+
+    const g = buildCallGraph(root);
+    assert.deepEqual(g.edges, [{ from: "main.py", to: "pkg/util.py", import: "pkg.util", line: 1 }]);
+    assert.deepEqual(g.externals, []);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("buildCallGraph: package-qualified, relative, and external imports", () => {
   withProject((root) => {
     const graph = buildCallGraph(root);
