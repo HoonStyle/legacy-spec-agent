@@ -99,6 +99,52 @@ test("extractProjectMeta: manifest facts, run commands, env surface", () => {
       JSON.stringify({ name: "demo", version: "2.1.0", description: "d", dependencies: { zod: "^3" }, scripts: { build: "tsc", test: "node" } }),
     );
     writeFileSync(join(root, "app.py"), "import os\nKEY = os.environ.get('API_KEY')\nDB = os.getenv('DB_URL')\n");
+    mkdirSync(join(root, "test"));
+    writeFileSync(
+      join(root, "test", "server.test.ts"),
+      [
+        'import test from "node:test";',
+        "const gated = { skip: !process.env.HOOKIFY_ROOT ? 'HOOKIFY_ROOT not set' : false };",
+        "const multilineGated = {",
+        "  skip: !process.env.HOOKIFY_ROOT ? 'HOOKIFY_ROOT not set' : false,",
+        "};",
+        'test("lists tools", () => {});',
+        "test(",
+        '  "multi-line call",',
+        "  () => {},",
+        ");",
+        'test.skip("disabled integration", () => {});',
+        'test("hookify acceptance", gated, () => {});',
+        'test("multiline gated", multilineGated, () => {});',
+        'test("skip word in name is still active", () => {});',
+        'test("body call without semicolon", () => {',
+        "  helper();",
+        "})",
+        "",
+      ].join("\n"),
+    );
+    writeFileSync(join(root, "test", "integration.ts"), 'import { it } from "node:test";\nit("root test directory file", () => {});\n');
+    writeFileSync(
+      join(root, "test", "test_models.py"),
+      [
+        "import pytest",
+        "",
+        "def test_extracts_model():",
+        "    assert True",
+        "",
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(root, "test", "test_units.py"),
+      [
+        "import unittest",
+        "",
+        "class DemoTest(unittest.TestCase):",
+        "    def test_unittest_case(self):",
+        "        self.assertTrue(True)",
+        "",
+      ].join("\n"),
+    );
     writeFileSync(join(root, "README.md"), "# demo\n");
     const pm = extractProjectMeta(root);
     assert.equal(pm.name, "demo");
@@ -108,6 +154,33 @@ test("extractProjectMeta: manifest facts, run commands, env surface", () => {
     assert.deepEqual(pm.env_vars.map((e) => e.key), ["API_KEY", "DB_URL"]);
     assert.equal(pm.env_vars[0].path, "app.py");
     assert.ok(pm.has.readme);
+    assert.ok(pm.has.tests);
+    assert.equal(pm.tests.total_files, 4);
+    assert.equal(pm.tests.total_cases, 10);
+    assert.deepEqual(pm.tests.files.map((f) => f.path), ["test/integration.ts", "test/server.test.ts", "test/test_models.py", "test/test_units.py"]);
+    assert.equal(pm.tests.files[0].framework, "node:test");
+    assert.deepEqual(pm.tests.files[0].cases.map((c) => c.name), ["root test directory file"]);
+    assert.equal(pm.tests.files[1].framework, "node:test");
+    assert.deepEqual(pm.tests.files[1].cases.map((c) => c.name), [
+      "lists tools",
+      "multi-line call",
+      "disabled integration",
+      "hookify acceptance",
+      "multiline gated",
+      "skip word in name is still active",
+      "body call without semicolon",
+    ]);
+    assert.equal(pm.tests.files[1].cases[2].skipped, true);
+    assert.equal(pm.tests.files[1].cases[3].skipped, true);
+    assert.deepEqual(pm.tests.files[1].cases[3].requires_env_vars, ["HOOKIFY_ROOT"]);
+    assert.equal(pm.tests.files[1].cases[4].skipped, true);
+    assert.deepEqual(pm.tests.files[1].cases[4].requires_env_vars, ["HOOKIFY_ROOT"]);
+    assert.equal(pm.tests.files[1].cases[5].skipped, false);
+    assert.equal(pm.tests.files[1].cases[6].skipped, false);
+    assert.equal(pm.tests.skipped_cases, 3);
+    assert.deepEqual(pm.tests.files[1].env_vars.map((e) => e.key), ["HOOKIFY_ROOT"]);
+    assert.equal(pm.tests.files[2].framework, "pytest");
+    assert.equal(pm.tests.files[3].framework, "unittest");
     assert.ok(!pm.has.dockerfile);
   } finally {
     rmSync(root, { recursive: true, force: true });

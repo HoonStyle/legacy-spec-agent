@@ -68,6 +68,7 @@ Hand each subagent exactly one module path plus this contract.
    - **verified** — code substantiates the claim as written.
    - **flagged** — citation missing / points to the wrong place / code doesn't support the claim → move to *Unverified* in `SPEC.md` with the reason.
 3. Emit one `audit_log.jsonl` line per decision (`action: "verified"` or `"flagged"`).
+4. Before final emission, scan the generated markdown set for every backticked `path:line` citation and ensure the audit log has an entry for each one. A mechanically valid line is not automatically a semantically verified claim; record that distinction in `note` when needed.
 
 **Bias**: when the code is ambiguous, flag rather than pass. A smaller spec you can trust beats a fuller one you can't. Do not let a plausible-sounding claim through just because it reads well.
 
@@ -75,7 +76,7 @@ Hand each subagent exactly one module path plus this contract.
 
 ## Phase 4 — Emitter (inline)
 
-Assemble verified items into `SPEC.md` (template in SKILL.md), write `ARCHITECTURE.md`, finalize `audit_log.jsonl`. Report to the user: modules covered / total, verified count, unverified count, top 3 risks or unknowns.
+Assemble verified items into `SPEC.md` (template in SKILL.md), write `ARCHITECTURE.md`, finalize `audit_log.jsonl`. Use separate provenance lines (`Analyzed source commit`, `Generated at`) and an explicit coverage line that names omitted scope/truncation. Report to the user: modules covered / total, verified count, unverified count, top 3 risks or unknowns, and whether the connector-generated report Quality tab found missing or line-mismatched citations.
 
 ---
 
@@ -95,11 +96,11 @@ Emit `DRIFT_REPORT.md` and append findings to `audit_log.jsonl`. Never auto-edit
 
 Only build these from **verified** items. Each row still needs a `path:line`.
 
-**INTERFACES.md** — enumerate public functions/classes/entrypoints. For each: exact signature (read it, don't paraphrase), inputs, output shape, and the I/O contract (stdin/stdout/exit/env for CLI-style entrypoints). List `_`-prefixed helpers separately as *internal, not contract*. Anything about an external/host schema the package doesn't define goes to Unverified.
+**INTERFACES.md** — enumerate public functions/classes/entrypoints. For each: exact signature (read it, don't paraphrase), inputs, output shape, and the I/O contract (stdin/stdout/exit/env for CLI-style entrypoints). Include concrete request/response examples when the code defines schemas or typed payloads. List `_`-prefixed helpers separately as *internal, not contract*. Anything about an external/host schema the package doesn't define goes to Unverified.
 
-**TESTCASES.md** — characterization tests, one per verified business rule. Format each as `Given / When / Then (current behavior)` plus the `path:line` it locks. Frame the whole file as behavior-locking for refactoring, NOT requirement conformance. Rules: derive only from verified claims; never from flagged/unverified; omit cases that depend on an external contract; do not claim branch/exhaustive coverage.
+**TESTCASES.md** — characterization tests, one per verified business rule. Format each as `Given / When / Then (current behavior)` plus the `path:line` it locks. Frame the whole file as behavior-locking for refactoring, NOT requirement conformance. Rules: derive only from verified claims; never from flagged/unverified; omit cases that depend on an external contract; do not claim branch/exhaustive coverage. When test files exist, prefer `extract_project_meta.tests` and add a matrix by test file/framework/test case; list skipped or gated tests plus case-level required environment/config.
 
-**RISKS.md** — one row per `flagged` audit entry and per `Unverified` spec item: finding, evidence `path:line`, suggested action, and a triage-level severity explicitly labeled as a reconstruction-time judgment (not a measured metric). Never present a candidate as a confirmed defect.
+**RISKS.md** — one row per `flagged` audit entry and per `Unverified` spec item: finding, evidence `path:line`, suggested action, and triage fields. Include severity, likelihood, impact, status, and owner when grounded; otherwise use `unknown` or `unassigned`. Never present a candidate as a confirmed defect.
 
 ## Notes on the "RAG" question
 Claude Code reads real files on demand, so for demo-to-mid-size repos this on-demand exploration *is* the retrieval layer, and citations come for free because you're reading actual lines. A persistent vector index (Chroma / AnythingLLM) only becomes necessary when the codebase exceeds what fan-out subagents can cover in context — that is the Phase-2 productization trigger noted in `SPEC.md`, not an MVP requirement.
