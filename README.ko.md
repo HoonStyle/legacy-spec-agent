@@ -120,6 +120,14 @@ showcase.html        데모 산출물용 탭형 뷰어
 
 ## 개발
 
+새 클라우드 또는 임시 Linux 워크스페이스에서 테스트 환경을 준비하려면 다음을 실행하세요.
+
+```bash
+scripts/setup-cloud-test.sh
+```
+
+설정 스크립트는 Node.js 20 이상을 확인하고, `npm ci`로 커넥터 의존성을 설치한 뒤 TypeScript 커넥터를 빌드하고 커넥터 테스트 스위트를 실행합니다. 테스트 실행 없이 설치/빌드만 하려면 `RUN_TESTS=0`을 설정하고, `codex` CLI가 있는 환경에서 이 체크아웃을 로컬 Codex 플러그인 마켓플레이스로도 등록하려면 `REGISTER_CODEX_MARKETPLACE=1`을 설정하세요.
+
 변경을 올리기 전에 커넥터 테스트를 돌려 주세요.
 
 ```bash

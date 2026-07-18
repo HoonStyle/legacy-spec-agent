@@ -120,6 +120,14 @@ showcase.html        Tabbed viewer for demo artifacts
 
 ## Development
 
+To prepare a fresh cloud or ephemeral Linux workspace for testing, run:
+
+```bash
+scripts/setup-cloud-test.sh
+```
+
+The setup script verifies Node.js 20+, installs connector dependencies with `npm ci`, builds the TypeScript connector, and runs the connector test suite. Set `RUN_TESTS=0` to install/build without running tests, or `REGISTER_CODEX_MARKETPLACE=1` to also register this checkout as a local Codex plugin marketplace when the `codex` CLI is available.
+
 Run the connector tests before submitting changes:
 
 ```bash
