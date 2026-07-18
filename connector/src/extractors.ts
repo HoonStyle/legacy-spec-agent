@@ -207,7 +207,8 @@ function scanEnvVars(rootAbs: string, files: string[]): EnvVar[] {
   return out.sort((a, b) => a.key.localeCompare(b.key));
 }
 
-const TEST_EXTS = new Set([".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".py"]);
+const SOURCE_EXTS = new Set([".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".py"]);
+const TEST_EXTS = SOURCE_EXTS;
 const WALK_SKIP_DIRS = new Set([".git", "node_modules", "dist", "__pycache__", ".venv", "venv", ".tox"]);
 
 function walkTextFiles(rootAbs: string): string[] {
@@ -231,6 +232,10 @@ function walkTextFiles(rootAbs: string): string[] {
     }
   }
   return files.sort().map((f) => f.slice(rootAbs.length + 1).split(sep).join("/"));
+}
+
+function looksLikeSourceFile(rel: string): boolean {
+  return SOURCE_EXTS.has(extname(basename(rel)));
 }
 
 function looksLikeTestFile(rel: string): boolean {
@@ -343,9 +348,38 @@ function extractTestCases(src: string, rel: string): TestCaseMeta[] {
       ...(requiresEnvVars.length > 0 ? { requires_env_vars: requiresEnvVars } : {}),
     });
   }
+
+  let pendingDecorators: string[] = [];
   lines.forEach((line, i) => {
     const py = /^\s*def\s+(test_[A-Za-z0-9_]+)\s*\(/.exec(line);
-    if (py) cases.push({ name: py[1], line: i + 1, skipped: /skip|xfail/.test(lines.slice(Math.max(0, i - 3), i + 1).join("\n")) });
+    if (/^\s*@/.test(line)) {
+      pendingDecorators.push(line);
+      return;
+    }
+    if (pendingDecorators.length > 0 && !py) {
+      if (line.trim() === "") {
+        pendingDecorators = [];
+      } else if (/^\s/.test(line) || /^[)\]},]/.test(line.trim())) {
+        pendingDecorators.push(line);
+      } else {
+        pendingDecorators = [];
+      }
+      return;
+    }
+    if (!py) {
+      pendingDecorators = [];
+      return;
+    }
+
+    const decoratorText = pendingDecorators.join("\n");
+    pendingDecorators = [];
+    const requiresEnvVars = envKeysInText(decoratorText);
+    cases.push({
+      name: py[1],
+      line: i + 1,
+      skipped: /\b(?:skip|skipif|xfail)\b/.test(decoratorText),
+      ...(requiresEnvVars.length > 0 ? { requires_env_vars: requiresEnvVars } : {}),
+    });
   });
   return cases.sort((a, b) => a.line - b.line || a.name.localeCompare(b.name));
 }
@@ -444,7 +478,8 @@ export function extractProjectMeta(root: string): ProjectMeta {
 
   meta.tests = extractTestInventory(rootAbs);
   meta.has.tests = meta.tests.total_files > 0;
-  meta.env_vars = scanEnvVars(rootAbs, pyFiles);
+  const sourceFiles = walkTextFiles(rootAbs).filter((rel) => looksLikeSourceFile(rel) && !looksLikeTestFile(rel));
+  meta.env_vars = scanEnvVars(rootAbs, sourceFiles);
   meta.dependencies = [...new Set(meta.dependencies)].sort();
   meta.run_commands = [...new Set(meta.run_commands)];
   meta.language = [...new Set(meta.language)];
