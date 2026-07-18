@@ -295,12 +295,10 @@ function resolveRelative(rootAbs: string, fromFile: string, dots: number, dotted
   return undefined;
 }
 
-function importedModuleNames(importFromText: string): string[] {
-  const match = importFromText.match(/\bimport\s+(.+)$/s);
-  if (!match) return [];
-  return match[1]
-    .split(",")
-    .map((part) => part.trim().split(/\s+as\s+/)[0]?.trim())
+function importedModuleNames(importFromNode: Parser.SyntaxNode, moduleNode: Parser.SyntaxNode): string[] {
+  return importFromNode.namedChildren
+    .filter((child) => child.startIndex >= moduleNode.endIndex)
+    .map((child) => (child.type === "aliased_import" ? child.childForFieldName("name")?.text : child.text))
     .filter((name): name is string => !!name && /^[A-Za-z_]\w*$/.test(name));
 }
 
@@ -347,7 +345,7 @@ export function buildCallGraph(
         // the package is namespace-style and has no __init__.py).
         const moduleNode = node.childForFieldName("module_name");
         if (!moduleNode) continue;
-        const importedNames = importedModuleNames(node.text);
+        const importedNames = importedModuleNames(node, moduleNode);
         if (moduleNode.type === "relative_import") {
           const dots = (moduleNode.text.match(/^\.+/)?.[0] ?? ".").length;
           const dotted = moduleNode.text.replace(/^\.+/, "");
