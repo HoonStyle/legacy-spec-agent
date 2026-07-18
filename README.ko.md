@@ -126,7 +126,7 @@ showcase.html        데모 산출물용 탭형 뷰어
 scripts/setup-cloud-test.sh
 ```
 
-설정 스크립트는 Node.js 20 이상을 확인하고, `npm ci`로 커넥터 의존성을 설치한 뒤 TypeScript 커넥터를 빌드하고 커넥터 테스트 스위트를 실행합니다. 테스트 실행 없이 설치/빌드만 하려면 `RUN_TESTS=0`을 설정하고, `codex` CLI가 있는 환경에서 이 체크아웃을 로컬 Codex 플러그인 마켓플레이스로도 등록하려면 `REGISTER_CODEX_MARKETPLACE=1`을 설정하세요.
+설정 스크립트는 Node.js 20 이상을 확인하고, `npm ci`로 커넥터 의존성을 설치한 뒤 TypeScript 커넥터를 빌드하고 커넥터 테스트 스위트를 실행합니다. 테스트 실행 없이 설치/빌드만 하려면 `RUN_TESTS=0`을 설정하고, 이 체크아웃을 로컬 Codex 플러그인 마켓플레이스로 등록하고 **Legacy Spec Agent**를 설치하려면 `REGISTER_CODEX_MARKETPLACE=1`을 설정하세요. `codex`가 이미 설치되어 있지 않으면 스크립트가 `npx -y @openai/codex`로 대체 실행하며, 특정 CLI 버전을 고정하려면 `CODEX_NPM_PACKAGE=@openai/codex@<version>`을 설정하면 됩니다.
 
 변경을 올리기 전에 커넥터 테스트를 돌려 주세요.
 

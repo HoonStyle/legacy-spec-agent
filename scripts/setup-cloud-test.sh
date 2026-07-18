@@ -7,9 +7,11 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONNECTOR_DIR="${ROOT_DIR}/connector"
+CODEX_MARKETPLACE_FILE="${ROOT_DIR}/.agents/plugins/marketplace.json"
 NODE_MAJOR_MIN=20
 RUN_TESTS="${RUN_TESTS:-1}"
 REGISTER_CODEX_MARKETPLACE="${REGISTER_CODEX_MARKETPLACE:-0}"
+CODEX_NPM_PACKAGE="${CODEX_NPM_PACKAGE:-@openai/codex}"
 
 log() {
   printf '\033[1;34m[cloud-setup]\033[0m %s\n' "$*"
@@ -70,12 +72,26 @@ else
 fi
 
 if [[ "${REGISTER_CODEX_MARKETPLACE}" == "1" ]]; then
-  if command -v codex >/dev/null 2>&1; then
-    log "Registering this checkout as a local Codex plugin marketplace"
-    codex plugin marketplace add "${ROOT_DIR}"
-  else
-    warn "REGISTER_CODEX_MARKETPLACE=1 was set, but the codex CLI is not installed."
+  if [[ ! -f "${CODEX_MARKETPLACE_FILE}" ]]; then
+    fail "Cannot find .agents/plugins/marketplace.json. Run this script from a complete plugin checkout."
   fi
+
+  CODEX_MARKETPLACE_NAME="$(node -e "const fs = require('node:fs'); const m = JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); process.stdout.write(m.name);" "${CODEX_MARKETPLACE_FILE}")"
+  CODEX_PLUGIN_NAME="$(node -e "const fs = require('node:fs'); const m = JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); process.stdout.write(m.plugins[0].name);" "${CODEX_MARKETPLACE_FILE}")"
+  CODEX_PLUGIN_SELECTOR="${CODEX_PLUGIN_NAME}@${CODEX_MARKETPLACE_NAME}"
+
+  if command -v codex >/dev/null 2>&1; then
+    CODEX_CMD=(codex)
+  else
+    log "codex CLI is not installed; using npx ${CODEX_NPM_PACKAGE} for one-shot plugin setup"
+    CODEX_CMD=(npx -y "${CODEX_NPM_PACKAGE}")
+  fi
+
+  log "Registering this checkout as a local Codex plugin marketplace"
+  "${CODEX_CMD[@]}" plugin marketplace add "${ROOT_DIR}"
+
+  log "Installing ${CODEX_PLUGIN_SELECTOR} from the local Codex marketplace"
+  "${CODEX_CMD[@]}" plugin add "${CODEX_PLUGIN_SELECTOR}"
 fi
 
 cat <<SUMMARY
@@ -87,6 +103,7 @@ Useful commands:
   npm test
 
 Optional toggles:
-  RUN_TESTS=0 scripts/setup-cloud-test.sh                 # install/build only
-  REGISTER_CODEX_MARKETPLACE=1 scripts/setup-cloud-test.sh # also register local Codex marketplace when codex CLI exists
+  RUN_TESTS=0 scripts/setup-cloud-test.sh                  # install/build only
+  REGISTER_CODEX_MARKETPLACE=1 scripts/setup-cloud-test.sh  # also register and install the local Codex plugin
+  CODEX_NPM_PACKAGE=@openai/codex@0.144.5 REGISTER_CODEX_MARKETPLACE=1 scripts/setup-cloud-test.sh
 SUMMARY

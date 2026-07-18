@@ -126,7 +126,7 @@ To prepare a fresh cloud or ephemeral Linux workspace for testing, run:
 scripts/setup-cloud-test.sh
 ```
 
-The setup script verifies Node.js 20+, installs connector dependencies with `npm ci`, builds the TypeScript connector, and runs the connector test suite. Set `RUN_TESTS=0` to install/build without running tests, or `REGISTER_CODEX_MARKETPLACE=1` to also register this checkout as a local Codex plugin marketplace when the `codex` CLI is available.
+The setup script verifies Node.js 20+, installs connector dependencies with `npm ci`, builds the TypeScript connector, and runs the connector test suite. Set `RUN_TESTS=0` to install/build without running tests, or `REGISTER_CODEX_MARKETPLACE=1` to also register this checkout as a local Codex plugin marketplace and install **Legacy Spec Agent**. When `codex` is not already installed, the script falls back to `npx -y @openai/codex`; pin a specific CLI with `CODEX_NPM_PACKAGE=@openai/codex@<version>`.
 
 Run the connector tests before submitting changes:
 
