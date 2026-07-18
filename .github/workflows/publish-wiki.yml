@@ -1,0 +1,32 @@
+name: Publish Wiki
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "wiki/**"
+      - ".github/workflows/publish-wiki.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-wiki
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Sync wiki directory to GitHub Wiki tab
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Publish wiki pages
+        env:
+          WIKI_REMOTE: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git
+          WIKI_COMMIT_MESSAGE: docs: sync wiki from ${{ github.sha }}
+        run: scripts/publish-github-wiki.sh
