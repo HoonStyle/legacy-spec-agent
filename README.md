@@ -118,6 +118,10 @@ showcase.html        Tabbed viewer for demo artifacts
 - `evals/BENCHMARK.md` compares runs with and without the skill on the same prompts: 86-87% citation coverage with the skill against 0% without, and 6 of 6 sampled citations accurate.
 - The connector test suite replays all 12 citations from the demo audit log against the pinned commit and verifies them mechanically, plus regression tests for plugin packaging and issues found in review.
 
+## Wiki
+
+Human-maintained wiki pages live in [`wiki/`](wiki/Home.md). They summarize setup, workflow, outputs, connector tools, and development practices in Markdown files that can also be copied into a GitHub Wiki.
+
 ## Development
 
 To prepare a fresh cloud or ephemeral Linux workspace for testing, run:
