@@ -45,6 +45,18 @@ When updating documentation:
 3. Avoid promising intent-heavy documents such as ADRs or PRDs unless they are human-authored.
 4. Keep Wiki pages concise enough to be copied into GitHub Wiki without transformation.
 
+## Publishing to the GitHub Wiki tab
+
+GitHub does not render the repository's `wiki/` directory in the visible Wiki tab automatically. The Wiki tab is backed by a separate git repository named `<owner>/<repo>.wiki.git`.
+
+After reviewing local Wiki changes, publish them with:
+
+```bash
+scripts/publish-github-wiki.sh --remote git@github.com:OWNER/REPO.wiki.git
+```
+
+You can also set `WIKI_REMOTE` instead of passing `--remote`. The script copies the contents of `wiki/` into the separate Wiki repository, commits only when there are actual Wiki changes, and pushes the result.
+
 ## Pull request checklist
 
 - Tests or relevant checks were run.
