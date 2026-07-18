@@ -28,5 +28,5 @@ jobs:
       - name: Publish wiki pages
         env:
           WIKI_REMOTE: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git
-          WIKI_COMMIT_MESSAGE: docs: sync wiki from ${{ github.sha }}
+          WIKI_COMMIT_MESSAGE: "docs: sync wiki from ${{ github.sha }}"
         run: scripts/publish-github-wiki.sh
