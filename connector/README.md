@@ -7,7 +7,7 @@ The deterministic engine behind `legacy-spec-agent`, packaged as a stdio MCP ser
 | Tool | What it does |
 |------|--------------|
 | `verify_citation` | Checks a `path:line` citation against the actual source and returns a verdict with the surrounding code |
-| `index_symbols` | Indexes functions, methods, and classes with line ranges and signatures (tree-sitter, Python) |
+| `index_symbols` | Indexes functions, methods, and classes with line ranges and signatures (Lezer, Python) |
 | `build_call_graph` | Builds module-to-module edges from import statements; unresolved imports are listed as externals |
 | `detect_drift` | Classifies each citation in an existing spec as intact, moved, drifted, orphaned, or unresolved, by comparing the cited line's content at the spec's baseline commit against the current tree |
 | `extract_data_model` | Turns dataclasses and model classes into entities, typed fields, and relations |
@@ -33,6 +33,23 @@ claude mcp add legacy-spec -- node /path/to/connector/dist/src/index.js /path/to
 ```
 
 stdout carries the MCP protocol; diagnostics go to stderr. When installed as part of the plugin, `bootstrap.mjs` runs the install and build automatically on first launch and rebuilds after updates.
+
+### Windows installation
+
+The Python syntax engine is pure JavaScript and does not use `node-gyp`, Visual Studio,
+or a native C++ toolset. An installation left broken by an older connector release can
+be reset once from `cmd.exe`:
+
+   ```bat
+   cd /d "C:\path\to\plugin\connector"
+   rmdir /s /q node_modules 2>nul
+   npm ci
+   npm run build
+   node bootstrap.mjs "C:\path\to\project"
+   ```
+
+The last command should stay running as an MCP stdio server; stop it with Ctrl+C,
+then reconnect or restart Claude Code.
 
 ## `verify_citation` contract
 

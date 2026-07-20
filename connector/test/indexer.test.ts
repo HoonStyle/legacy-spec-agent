@@ -9,7 +9,7 @@ function withProject(fn: (root: string) => void) {
   const tmp = mkdtempSync(join(tmpdir(), "lsc-index-"));
   // The project root needs a python-identifier basename: the fixture writes a
   // package-qualified self-import (`from <rootname>.core... import`), and a
-  // hyphenated name would be a syntax error tree-sitter refuses to parse.
+  // hyphenated name would be a syntax error the Python grammar refuses to parse.
   const root = join(tmp, "myproj");
   try {
     mkdirSync(join(root, "core"), { recursive: true });
@@ -160,6 +160,27 @@ test("buildCallGraph: from package import submodule resolves the imported file",
       { from: "main.py", to: "pkg/util.py", import: "pkg.util", line: 1 },
     ]);
     assert.ok(!g.externals.some((e) => e.module === "pkg"));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("buildCallGraph: comments inside multiline imports do not hide submodules", () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-cg-comments-"));
+  try {
+    mkdirSync(join(root, "pkg"));
+    writeFileSync(join(root, "pkg", "util.py"), "VALUE = 1\n");
+    writeFileSync(join(root, "pkg", "extra.py"), "VALUE = 2\n");
+    writeFileSync(
+      join(root, "main.py"),
+      ["from pkg import (", "    util,  # primary helper", "    extra as renamed,", ")", ""].join("\n"),
+    );
+
+    const g = buildCallGraph(root);
+    assert.deepEqual(g.edges, [
+      { from: "main.py", to: "pkg/extra.py", import: "pkg.extra", line: 1 },
+      { from: "main.py", to: "pkg/util.py", import: "pkg.util", line: 1 },
+    ]);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

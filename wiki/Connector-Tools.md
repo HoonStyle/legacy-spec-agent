@@ -7,7 +7,7 @@ The connector is a TypeScript MCP server that performs deterministic operations 
 | Tool | Description |
 | --- | --- |
 | `verify_citation` | Checks a `path:line` citation against the actual source and returns a verdict with surrounding code. |
-| `index_symbols` | Extracts functions, methods, classes, line ranges, and signatures using tree-sitter for Python. |
+| `index_symbols` | Extracts functions, methods, classes, line ranges, and signatures using the pure-JavaScript Lezer parser for Python. |
 | `build_call_graph` | Builds module-to-module edges from imports and records unresolved imports as externals. |
 | `detect_drift` | Compares existing spec citations against the current tree and classifies drift status. |
 | `extract_data_model` | Turns dataclasses and model-like classes into entities, typed fields, and relations. |

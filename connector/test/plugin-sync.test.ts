@@ -20,6 +20,16 @@ test("plugin skill copy matches the canonical root files", () => {
   }
 });
 
+test("connector parser dependencies are JavaScript-only", () => {
+  const pkg = JSON.parse(readFileSync(join(repo, "connector/package.json"), "utf8"));
+  const lock = readFileSync(join(repo, "connector/package-lock.json"), "utf8");
+  assert.equal(pkg.dependencies["@lezer/python"], "^1.1.19");
+  assert.equal(pkg.dependencies["tree-sitter"], undefined);
+  assert.equal(pkg.dependencies["tree-sitter-python"], undefined);
+  assert.ok(!lock.includes('node_modules/tree-sitter'));
+  assert.ok(!lock.includes('node_modules/node-gyp-build'));
+});
+
 
 test("codex plugin manifests use portable local packaging", () => {
   const plugin = JSON.parse(readFileSync(join(repo, ".codex-plugin/plugin.json"), "utf8"));

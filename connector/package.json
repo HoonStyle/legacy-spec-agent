@@ -17,9 +17,9 @@
     "start": "node dist/src/index.js"
   },
   "dependencies": {
+    "@lezer/common": "^1.5.2",
+    "@lezer/python": "^1.1.19",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "tree-sitter": "^0.25.0",
-    "tree-sitter-python": "^0.25.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
