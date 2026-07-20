@@ -3,7 +3,7 @@
 <p align="center">
   <a href="README.md"><img alt="언어: English" src="https://img.shields.io/badge/lang-English-blue"></a>
   <a href="README.ko.md"><img alt="언어: 한국어" src="https://img.shields.io/badge/lang-%ED%95%9C%EA%B5%AD%EC%96%B4-blue"></a>
-  <img alt="버전 0.1.0" src="https://img.shields.io/badge/version-0.1.0-informational">
+  <img alt="버전 0.1.3" src="https://img.shields.io/badge/version-0.1.3-informational">
   <a href="LICENSE"><img alt="라이선스: MIT" src="https://img.shields.io/badge/license-MIT-green"></a>
   <br>
   <a href="https://claude.com/claude-code"><img alt="Claude Code 플러그인" src="https://img.shields.io/badge/Claude%20Code-plugin-D97757?logo=claude&logoColor=white"></a>
@@ -62,8 +62,13 @@ ADR, PRD, 사용자 매뉴얼은 일부러 만들지 않습니다. 이런 문서
 
 ## 커넥터 도구
 
-번들 커넥터가 제공하는 아홉 개 도구입니다.
+번들 커넥터가 제공하는 열네 개 도구입니다.
 
+- `assess_language_toolchains`
+- `approve_toolchain_download`
+- `download_language_toolchain`
+- `get_toolchain_download_status`
+- `cancel_toolchain_download`
 - `verify_citation`
 - `index_symbols`
 - `build_call_graph`
@@ -76,12 +81,28 @@ ADR, PRD, 사용자 매뉴얼은 일부러 만들지 않습니다. 이런 문서
 
 커넥터 없이도 스킬은 동작합니다. 다만 LLM 출력에만 의존하게 되어 보장 수준은 낮아집니다.
 
+### 언어 SDK가 없을 때
+
+커넥터를 실행하는 환경은 분석 대상 저장소의 개발 환경과 다를 수 있습니다. `assess_language_toolchains`는 Python, JavaScript/TypeScript, Java, C#, Go 소스와 저장소의 일반적인 버전 고정 파일 및 로컬 SDK 명령을 검사하고, 다운로드나 코드 실행 없이 구조화된 동의 정보를 반환합니다. 정밀 분석에 필요한 파서나 SDK가 없으면 에이전트는 이 결과를 이용해 버전, 용도, 공식 배포처, 확인 가능한 경우 예상 용량, 격리된 캐시 위치를 밝히고 다운로드 전에 사용자에게 묻습니다. 사용자가 거절해도 명세 복원을 중단하지 않고, 파서가 없으면 소스를 직접 읽고 파서가 있으면 가능한 구문 분석을 수행한 뒤 검증하지 못한 시맨틱 항목을 명시합니다.
+
+SDK 사용 가능 여부와 semantic backend 사용 가능 여부는 따로 보고합니다. 번들된 순수 JavaScript/WASM 파서는 로컬 SDK 없이도 Python, JavaScript/TypeScript, Java, C#, Go의 syntax-level 심볼 인덱스, import 그래프, typed model 추출을 수행합니다. SDK를 찾거나 다운로드했다는 이유만으로 compiler-resolved semantic 추출을 수행했다고 표시하지는 않습니다.
+
+정확한 언어·버전·공식 아티팩트 URL·SHA-256을 사용자에게 표시하고 명시적 동의를 받은 뒤 `approve_toolchain_download`가 그 계획에 결합된 단기 일회용 토큰을 발급합니다. `download_language_toolchain`은 토큰을 소비하고 공식 host/path 규칙, 제한된 redirect, 용량·동시성·시간 제한, 체크섬 검증을 적용해 커넥터가 관리하는 캐시로 다운로드합니다. 반환된 작업 ID를 `get_toolchain_download_status`에 전달하면 바이트·백분율과 대기, 다운로드, 검증, 완료, 실패, 취소 상태를 확인할 수 있고 `cancel_toolchain_download`로 취소할 수 있습니다.
+
+현재 승인 출처는 `caller_attestation`으로 명시됩니다. 즉 에이전트 호스트가 정확한 계획을 표시하고 동의를 받았다고 증명하는 방식이며, 커넥터는 이를 프로토콜 수준의 MCP elicitation이라고 주장하지 않습니다.
+
+다운로드 완료는 검증된 아티팩트를 뜻하며 SDK 설치 완료를 뜻하지 않습니다. 다운로드 동의는 압축 해제, dependency restore, 프로젝트 빌드, install hook, 저장소 스크립트 또는 대상 코드 실행에 대한 동의가 아닙니다. 그런 작업은 별도의 명시적 동의가 필요합니다. 비대화형 실행에서는 호출자가 미리 opt-in하지 않은 한 다운로드하지 않는 것이 기본값입니다.
+
 ## 대형 저장소 지원
 
 큰 코드베이스에서 보고서가 감당하기 어려운 크기로 자라지 않도록 다음을 지원합니다.
 
 - 항목 단위 산출물은 `limit`을 받을 수 있고, 잘렸을 때는 무엇이 생략됐는지 밝힙니다.
 - 그래프는 `package` 단위로도 그릴 수 있어 큰 의존성 다이어그램도 읽을 만하게 유지됩니다.
+
+다중 언어 응답에는 원본 소스 바이트, 직렬화된 응답 바이트, WASM parse cache hit/miss도 포함됩니다. 현재 결정적 합성 벤치마크에서는 원본 소스 전문 대비 file-level 심볼 응답이 43.0%, package 요약이 95.3% 적은 토큰을 사용했습니다. 이는 fixture 측정값이며 전체 에이전트 세션이나 과금 토큰 절감률은 아닙니다. 측정 방법과 한계는 [`TOKEN_USAGE.md`](TOKEN_USAGE.md)에 기록했습니다.
+
+출시 차단 항목, 언어별 resolver, semantic backend, 마지막 SDK installer 단계의 작업 순서는 [`IMPLEMENTATION_ROADMAP.md`](IMPLEMENTATION_ROADMAP.md)에 정리했습니다.
 
 ## 설치
 
@@ -100,7 +121,7 @@ SKILL.md             스킬 워크플로, 템플릿, 필수 규칙
 references/          추출, 아키텍처, critic 계약
 SPEC.md              최초 설계 문서(v0.1)
 CONNECTOR_DESIGN.md  커넥터 설계 및 마일스톤 기록(C0-C7)
-connector/           아홉 개 도구와 테스트가 포함된 TypeScript MCP 서버
+connector/           열네 개 도구와 테스트가 포함된 TypeScript MCP 서버
 demo-hookify/        서드파티 패키지를 대상으로 한 Mode A 예시 실행 결과
 evals/               스킬 사용/미사용 벤치마크 결과
 skills/              플러그인 레이아웃용 스킬 사본
