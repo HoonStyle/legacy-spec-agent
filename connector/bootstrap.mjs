@@ -11,7 +11,7 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const entry = join(here, "dist/src/index.js");
@@ -63,4 +63,4 @@ if (missing || dependenciesStale || stale) {
   }
 }
 
-await import(entry); // reads the root dir from process.argv[2], shared with this process
+await import(pathToFileURL(entry).href); // reads the root dir from process.argv[2], shared with this process
