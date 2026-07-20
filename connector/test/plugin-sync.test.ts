@@ -30,6 +30,13 @@ test("connector parser dependencies are JavaScript-only", () => {
   assert.ok(!lock.includes('node_modules/node-gyp-build'));
 });
 
+test("plugin and connector versions stay in sync", () => {
+  const connector = JSON.parse(readFileSync(join(repo, "connector/package.json"), "utf8"));
+  const claude = JSON.parse(readFileSync(join(repo, ".claude-plugin/plugin.json"), "utf8"));
+  const codex = JSON.parse(readFileSync(join(repo, ".codex-plugin/plugin.json"), "utf8"));
+  assert.equal(claude.version, connector.version);
+  assert.equal(codex.version, connector.version);
+});
 
 test("codex plugin manifests use portable local packaging", () => {
   const plugin = JSON.parse(readFileSync(join(repo, ".codex-plugin/plugin.json"), "utf8"));

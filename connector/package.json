@@ -1,6 +1,6 @@
 {
   "name": "@legacy-spec/connector",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Deterministic engine for legacy-spec-agent: citation verification, symbol indexing, drift detection, chart emission — exposed as a stdio MCP server.",
   "type": "module",
   "license": "MIT",
