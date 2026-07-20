@@ -139,6 +139,22 @@ cd connector
 npm test
 ```
 
+### Windows 설치
+
+Python 구문 분석기를 순수 JavaScript 구현으로 교체했으므로 이제 `node-gyp`,
+Visual Studio 또는 VC++ 툴셋이 필요하지 않습니다. 이전 버전의 설치 실패 잔재가
+남았다면 플러그인의 `connector` 디렉터리에서 한 번만 다음 명령을 실행하세요.
+
+```bat
+rmdir /s /q node_modules 2>nul
+npm ci
+npm run build
+node bootstrap.mjs "C:\분석할\프로젝트"
+```
+
+마지막 명령이 즉시 종료되지 않고 stdio MCP 서버로 대기하면 복구된 것입니다.
+Ctrl+C로 종료한 뒤 Claude Code를 재시작하거나 MCP를 다시 연결하세요.
+
 선택적인 acceptance 테스트는 `HOOKIFY_ROOT`가 Claude Code 체크아웃의 `plugins/hookify` 디렉터리를 가리켜야 실행됩니다.
 
 `SKILL.md`나 `references/` 아래 파일을 고쳤다면 플러그인 사본도 동기화해야 합니다.

@@ -97,7 +97,7 @@ export function createServer(root: string): McpServer {
     "index_symbols",
     {
       description:
-        "Parse the codebase once (tree-sitter, Python for now) into a symbol index: functions, methods, classes " +
+        "Parse the codebase once (Lezer, Python for now) into a symbol index: functions, methods, classes " +
         "with exact line ranges and signatures per module. Use this instead of re-reading files to locate code. " +
         "Files in unsupported languages are counted in unsupported_files, never silently dropped.",
       inputSchema: {
@@ -122,7 +122,7 @@ export function createServer(root: string): McpServer {
     "build_call_graph",
     {
       description:
-        "Build the module-to-module edge list from import statements (tree-sitter, Python for now) for " +
+        "Build the module-to-module edge list from import statements (Lezer, Python for now) for " +
         "ARCHITECTURE.md. Package-qualified and relative imports are resolved to files inside the root; " +
         "everything else is reported under externals with its importers.",
       inputSchema: {
@@ -171,7 +171,7 @@ export function createServer(root: string): McpServer {
     "extract_data_model",
     {
       description:
-        "Reverse-engineer the data model (tree-sitter, Python): dataclasses and annotated/model classes become " +
+        "Reverse-engineer the data model (Lezer, Python): dataclasses and annotated/model classes become " +
         "entities with typed fields and line citations; typed fields referencing another entity become relations " +
         "(List[X] → many, else one). Feed the result to emit_charts kind 'erd' for a Mermaid ER diagram, and to " +
         "DATA_MODEL.md. Grounded — no relation is invented that a field type doesn't state.",

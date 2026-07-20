@@ -77,6 +77,17 @@ test("extractDataModel: limit truncates entities and reports it", () => {
   }
 });
 
+test("extractDataModel: generic base arguments are not split into fake bases", () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-dm-bases-"));
+  try {
+    writeFileSync(join(root, "m.py"), "class Item(Base[Key, Value], Model):\n    name: str\n");
+    const item = extractDataModel(root).entities[0];
+    assert.deepEqual(item.bases, ["Base[Key, Value]", "Model"]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("erdChart: sanitizes bracketed types into valid erDiagram tokens", () => {
   const c = erdChart({
     entities: [{ name: "Rule", fields: [{ name: "conditions", type: "List[Condition]" }] }],

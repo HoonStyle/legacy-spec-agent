@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { basename, extname, join, resolve, sep } from "node:path";
-import type Parser from "tree-sitter";
+import type { SyntaxNode } from "@lezer/common";
 import { parsePython, pythonFiles } from "./indexer.js";
 
 // ===========================================================================
@@ -37,50 +37,66 @@ export interface DataModelResult {
 }
 
 /** Read the class-level annotated fields (`name: Type` / `name: Type = default`). */
-function classFields(body: Parser.SyntaxNode): Field[] {
+function nodeChildren(node: SyntaxNode): SyntaxNode[] {
+  const result: SyntaxNode[] = [];
+  for (let child = node.firstChild; child; child = child.nextSibling) result.push(child);
+  return result;
+}
+
+function nodeText(node: SyntaxNode, source: string): string {
+  return source.slice(node.from, node.to);
+}
+
+function sourceLine(source: string, offset: number): number {
+  let line = 1;
+  for (let i = 0; i < offset; i += 1) if (source.charCodeAt(i) === 10) line += 1;
+  return line;
+}
+
+function classFields(body: SyntaxNode, source: string): Field[] {
   const fields: Field[] = [];
-  for (const stmt of body.namedChildren) {
-    const assign = stmt.type === "expression_statement" ? stmt.namedChildren[0] : undefined;
-    if (!assign || assign.type !== "assignment") continue;
-    const left = assign.childForFieldName("left");
-    const typeNode = assign.childForFieldName("type");
-    if (!left || left.type !== "identifier" || !typeNode) continue;
-    const type = typeNode.text.trim();
+  for (const stmt of nodeChildren(body)) {
+    if (stmt.name !== "AssignStatement") continue;
+    const parts = nodeChildren(stmt);
+    const left = parts.find((node) => node.name === "VariableName");
+    const typeNode = parts.find((node) => node.name === "TypeDef");
+    if (!left || !typeNode) continue;
+    const type = nodeText(typeNode, source).replace(/^:\s*/, "").trim();
+    const statement = nodeText(stmt, source);
     fields.push({
-      name: left.text,
+      name: nodeText(left, source),
       type,
-      line: stmt.startPosition.row + 1,
-      optional: /^Optional\[|(\|\s*None$)|=None$/.test(type.replace(/\s/g, "")) || assign.childForFieldName("right") != null,
+      line: sourceLine(source, stmt.from),
+      optional: /^Optional\[|(\|\s*None$)/.test(type.replace(/\s/g, "")) || /=/.test(statement.slice(typeNode.to - stmt.from)),
     });
   }
   return fields;
 }
 
-function collectEntities(node: Parser.SyntaxNode, path: string, out: Entity[]): void {
-  for (const child of node.namedChildren) {
-    const classNode =
-      child.type === "class_definition"
-        ? child
-        : child.type === "decorated_definition"
-          ? child.namedChildren.find((n) => n.type === "class_definition")
-          : undefined;
-    if (classNode) {
-      const name = classNode.childForFieldName("name")?.text ?? "<anonymous>";
-      const supers = classNode.childForFieldName("superclasses");
+function collectEntities(node: SyntaxNode, source: string, path: string, out: Entity[]): void {
+  for (const child of nodeChildren(node)) {
+    if (child.name === "ClassDefinition") {
+      const parts = nodeChildren(child);
+      const nameNode = parts.find((n) => n.name === "VariableName");
+      const name = nameNode ? nodeText(nameNode, source) : "<anonymous>";
+      const supers = parts.find((n) => n.name === "ArgList");
       const bases = supers
-        ? supers.namedChildren.map((n) => n.text).filter((t) => t && t !== "object")
+        ? nodeChildren(supers)
+            .filter((node) => !["(", ")", ","].includes(node.name))
+            .map((node) => nodeText(node, source).trim())
+            .filter((base) => base && base !== "object")
         : [];
-      const body = classNode.childForFieldName("body");
-      const fields = body ? classFields(body) : [];
+      const body = parts.find((n) => n.name === "Body");
+      const fields = body ? classFields(body, source) : [];
       // Only record classes that actually declare data (fields or a model base).
       const looksLikeModel =
         fields.length > 0 || bases.some((b) => /Model|Base|Schema|Entity/.test(b));
       if (looksLikeModel) {
-        out.push({ name, path, line: classNode.startPosition.row + 1, bases, fields });
+        out.push({ name, path, line: sourceLine(source, child.from), bases, fields });
       }
       continue;
     }
-    if (child.namedChildCount > 0) collectEntities(child, path, out);
+    if (child.firstChild) collectEntities(child, source, path, out);
   }
 }
 
@@ -94,8 +110,8 @@ export function extractDataModel(root: string, opts: { subdir?: string; limit?: 
   const files = pythonFiles(rootAbs, opts);
   const all: Entity[] = [];
   for (const path of files) {
-    const { tree } = parsePython(rootAbs, path);
-    collectEntities(tree.rootNode, path, all);
+    const { tree, source } = parsePython(rootAbs, path);
+    collectEntities(tree.topNode, source, path, all);
   }
 
   // Bound the entity list; relations are computed only over the kept entities.

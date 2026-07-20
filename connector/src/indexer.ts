@@ -1,8 +1,8 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { existsSync } from "node:fs";
 import { basename, join, relative, resolve, sep, posix } from "node:path";
-import Parser from "tree-sitter";
-import Python from "tree-sitter-python";
+import type { SyntaxNode, Tree } from "@lezer/common";
+import { parser } from "@lezer/python";
 
 // ---------------------------------------------------------------------------
 // Shared walking / parsing
@@ -10,9 +10,6 @@ import Python from "tree-sitter-python";
 
 const SKIP_DIRS = new Set([".git", "node_modules", "dist", "__pycache__", ".venv", "venv", ".tox"]);
 const SUPPORTED = new Map<string, "python">([[".py", "python"]]);
-
-const parser = new Parser();
-parser.setLanguage(Python as Parser.Language);
 
 /** Top-level package a root-relative posix path belongs to. */
 export function packageOf(path: string): string {
@@ -65,7 +62,7 @@ function walk(rootAbs: string, subdir?: string): WalkResult {
 
 interface CacheEntry {
   mtimeMs: number;
-  tree: Parser.Tree;
+  tree: Tree;
   source: string;
 }
 const parseCache = new Map<string, CacheEntry>();
@@ -87,7 +84,7 @@ export function pythonFiles(root: string, opts: { subdir?: string } = {}): strin
 }
 
 /** Shared with extractors.ts: parse one file, reusing the mtime-keyed cache. */
-export function parsePython(root: string, relPath: string): { tree: Parser.Tree; source: string } {
+export function parsePython(root: string, relPath: string): { tree: Tree; source: string } {
   const { tree, source } = parseFile(resolve(root), relPath);
   return { tree, source };
 }
@@ -133,44 +130,71 @@ export interface IndexResult {
   truncated?: Truncation;
 }
 
-function extractSymbols(node: Parser.SyntaxNode, classCtx: string | undefined, out: Symbol[]): void {
-  for (const child of node.namedChildren) {
-    if (child.type === "decorated_definition") {
-      const def = child.namedChildren.find(
-        (n) => n.type === "function_definition" || n.type === "class_definition",
-      );
-      if (def) extractSymbols({ namedChildren: [def] } as unknown as Parser.SyntaxNode, classCtx, out);
-      continue;
-    }
-    if (child.type === "function_definition") {
-      const name = child.childForFieldName("name")?.text ?? "<anonymous>";
-      const params = child.childForFieldName("parameters")?.text ?? "()";
+function children(node: SyntaxNode): SyntaxNode[] {
+  const result: SyntaxNode[] = [];
+  for (let child = node.firstChild; child; child = child.nextSibling) result.push(child);
+  return result;
+}
+
+function textOf(node: SyntaxNode, source: string): string {
+  return source.slice(node.from, node.to);
+}
+
+function lineStarts(source: string): number[] {
+  const starts = [0];
+  for (let i = 0; i < source.length; i += 1) {
+    if (source.charCodeAt(i) === 10) starts.push(i + 1);
+  }
+  return starts;
+}
+
+function lineAt(starts: number[], offset: number): number {
+  let low = 0;
+  let high = starts.length;
+  while (low < high) {
+    const mid = (low + high) >>> 1;
+    if (starts[mid] <= offset) low = mid + 1;
+    else high = mid;
+  }
+  return low;
+}
+
+function extractSymbols(node: SyntaxNode, source: string, starts: number[], classCtx: string | undefined, out: Symbol[]): void {
+  for (const child of children(node)) {
+    if (child.name === "FunctionDefinition") {
+      const parts = children(child);
+      const nameNode = parts.find((n) => n.name === "VariableName");
+      const paramsNode = parts.find((n) => n.name === "ParamList");
+      const name = nameNode ? textOf(nameNode, source) : "<anonymous>";
+      const params = paramsNode ? textOf(paramsNode, source) : "()";
       out.push({
         kind: classCtx ? "method" : "function",
         name: classCtx ? `${classCtx}.${name}` : name,
-        line: child.startPosition.row + 1,
-        end_line: child.endPosition.row + 1,
+        line: lineAt(starts, child.from),
+        end_line: lineAt(starts, Math.max(child.from, child.to - 1)),
         signature: `def ${name}${params}`,
       });
-      const body = child.childForFieldName("body");
-      if (body) extractSymbols(body, classCtx, out);
+      const body = parts.find((n) => n.name === "Body");
+      if (body) extractSymbols(body, source, starts, classCtx, out);
       continue;
     }
-    if (child.type === "class_definition") {
-      const name = child.childForFieldName("name")?.text ?? "<anonymous>";
+    if (child.name === "ClassDefinition") {
+      const parts = children(child);
+      const nameNode = parts.find((n) => n.name === "VariableName");
+      const name = nameNode ? textOf(nameNode, source) : "<anonymous>";
       out.push({
         kind: "class",
         name,
-        line: child.startPosition.row + 1,
-        end_line: child.endPosition.row + 1,
+        line: lineAt(starts, child.from),
+        end_line: lineAt(starts, Math.max(child.from, child.to - 1)),
         signature: `class ${name}`,
       });
-      const body = child.childForFieldName("body");
-      if (body) extractSymbols(body, name, out);
+      const body = parts.find((n) => n.name === "Body");
+      if (body) extractSymbols(body, source, starts, name, out);
       continue;
     }
     // Recurse into blocks (if/try/with...) so conditionally-defined symbols are found.
-    if (child.namedChildCount > 0) extractSymbols(child, classCtx, out);
+    if (child.firstChild) extractSymbols(child, source, starts, classCtx, out);
   }
 }
 
@@ -183,9 +207,9 @@ export function indexSymbols(
   const { files, unsupported } = walk(rootAbs, opts.subdir);
 
   const allModules: ModuleIndex[] = files.map((path) => {
-    const { tree } = parseFile(rootAbs, path);
+    const { tree, source } = parseFile(rootAbs, path);
     const symbols: Symbol[] = [];
-    extractSymbols(tree.rootNode, undefined, symbols);
+    extractSymbols(tree.topNode, source, lineStarts(source), undefined, symbols);
     return { path, symbols };
   });
   const totalSymbols = allModules.reduce((n, m) => n + m.symbols.length, 0);
@@ -295,11 +319,46 @@ function resolveRelative(rootAbs: string, fromFile: string, dots: number, dotted
   return undefined;
 }
 
-function importedModuleNames(importFromNode: Parser.SyntaxNode, moduleNode: Parser.SyntaxNode): string[] {
-  return importFromNode.namedChildren
-    .filter((child) => child.startIndex >= moduleNode.endIndex)
-    .map((child) => (child.type === "aliased_import" ? child.childForFieldName("name")?.text : child.text))
-    .filter((name): name is string => !!name && /^[A-Za-z_]\w*$/.test(name));
+interface ParsedImport {
+  kind: "import" | "from";
+  module?: string;
+  names: string[];
+  line: number;
+}
+
+function importsFromTree(tree: Tree, source: string): ParsedImport[] {
+  const result: ParsedImport[] = [];
+  const starts = lineStarts(source);
+  const cursor = tree.cursor();
+  do {
+    if (cursor.name !== "ImportStatement") continue;
+    const line = lineAt(starts, cursor.from);
+    const statement = source
+      .slice(cursor.from, cursor.to)
+      .replace(/\\\r?\n/g, " ")
+      .replace(/#[^\r\n]*/g, " ")
+      .replace(/[()]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const fromMatch = /^from\s+([.A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*|\.+[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*|\.+)\s+import\s+(.+)$/.exec(statement);
+    if (fromMatch) {
+      const names = fromMatch[2]
+        .split(",")
+        .map((name) => name.trim().split(/\s+as\s+/)[0])
+        .filter((name) => /^[A-Za-z_]\w*$/.test(name));
+      result.push({ kind: "from", module: fromMatch[1], names, line });
+      continue;
+    }
+    const importMatch = /^import\s+(.+)$/.exec(statement);
+    if (importMatch) {
+      const names = importMatch[1]
+        .split(",")
+        .map((name) => name.trim().split(/\s+as\s+/)[0])
+        .filter((name) => /^[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*$/.test(name));
+      result.push({ kind: "import", names, line });
+    }
+  } while (cursor.next());
+  return result;
 }
 
 export function buildCallGraph(
@@ -324,15 +383,12 @@ export function buildCallGraph(
   };
 
   for (const file of files) {
-    const { tree } = parseFile(rootAbs, file);
-    const importNodes = tree.rootNode.descendantsOfType(["import_statement", "import_from_statement"]);
-    for (const node of importNodes) {
-      const line = node.startPosition.row + 1;
-      if (node.type === "import_statement") {
+    const { tree, source } = parseFile(rootAbs, file);
+    for (const parsed of importsFromTree(tree, source)) {
+      const line = parsed.line;
+      if (parsed.kind === "import") {
         // import a.b, c.d as e
-        for (const child of node.namedChildren) {
-          const dotted = child.type === "aliased_import" ? child.childForFieldName("name")?.text : child.text;
-          if (!dotted) continue;
+        for (const dotted of parsed.names) {
           const resolved = resolveModule(rootAbs, dotted);
           if (resolved) addEdge(file, resolved, dotted, line);
           else addExternal(dotted, file);
@@ -343,32 +399,31 @@ export function buildCallGraph(
         // `from pkg import util` produces an edge to pkg/util.py instead of
         // stopping at pkg/__init__.py (or misclassifying pkg as external when
         // the package is namespace-style and has no __init__.py).
-        const moduleNode = node.childForFieldName("module_name");
-        if (!moduleNode) continue;
-        const importedNames = importedModuleNames(node, moduleNode);
-        if (moduleNode.type === "relative_import") {
-          const dots = (moduleNode.text.match(/^\.+/)?.[0] ?? ".").length;
-          const dotted = moduleNode.text.replace(/^\.+/, "");
+        const moduleName = parsed.module!;
+        const importedNames = parsed.names;
+        if (moduleName.startsWith(".")) {
+          const dots = (moduleName.match(/^\.+/)?.[0] ?? ".").length;
+          const dotted = moduleName.replace(/^\.+/, "");
           const baseResolved = resolveRelative(rootAbs, file, dots, dotted);
           let matched = false;
           for (const name of importedNames) {
             const submodule = resolveRelative(rootAbs, file, dots, [dotted, name].filter(Boolean).join("."));
             if (submodule) {
-              addEdge(file, submodule, `${moduleNode.text} import ${name}`, line);
+              addEdge(file, submodule, `${moduleName} import ${name}`, line);
               matched = true;
             } else if (baseResolved) {
-              addEdge(file, baseResolved, moduleNode.text, line);
+              addEdge(file, baseResolved, moduleName, line);
               matched = true;
             }
           }
           if (!matched) {
-            if (baseResolved) addEdge(file, baseResolved, moduleNode.text, line);
+            if (baseResolved) addEdge(file, baseResolved, moduleName, line);
             // unresolvable relative imports stay silent-external-free: they can
             // only point inside the tree, so report as external "." for visibility
             else addExternal(".", file);
           }
         } else {
-          const dotted = moduleNode.text;
+          const dotted = moduleName;
           const baseResolved = resolveModule(rootAbs, dotted);
           let matched = false;
           for (const name of importedNames) {
