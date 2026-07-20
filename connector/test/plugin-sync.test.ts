@@ -38,7 +38,6 @@ test("plugin and connector versions stay in sync", () => {
   assert.equal(codex.version, connector.version);
 });
 
-
 test("codex plugin manifests use portable local packaging", () => {
   const plugin = JSON.parse(readFileSync(join(repo, ".codex-plugin/plugin.json"), "utf8"));
   assert.equal(plugin.skills, "./skills/");
