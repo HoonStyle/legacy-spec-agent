@@ -1,6 +1,6 @@
 {
   "name": "legacy-spec-agent",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Reverse-engineer a citation-grounded spec from undocumented legacy code and track drift — skill (LLM reasoning) + bundled MCP connector (deterministic citation verification, symbol index, drift classification, charts).",
   "author": {
     "name": "HoonStyle"
