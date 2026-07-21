@@ -1,11 +1,15 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { verifyCitation } from "./verify.js";
-import { indexSymbols, buildCallGraph } from "./indexer.js";
 import { detectDrift } from "./drift.js";
-import { extractDataModel, extractProjectMeta, extractChangelog } from "./extractors.js";
+import { extractProjectMeta, extractChangelog } from "./extractors.js";
 import { emitChart } from "./charts.js";
 import { renderReport } from "./report.js";
+import { assessLanguageToolchains } from "./toolchains.js";
+import { ToolchainApprovalStore, ToolchainDownloadManager } from "./toolchain-downloads.js";
+import { indexSymbolsMulti, buildCallGraphMulti, extractDataModelMulti } from "./multilang.js";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 
 const count = z.number().int().min(0);
 const emitChartsSchema = z.discriminatedUnion("kind", [
@@ -63,11 +67,73 @@ function json(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
-export function createServer(root: string): McpServer {
+export function createServer(root: string, options: { cacheRoot?: string; fetchImpl?: typeof fetch } = {}): McpServer {
+  const approvals = new ToolchainApprovalStore();
+  const configuredCache = options.cacheRoot ?? process.env.LEGACY_SPEC_TOOLCHAIN_CACHE ?? join(homedir(), ".cache", "legacy-spec-agent", "toolchains");
+  const cacheRoot = resolve(configuredCache.replace(/^~(?=$|\/)/, homedir()));
+  const downloads = new ToolchainDownloadManager(cacheRoot, approvals, options.fetchImpl);
   const server = new McpServer({
     name: "legacy-spec-connector",
-    version: "0.1.0",
+    version: "0.1.3",
   });
+
+  server.registerTool(
+    "assess_language_toolchains",
+    {
+      description:
+        "Detect Python, JavaScript/TypeScript, Java, C#, and Go source; inspect repository version pins and local SDKs; " +
+        "and return explicit download-consent requests for missing toolchains. This tool never downloads, restores, builds, " +
+        "or executes target code. Pass remembered decisions so a declined toolchain is not requested again.",
+      inputSchema: {
+        subdir: z.string().optional().describe("Restrict detection to a subdirectory of the connector root"),
+        interactive: z.boolean().optional().describe("Whether the caller can ask the user (default true); false defaults missing SDKs to skip"),
+        decisions: z.record(z.string(), z.enum(["download", "skip"])).optional().describe("Remembered per-language user decisions"),
+      },
+    },
+    async (params) => json(assessLanguageToolchains(root, { ...params, cache_dir: cacheRoot })),
+  );
+
+  server.registerTool(
+    "approve_toolchain_download",
+    {
+      description: "Record caller-attested user approval and issue a short-lived, one-use consent token bound to the exact language, version, official artifact URL, and SHA-256. The result identifies approval_source as caller_attestation; this is not MCP elicitation.",
+      inputSchema: {
+        language: z.enum(["python", "typescript", "java", "csharp", "go"]), version: z.string().min(1),
+        url: z.string().url(), sha256: z.string().regex(/^[a-fA-F0-9]{64}$/),
+        user_approved: z.literal(true).describe("Caller attests that the user approved this exact displayed artifact plan"),
+      },
+    },
+    async ({ user_approved, ...plan }) => json(approvals.issue(plan, user_approved)),
+  );
+
+  server.registerTool(
+    "download_language_toolchain",
+    {
+      description: "Start a consent-gated HTTPS download from an official language host into an isolated cache. Requires SHA-256; downloads only and never extracts, installs, restores, builds, or executes content. Returns a job ID for progress polling.",
+      inputSchema: {
+        consent_token: z.string().min(32).describe("Short-lived one-use token from approve_toolchain_download"),
+      },
+    },
+    async ({ consent_token }) => json(downloads.start(consent_token)),
+  );
+
+  server.registerTool(
+    "get_toolchain_download_status",
+    {
+      description: "Return queued/downloading/verifying/complete/failed/cancelled state and byte progress for a toolchain artifact download.",
+      inputSchema: { id: z.string().uuid() },
+    },
+    async ({ id }) => json(downloads.get(id)),
+  );
+
+  server.registerTool(
+    "cancel_toolchain_download",
+    {
+      description: "Cancel an active toolchain artifact download and remove its temporary file.",
+      inputSchema: { id: z.string().uuid() },
+    },
+    async ({ id }) => json(downloads.cancel(id)),
+  );
 
   server.registerTool(
     "verify_citation",
@@ -97,7 +163,7 @@ export function createServer(root: string): McpServer {
     "index_symbols",
     {
       description:
-        "Parse the codebase once (Lezer, Python for now) into a symbol index: functions, methods, classes " +
+        "Parse Python, JavaScript/TypeScript, Java, C#, and Go with bundled Lezer/Tree-sitter WASM grammars into a symbol index: functions, methods, classes " +
         "with exact line ranges and signatures per module. Use this instead of re-reading files to locate code. " +
         "Files in unsupported languages are counted in unsupported_files, never silently dropped.",
       inputSchema: {
@@ -115,14 +181,14 @@ export function createServer(root: string): McpServer {
           .describe("file granularity: max symbols before truncation (default 2000); reports `truncated`"),
       },
     },
-    async (params) => json(indexSymbols(root, params)),
+    async (params) => json(await indexSymbolsMulti(root, params)),
   );
 
   server.registerTool(
     "build_call_graph",
     {
       description:
-        "Build the module-to-module edge list from import statements (Lezer, Python for now) for " +
+        "Build the module-to-module edge list from Python imports, JS/TS imports, Java imports, C# using directives, and Go imports for " +
         "ARCHITECTURE.md. Package-qualified and relative imports are resolved to files inside the root; " +
         "everything else is reported under externals with its importers.",
       inputSchema: {
@@ -140,7 +206,7 @@ export function createServer(root: string): McpServer {
           .describe("file granularity: max edges before truncation (default 500); reports `truncated`"),
       },
     },
-    async (params) => json(buildCallGraph(root, params)),
+    async (params) => json(await buildCallGraphMulti(root, params)),
   );
 
   server.registerTool(
@@ -171,7 +237,7 @@ export function createServer(root: string): McpServer {
     "extract_data_model",
     {
       description:
-        "Reverse-engineer the data model (Lezer, Python): dataclasses and annotated/model classes become " +
+        "Reverse-engineer typed data models across Python, JavaScript/TypeScript, Java, C#, and Go: model-like classes/structs become " +
         "entities with typed fields and line citations; typed fields referencing another entity become relations " +
         "(List[X] → many, else one). Feed the result to emit_charts kind 'erd' for a Mermaid ER diagram, and to " +
         "DATA_MODEL.md. Grounded — no relation is invented that a field type doesn't state.",
@@ -186,7 +252,7 @@ export function createServer(root: string): McpServer {
           .describe("max entities before truncation (default 200); reports `truncated`"),
       },
     },
-    async (params) => json(extractDataModel(root, params)),
+    async (params) => json(await extractDataModelMulti(root, params)),
   );
 
   server.registerTool(

@@ -24,9 +24,11 @@ test("connector parser dependencies are JavaScript-only", () => {
   const pkg = JSON.parse(readFileSync(join(repo, "connector/package.json"), "utf8"));
   const lock = readFileSync(join(repo, "connector/package-lock.json"), "utf8");
   assert.equal(pkg.dependencies["@lezer/python"], "^1.1.19");
+  assert.equal(pkg.dependencies["web-tree-sitter"], "^0.20.8");
+  assert.equal(pkg.dependencies["tree-sitter-wasms"], "^0.1.13");
   assert.equal(pkg.dependencies["tree-sitter"], undefined);
   assert.equal(pkg.dependencies["tree-sitter-python"], undefined);
-  assert.ok(!lock.includes('node_modules/tree-sitter'));
+  assert.ok(!lock.includes('"node_modules/tree-sitter":'));
   assert.ok(!lock.includes('node_modules/node-gyp-build'));
 });
 
@@ -59,4 +61,13 @@ test("claude code mcp config keeps claude path substitutions", () => {
     "${CLAUDE_PLUGIN_ROOT}/connector/bootstrap.mjs",
     "${CLAUDE_PROJECT_DIR}",
   ]);
+});
+
+test("repository agents load the implementation roadmap at session startup", () => {
+  const agents = readFileSync(join(repo, "AGENTS.md"), "utf8");
+  const claude = readFileSync(join(repo, "CLAUDE.md"), "utf8");
+  assert.match(agents, /start of every work session[\s\S]*IMPLEMENTATION_ROADMAP\.md/);
+  assert.match(agents, /Do not mark a priority complete until its documented exit gate is satisfied/);
+  assert.match(claude, /@IMPLEMENTATION_ROADMAP\.md/);
+  assert.match(claude, /if the final gate depends on CI, say so explicitly/);
 });
