@@ -13,7 +13,7 @@ The connector is a TypeScript MCP server that performs deterministic operations 
 | `cancel_toolchain_download` | Cancels an active download and removes its temporary artifact. |
 | `verify_citation` | Checks a `path:line` citation against the actual source and returns a verdict with surrounding code. |
 | `index_symbols` | Extracts declarations and line ranges for Python, JavaScript/TypeScript, Java, C#, and Go using bundled Lezer/Tree-sitter WASM parsers. |
-| `build_call_graph` | Builds module edges from each supported language's import/using syntax and records unresolved imports as externals. |
+| `build_call_graph` | Builds a `module_dependency` graph with `resolution: "syntax"` from each supported language's import/using syntax, reports resolved/unresolved relationship counts, and records unresolved imports as externals. It does not represent method calls or dynamic dispatch. |
 | `detect_drift` | Compares existing spec citations against the current tree and classifies drift status. |
 | `extract_data_model` | Turns dataclasses and model-like classes into entities, typed fields, and relations. |
 | `extract_project_meta` | Collects package metadata, dependencies, run commands, environment variables, and tests. |

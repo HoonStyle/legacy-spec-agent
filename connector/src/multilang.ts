@@ -184,7 +184,7 @@ function importTarget(text: string, language: SupportedLanguage): string | undef
   return text.match(/^(?:from|import)\s+([\w.]+)/)?.[1];
 }
 export async function buildCallGraphMulti(root: string, opts: { subdir?: string; limit?: number; granularity?: "file" | "package" } = {}): Promise<Measured<CallGraphResult>> {
-  const rootAbs = resolve(root); const sourceFiles = files(rootAbs, opts.subdir).supported; const metrics = metricAccumulator(rootAbs, sourceFiles); const pythonGraph = buildCallGraph(rootAbs, { subdir: opts.subdir, granularity: "file", limit: 20000 }); const edges: Edge[] = [...pythonGraph.edges]; const external = new Map<string, Set<string>>(pythonGraph.externals.map((item) => [item.module, new Set(item.imported_by)]));
+  const rootAbs = resolve(root); const sourceFiles = files(rootAbs, opts.subdir).supported; const metrics = metricAccumulator(rootAbs, sourceFiles); const pythonGraph = buildCallGraph(rootAbs, { subdir: opts.subdir, granularity: "file", limit: 20000 }); const edges: Edge[] = [...pythonGraph.edges]; let nonPythonResolved = 0; const external = new Map<string, Set<string>>(pythonGraph.externals.map((item) => [item.module, new Set(item.imported_by)]));
   const goMod = join(rootAbs, "go.mod");
   const goModule = existsSync(goMod) ? readFileSync(goMod, "utf8").match(/^\s*module\s+(\S+)/m)?.[1] : undefined;
   const resolveTarget = (from: SourceFile, target: string): string | undefined => {
@@ -204,16 +204,20 @@ export async function buildCallGraphMulti(root: string, opts: { subdir?: string;
   for (const file of sourceFiles) {
     if (file.language === "python") continue;
     const access = await parsedSource(rootAbs, file); recordAccess(metrics, access); const { source, tree } = access;
-    const visit = (node: Parser.SyntaxNode) => { if (IMPORT_NODES[file.language].has(node.type)) { const target = importTarget(source.slice(node.startIndex, node.endIndex), file.language); if (target) { const internal = resolveTarget(file, target); if (internal) edges.push({ from: file.path, to: internal, import: target, line: node.startPosition.row + 1 }); else external.set(target, (external.get(target) ?? new Set()).add(file.path)); } } for (const child of node.namedChildren) visit(child); };
+    const visit = (node: Parser.SyntaxNode) => { if (IMPORT_NODES[file.language].has(node.type)) { const target = importTarget(source.slice(node.startIndex, node.endIndex), file.language); if (target) { const internal = resolveTarget(file, target); if (internal) { edges.push({ from: file.path, to: internal, import: target, line: node.startPosition.row + 1 }); nonPythonResolved++; } else external.set(target, (external.get(target) ?? new Set()).add(file.path)); } } for (const child of node.namedChildren) visit(child); };
     visit(tree.rootNode);
   }
   const externals = [...external].map(([module, importers]) => ({ module, imported_by: [...importers].sort() })).sort((a, b) => a.module.localeCompare(b.module));
+  // pythonGraph.edges may already be capped at the indexer's hard 20,000-edge
+  // response limit. Its resolved count is deliberately pre-truncation, so use
+  // that count rather than the number of Python edges copied into this output.
+  const contract = { graph_type: "module_dependency" as const, resolution: "syntax" as const, resolved: pythonGraph.resolved + nonPythonResolved, unresolved: externals.reduce((count, item) => count + item.imported_by.length, 0) };
   const granularity = opts.granularity ?? "file";
   if (granularity === "package") {
     const weights = new Map<string, Edge>(); for (const edge of edges) { const from = packageOf(edge.from); const to = packageOf(edge.to); if (from === to) continue; const key = `${from}\0${to}`; const item = weights.get(key) ?? { from, to, weight: 0 }; item.weight = (item.weight ?? 0) + 1; weights.set(key, item); }
-    return measured({ root: rootAbs, granularity, files: sourceFiles.length, edges: [...weights.values()], externals, packages: [...new Set(sourceFiles.map((file) => packageOf(file.path)))].sort() }, metrics);
+    return measured({ root: rootAbs, ...contract, granularity, files: sourceFiles.length, edges: [...weights.values()], externals, packages: [...new Set(sourceFiles.map((file) => packageOf(file.path)))].sort() }, metrics);
   }
-  const limit = Math.min(Math.max(opts.limit ?? 500, 1), 20000); const kept = edges.slice(0, limit); const result: CallGraphResult = { root: rootAbs, granularity, files: sourceFiles.length, edges: kept, externals };
+  const limit = Math.min(Math.max(opts.limit ?? 500, 1), 20000); const kept = edges.slice(0, limit); const result: CallGraphResult = { root: rootAbs, ...contract, granularity, files: sourceFiles.length, edges: kept, externals };
   if (kept.length < edges.length) result.truncated = { returned: kept.length, total: edges.length, omitted: edges.length - kept.length }; return measured(result, metrics);
 }
 

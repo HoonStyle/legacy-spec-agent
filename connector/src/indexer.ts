@@ -272,6 +272,12 @@ export interface Edge {
 
 export interface CallGraphResult {
   root: string;
+  graph_type: "module_dependency";
+  resolution: "syntax";
+  /** Number of import relationships resolved to files before output collapsing/truncation. */
+  resolved: number;
+  /** Number of unresolved import relationships, counted once per module/importer pair. */
+  unresolved: number;
   granularity: "file" | "package";
   files: number;
   edges: Edge[];
@@ -451,6 +457,12 @@ export function buildCallGraph(
   const externalsOut = [...externals.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([module, importedBy]) => ({ module, imported_by: [...importedBy].sort() }));
+  const contract = {
+    graph_type: "module_dependency" as const,
+    resolution: "syntax" as const,
+    resolved: fileEdges.length,
+    unresolved: externalsOut.reduce((count, item) => count + item.imported_by.length, 0),
+  };
 
   if (granularity === "package") {
     // Collapse file→file edges into package→package edges with weight.
@@ -469,6 +481,7 @@ export function buildCallGraph(
     }
     return {
       root: rootAbs,
+      ...contract,
       granularity,
       files: files.length,
       edges: [...pkgEdges.values()].sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to)),
@@ -480,6 +493,7 @@ export function buildCallGraph(
   const limit = clampLimit(opts.limit, 500, 20_000);
   const result: CallGraphResult = {
     root: rootAbs,
+    ...contract,
     granularity,
     files: files.length,
     edges: fileEdges.slice(0, limit),

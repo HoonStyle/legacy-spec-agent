@@ -188,9 +188,10 @@ export function createServer(root: string, options: { cacheRoot?: string; fetchI
     "build_call_graph",
     {
       description:
-        "Build the module-to-module edge list from Python imports, JS/TS imports, Java imports, C# using directives, and Go imports for " +
-        "ARCHITECTURE.md. Package-qualified and relative imports are resolved to files inside the root; " +
-        "everything else is reported under externals with its importers.",
+        "Build a syntax-resolved module dependency graph from Python imports, JS/TS imports, Java imports, C# using directives, and Go imports for " +
+        "ARCHITECTURE.md. This is not a method call graph and does not resolve symbols, runtime calls, or dynamic dispatch. " +
+        "The response identifies graph_type=module_dependency and resolution=syntax, reports resolved and unresolved import-relationship counts, " +
+        "resolves supported package-qualified and relative imports to files inside the root, and lists everything else under externals.",
       inputSchema: {
         subdir: z.string().optional().describe("Restrict analysis to a subdirectory of the connector root"),
         granularity: z

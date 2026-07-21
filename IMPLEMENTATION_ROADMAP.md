@@ -35,6 +35,8 @@ Exercise thousands of supported files plus `.claude/worktrees`, `bin`, `obj`, `n
 
 ### 3. Accurate tool contract
 
+**Status: complete.** Graph responses identify `graph_type: "module_dependency"` and `resolution: "syntax"`, report resolved and unresolved import-relationship counts before output collapsing or truncation, and the MCP/tool documentation explicitly distinguishes these syntax edges from method calls and dynamic dispatch.
+
 Label current graph output as `module_dependency` with `resolution: "syntax"`, resolved/unresolved counts, and documentation that it does not represent method calls or dynamic dispatch.
 
 **Exit gate:** clients cannot mistake syntax imports for a semantic call graph.
