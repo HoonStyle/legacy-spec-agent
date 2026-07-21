@@ -6,11 +6,16 @@ The deterministic engine behind `legacy-spec-agent`, packaged as a stdio MCP ser
 
 | Tool | What it does |
 |------|--------------|
+| `assess_language_toolchains` | Detects five language families, repository version pins, and local SDK readiness; returns consent metadata without downloading or executing code |
+| `approve_toolchain_download` | Issues a short-lived one-use token bound to an explicitly approved artifact plan |
+| `download_language_toolchain` | Starts an explicitly approved, SHA-256-verified artifact download from an allowlisted official HTTPS host |
+| `get_toolchain_download_status` | Reports download state, bytes, percentage, completion, or failure |
+| `cancel_toolchain_download` | Cancels an active artifact download |
 | `verify_citation` | Checks a `path:line` citation against the actual source and returns a verdict with the surrounding code |
-| `index_symbols` | Indexes functions, methods, and classes with line ranges and signatures (Lezer, Python) |
-| `build_call_graph` | Builds module-to-module edges from import statements; unresolved imports are listed as externals |
+| `index_symbols` | Indexes functions, methods, classes, interfaces, records, and structs across Python, JS/TS, Java, C#, and Go (Lezer + Tree-sitter WASM) |
+| `build_call_graph` | Builds module-to-module edges from Python/JS/TS/Java/C#/Go import constructs; unresolved imports are listed as externals |
 | `detect_drift` | Classifies each citation in an existing spec as intact, moved, drifted, orphaned, or unresolved, by comparing the cited line's content at the spec's baseline commit against the current tree |
-| `extract_data_model` | Turns dataclasses and model classes into entities, typed fields, and relations |
+| `extract_data_model` | Turns Python models and typed JS/TS/Java/C#/Go classes or structs into entities, fields, and declared-type relations |
 | `extract_project_meta` | Collects name, version, dependencies, run commands, and environment variables from manifests and code |
 | `extract_changelog` | Groups git history by conventional-commit type |
 | `emit_charts` | Renders coverage, drift, and benchmark SVGs plus architecture and ER diagrams from structured data |

@@ -3,7 +3,7 @@
 <p align="center">
   <a href="README.md"><img alt="Language: English" src="https://img.shields.io/badge/lang-English-blue"></a>
   <a href="README.ko.md"><img alt="Language: Korean" src="https://img.shields.io/badge/lang-%ED%95%9C%EA%B5%AD%EC%96%B4-blue"></a>
-  <img alt="Version 0.1.0" src="https://img.shields.io/badge/version-0.1.0-informational">
+  <img alt="Version 0.1.3" src="https://img.shields.io/badge/version-0.1.3-informational">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green"></a>
   <br>
   <a href="https://claude.com/claude-code"><img alt="Claude Code plugin" src="https://img.shields.io/badge/Claude%20Code-plugin-D97757?logo=claude&logoColor=white"></a>
@@ -62,8 +62,13 @@ Takes an existing spec and the commit it was recorded against, compares every ci
 
 ## Connector tools
 
-The connector exposes nine deterministic tools:
+The connector exposes fourteen tools:
 
+- `assess_language_toolchains`
+- `approve_toolchain_download`
+- `download_language_toolchain`
+- `get_toolchain_download_status`
+- `cancel_toolchain_download`
 - `verify_citation`
 - `index_symbols`
 - `build_call_graph`
@@ -76,12 +81,28 @@ The connector exposes nine deterministic tools:
 
 Without the connector the skill still runs, LLM-only, with weaker guarantees.
 
+### Missing language SDKs
+
+The machine running the connector does not have to match the repository's development environment. `assess_language_toolchains` detects Python, JavaScript/TypeScript, Java, C#, and Go source, reads common repository version pins, checks local SDK commands, and returns structured consent metadata without downloading or executing anything. If enhanced analysis needs a missing parser or SDK, the agent uses that result to ask before downloading it and identifies the version, purpose, source, approximate size when known, and isolated cache location. Declining does not stop reconstruction: the agent continues with direct source reading, or syntax-only analysis when a parser is available, and reports the semantic checks it could not perform.
+
+SDK availability and semantic-backend availability are reported separately. Bundled pure-JavaScript/WASM parsers provide syntax-level symbol indexing, import graphs, and typed model extraction for Python, JavaScript/TypeScript, Java, C#, and Go without a local SDK. Finding or downloading an SDK does not by itself claim compiler-resolved semantic extraction.
+
+After the exact language, version, official artifact URL, and SHA-256 are displayed and explicitly approved, `approve_toolchain_download` issues a short-lived one-use token bound to that plan. `download_language_toolchain` consumes the token and downloads into the connector-managed cache with official host/path rules, bounded redirects, size/concurrency/time limits, and checksum verification. The returned job ID can be polled with `get_toolchain_download_status` for byte/percentage and queued, downloading, verifying, complete, failed, or cancelled state, and cancelled with `cancel_toolchain_download`.
+
+The current approval source is explicitly reported as `caller_attestation`: the agent host attests that it showed the exact plan and received approval. The connector does not claim that this is protocol-level MCP elicitation.
+
+Download completion means a verified artifact, not an installed SDK. Approval never implies archive extraction, dependency restore, project build, install hooks, repository scripts, or target-code execution. Those actions require separate explicit consent. Non-interactive runs default to no download unless the caller explicitly opts in.
+
 ## Large repository support
 
 Reports on big codebases would get unwieldy without limits, so:
 
 - Item-level outputs accept a `limit` and say what was omitted when truncated.
 - Graphs can be rendered at `package` granularity, which keeps large dependency diagrams readable.
+
+Multi-language responses also report source bytes, serialized response bytes, and WASM parse-cache hits/misses. A deterministic synthetic benchmark currently measures 43.0% fewer tokens for file-level symbols and 95.3% fewer for package summaries than concatenated raw source. These are fixture results, not end-to-end session or billing-token claims; see [`TOKEN_USAGE.md`](TOKEN_USAGE.md) for the method and limitations.
+
+Release blockers, resolver work, semantic backends, and the deliberately last SDK-installer phase are ordered in [`IMPLEMENTATION_ROADMAP.md`](IMPLEMENTATION_ROADMAP.md).
 
 ## Installation
 
@@ -100,7 +121,7 @@ SKILL.md             Skill workflow, templates, and hard rules
 references/          Extraction, architecture, and critic contracts
 SPEC.md              Original design document (v0.1)
 CONNECTOR_DESIGN.md  Connector design and milestone record (C0-C7)
-connector/           TypeScript MCP server with nine tools and tests
+connector/           TypeScript MCP server with fourteen tools and tests
 demo-hookify/        Example Mode A run against a third-party package
 evals/               With-skill vs. baseline benchmark results
 skills/              Plugin-layout copy of the skill

@@ -291,7 +291,7 @@ SPEC.md의 M0–M4는 스킬 트랙으로 이미 상당 부분 달성되었다(d
 |------|------|-----------|------|
 | **C0** | stdio MCP 서버 스캐폴드 (툴 5개 시그니처 + 더미 응답) | `claude mcp add`로 등록, 툴 목록 노출 | ✅ `connector/` (TypeScript, SDK 클라이언트 스모크로 5툴 노출 확인) |
 | **C1** | `verify_citation` 실동작 (단일 언어 우선) | demo-hookify의 audit_log 12건 판정을 기계 재현 | ✅ 12/12 재현 (verified 9 · flagged 3, `connector/test/replay-audit.test.ts`) |
-| **C2** | `index_symbols` + `build_call_graph` | 재독 없이 Phase 1 fan-out 지원, 토큰 사용량 전후 비교 | ✅ 구현 (Python/Lezer — hookify 10파일·20심볼·내부엣지 9 검증. 토큰 전후 비교는 스킬측 eval로 미실행) |
+| **C2** | `index_symbols` + `build_call_graph` | 재독 없이 Phase 1 fan-out 지원, 토큰 사용량 전후 비교 | ✅ 구현 (5개 언어 번들 WASM 파서와 공유 parse cache. 25파일 합성 fixture의 o200k 측정에서 raw 대비 file index 43.0%, package index 95.3% 감소. end-to-end 세션 eval은 미실행) |
 | **C3** | `detect_drift` (git diff + AST) | 의도 변경 1건 → drifted 플래그 데모 (SPEC.md §9 시나리오 3) | ✅ 구현 (baseline_ref 방식 — 의도 변경 데모 테스트로 4분류 전부 재현 + hookify 12건 intact 검증. AST 비교는 라인 프로브로 대체, 언어 무관) |
 | **C4** | `emit_charts` + 플러그인 패키징 (방식 A) | `/plugin install` 한 번으로 전체 동작 | ✅ 차트 5종 + 플러그인 패키징. 실제 설치로 스킬 1개와 MCP 서버 1개 등록을 확인했고, 의존성 없는 사본에서 bootstrap이 자동 설치·빌드하는 것까지 검증. 스킬 사본 드리프트는 테스트가 잠근다 |
 | **C5** | 추가 산출물 추출기 | ERD·온보딩·CHANGELOG 생성 | ✅ `extract_data_model`, `extract_project_meta`, `extract_changelog` 구현. hookify에서 Rule/Condition 관계, 플러그인 메타데이터, 환경변수 복원을 검증 |
