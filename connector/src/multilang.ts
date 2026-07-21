@@ -208,12 +208,13 @@ export async function buildCallGraphMulti(root: string, opts: { subdir?: string;
     visit(tree.rootNode);
   }
   const externals = [...external].map(([module, importers]) => ({ module, imported_by: [...importers].sort() })).sort((a, b) => a.module.localeCompare(b.module));
+  const contract = { graph_type: "module_dependency" as const, resolution: "syntax" as const, resolved: edges.length, unresolved: externals.reduce((count, item) => count + item.imported_by.length, 0) };
   const granularity = opts.granularity ?? "file";
   if (granularity === "package") {
     const weights = new Map<string, Edge>(); for (const edge of edges) { const from = packageOf(edge.from); const to = packageOf(edge.to); if (from === to) continue; const key = `${from}\0${to}`; const item = weights.get(key) ?? { from, to, weight: 0 }; item.weight = (item.weight ?? 0) + 1; weights.set(key, item); }
-    return measured({ root: rootAbs, granularity, files: sourceFiles.length, edges: [...weights.values()], externals, packages: [...new Set(sourceFiles.map((file) => packageOf(file.path)))].sort() }, metrics);
+    return measured({ root: rootAbs, ...contract, granularity, files: sourceFiles.length, edges: [...weights.values()], externals, packages: [...new Set(sourceFiles.map((file) => packageOf(file.path)))].sort() }, metrics);
   }
-  const limit = Math.min(Math.max(opts.limit ?? 500, 1), 20000); const kept = edges.slice(0, limit); const result: CallGraphResult = { root: rootAbs, granularity, files: sourceFiles.length, edges: kept, externals };
+  const limit = Math.min(Math.max(opts.limit ?? 500, 1), 20000); const kept = edges.slice(0, limit); const result: CallGraphResult = { root: rootAbs, ...contract, granularity, files: sourceFiles.length, edges: kept, externals };
   if (kept.length < edges.length) result.truncated = { returned: kept.length, total: edges.length, omitted: edges.length - kept.length }; return measured(result, metrics);
 }
 

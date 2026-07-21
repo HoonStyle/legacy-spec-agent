@@ -124,9 +124,29 @@ test("buildCallGraph: package granularity collapses file edges with weight", () 
     writeFileSync(join(root, "a", "x1.py"), "from b.y import Z\n");
     writeFileSync(join(root, "a", "x2.py"), "from b.y import W\n"); // 2nd a→b file edge
     const g = buildCallGraph(root, { granularity: "package" });
+    assert.equal(g.graph_type, "module_dependency");
+    assert.equal(g.resolution, "syntax");
+    assert.equal(g.resolved, 2);
+    assert.equal(g.unresolved, 0);
     assert.equal(g.granularity, "package");
     assert.deepEqual(g.edges, [{ from: "a", to: "b", weight: 2 }]);
     assert.ok(g.packages!.includes("a") && g.packages!.includes("b"));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("buildCallGraph: contract counts unresolved relationships per importer", () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-contract-"));
+  try {
+    writeFileSync(join(root, "target.py"), "VALUE = 1\n");
+    writeFileSync(join(root, "a.py"), "from target import VALUE\nimport external_lib\n");
+    writeFileSync(join(root, "b.py"), "import external_lib\n");
+    const graph = buildCallGraph(root);
+    assert.deepEqual(
+      { graph_type: graph.graph_type, resolution: graph.resolution, resolved: graph.resolved, unresolved: graph.unresolved },
+      { graph_type: "module_dependency", resolution: "syntax", resolved: 1, unresolved: 2 },
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
