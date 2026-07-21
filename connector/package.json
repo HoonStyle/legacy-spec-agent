@@ -1,6 +1,6 @@
 {
   "name": "@legacy-spec/connector",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Deterministic engine for legacy-spec-agent: citation verification, symbol indexing, drift detection, chart emission — exposed as a stdio MCP server.",
   "type": "module",
   "license": "MIT",
@@ -13,17 +13,20 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "npm run build && node --test dist/test/*.test.js",
+    "test": "npm run build && node run-tests.mjs",
     "start": "node dist/src/index.js"
   },
   "dependencies": {
     "@lezer/common": "^1.5.2",
     "@lezer/python": "^1.1.19",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "tree-sitter-wasms": "^0.1.13",
+    "web-tree-sitter": "^0.20.8",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
+    "gpt-tokenizer": "^3.4.0",
     "typescript": "^7.0.2"
   }
 }
