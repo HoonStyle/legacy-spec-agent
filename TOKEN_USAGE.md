@@ -24,6 +24,20 @@ node --test dist/test/token-benchmark.test.js
 
 The test enforces a conservative floor of 35% reduction for file granularity and 90% for package granularity.
 
+## Large mixed-repository resource benchmark
+
+`connector/test/large-corpus.test.ts` creates 2,001 supported files across Python, JavaScript/TypeScript, Java, C#, and Go. It also includes generated/worktree directories, binaries, unsupported sources, a symlink, malformed syntax, and an unreadable generated file. The test reports elapsed time, process peak RSS, source bytes, structured-response bytes, and cache hits/misses as a Node test diagnostic.
+
+Run it with:
+
+```bash
+cd connector
+npm run build
+node --test dist/test/large-corpus.test.js
+```
+
+The corpus is generated in the system temporary directory and removed after the test. Measurements are regression diagnostics rather than fixed performance thresholds because CI operating systems and runners have different resource profiles. Deterministic assertions enforce the supported-file count, generated/worktree exclusion, cache reuse, and a response size below 100,000 bytes when the symbol limit is 50.
+
 ## Interpretation limits
 
 This is a deterministic synthetic fixture, not an end-to-end agent-session benchmark. It measures the context required to transmit source versus a structural index; it does not include prompts, reasoning, tool-call envelopes, citations opened after indexing, output tokens, or provider-side cache accounting. Results also vary by repository shape and tokenizer.

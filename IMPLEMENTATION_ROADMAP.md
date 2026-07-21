@@ -12,7 +12,7 @@ The current graph is a **module dependency graph**, not a compiler-resolved meth
 
 ### 1. Installed-plugin end-to-end smoke
 
-**Status: implementation complete; Ubuntu/Windows CI is the merge gate.** `connector/test/installed-plugin.test.ts` copies a clean plugin without `node_modules` or `dist` into paths containing spaces, Korean, and Greek characters. It launches concurrent first-run servers through both the installed Codex manifest and the placeholder-expanded Claude MCP configuration. A bootstrap lock serializes dependency installation/build, while later processes re-check state and reuse the completed setup. The test indexes all five language fixtures, verifies the C# WASM grammar and built entrypoint exist, and compares a recursive SHA-256 snapshot to confirm that no target path or content changed. CI enables this network-dependent smoke with `PLUGIN_INSTALL_SMOKE=1` on Node 20 and 22 across Ubuntu and Windows.
+**Status: complete.** `connector/test/installed-plugin.test.ts` copies a clean plugin without `node_modules` or `dist` into paths containing spaces, Korean, and Greek characters. It launches concurrent first-run servers through both the installed Codex manifest and the placeholder-expanded Claude MCP configuration. A bootstrap lock serializes dependency installation/build, while later processes re-check state and reuse the completed setup. The test indexes all five language fixtures, verifies the C# WASM grammar and built entrypoint exist, and compares a recursive SHA-256 snapshot to confirm that no target path or content changed. CI enables this network-dependent smoke with `PLUGIN_INSTALL_SMOKE=1` on Node 20 and 22 across Ubuntu and Windows.
 
 Prove the distributed layout rather than only the checkout layout:
 
@@ -26,6 +26,8 @@ Prove the distributed layout rather than only the checkout layout:
 **Exit gate:** the smoke passes on Ubuntu and Windows with supported CI Node versions from a clean plugin copy. Locally, run `cd connector && npm run build && PLUGIN_INSTALL_SMOKE=1 node --test dist/test/installed-plugin.test.js`; the ordinary suite skips this reinstall check unless explicitly enabled.
 
 ### 2. Large mixed-repository corpus
+
+**Status: implementation complete; Ubuntu/Windows CI is the merge gate.** `connector/test/large-corpus.test.ts` generates 2,001 supported files across all five languages together with generated directories, binaries, unsupported sources, a symlink, malformed syntax, and an unreadable generated file. It records elapsed time, peak RSS, source and response bytes, and warm-cache reuse. The assertions enforce generated/worktree exclusion and bounded file-granularity responses.
 
 Exercise thousands of supported files plus `.claude/worktrees`, `bin`, `obj`, `node_modules`, binaries, unsupported sources, symlinks, malformed syntax, and unreadable files. Record elapsed time, peak RSS, response bytes, and cache reuse.
 
