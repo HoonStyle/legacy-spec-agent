@@ -92,6 +92,16 @@ test("clean installed plugin bootstraps and parses all bundled languages", { ski
     assert.equal(directoryDigest(target), targetBefore);
   } finally {
     await Promise.all([client.close(), secondClient.close(), claudeClient.close()]);
-    rmSync(workspace, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    // On Windows the spawned server children can keep file handles inside the
+    // installed connector open for a short while after close(), so an immediate
+    // rmSync hits EBUSY. Cleanup of an OS temp dir is best-effort (the CI runner
+    // is ephemeral) — retry generously, and never let a teardown lock fail an
+    // otherwise-passing smoke test.
+    try {
+      rmSync(workspace, { recursive: true, force: true, maxRetries: 50, retryDelay: 200 });
+    } catch (error) {
+      const code = error && typeof error === "object" && "code" in error ? (error as { code?: string }).code : undefined;
+      console.error(`installed-plugin smoke: workspace cleanup skipped (${code ?? String(error)})`);
+    }
   }
 });
