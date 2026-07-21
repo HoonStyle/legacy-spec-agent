@@ -10,11 +10,12 @@ permissions:
 
 jobs:
   test:
-    name: connector tests (Node ${{ matrix.node }})
-    runs-on: ubuntu-latest
+    name: connector tests (${{ matrix.os }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest]
         node: [20, 22]
     steps:
       - uses: actions/checkout@v4
@@ -26,4 +27,7 @@ jobs:
       - run: npm ci
         working-directory: connector
       - run: npm test
+        working-directory: connector
+      - name: Installed plugin smoke
+        run: node run-installed-smoke.mjs
         working-directory: connector
