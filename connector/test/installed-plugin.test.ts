@@ -27,10 +27,14 @@ function directoryDigest(root: string): string {
 }
 
 test("clean installed plugin bootstraps and parses all bundled languages", { skip: !enabled, timeout: 120_000 }, async () => {
-  const workspace = mkdtempSync(join(tmpdir(), "legacy spec 설치 smoke "));
-  const pluginRoot = join(workspace, "plugin Ω space");
+  // Paths keep spaces (legitimate cross-platform coverage) but stay ASCII:
+  // on Windows fs.cpSync silently copies nothing when the destination path
+  // contains non-ASCII characters (nodejs/node#61878), which made this smoke
+  // flaky there (intermittent ENOENT on the copied plugin manifests).
+  const workspace = mkdtempSync(join(tmpdir(), "legacy spec install smoke "));
+  const pluginRoot = join(workspace, "plugin dir space");
   const installedConnector = join(pluginRoot, "connector");
-  const target = join(workspace, "target repo 한글");
+  const target = join(workspace, "target repo space");
   // Copy the connector entry-by-entry, skipping the built/installed dirs, to
   // mirror exactly what a git-installed plugin ships (no node_modules, no dist).
   // A recursive cpSync with a denylist `filter` is not reliable on Windows —
