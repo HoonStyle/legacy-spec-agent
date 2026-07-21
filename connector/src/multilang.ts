@@ -212,13 +212,24 @@ export async function buildCallGraphMulti(root: string, opts: { subdir?: string;
   // response limit. Its resolved count is deliberately pre-truncation, so use
   // that count rather than the number of Python edges copied into this output.
   const contract = { graph_type: "module_dependency" as const, resolution: "syntax" as const, resolved: pythonGraph.resolved + nonPythonResolved, unresolved: externals.reduce((count, item) => count + item.imported_by.length, 0) };
+  // `edges` only holds the Python edges that survived the inner buildCallGraph's
+  // hard 20,000-edge cap, so its length under-reports the true resolved-edge
+  // total whenever Python alone exceeds that cap. Reconcile every downstream
+  // count against the pre-truncation total (== contract.resolved) and carry the
+  // Python-side omission forward so `resolved` and the returned graph stay
+  // consistent instead of contradicting each other.
+  const pythonOmitted = pythonGraph.truncated?.omitted ?? 0;
+  const totalResolvedEdges = contract.resolved; // pythonGraph.resolved + nonPythonResolved, both pre-truncation
   const granularity = opts.granularity ?? "file";
   if (granularity === "package") {
     const weights = new Map<string, Edge>(); for (const edge of edges) { const from = packageOf(edge.from); const to = packageOf(edge.to); if (from === to) continue; const key = `${from}\0${to}`; const item = weights.get(key) ?? { from, to, weight: 0 }; item.weight = (item.weight ?? 0) + 1; weights.set(key, item); }
-    return measured({ root: rootAbs, ...contract, granularity, files: sourceFiles.length, edges: [...weights.values()], externals, packages: [...new Set(sourceFiles.map((file) => packageOf(file.path)))].sort() }, metrics);
+    // Package weights are collapsed from `edges`, so a Python cap silently drops
+    // file edges before aggregation. Surface that rather than reporting nothing.
+    const packageTruncated = pythonOmitted > 0 ? { truncated: { returned: totalResolvedEdges - pythonOmitted, total: totalResolvedEdges, omitted: pythonOmitted } } : {};
+    return measured({ root: rootAbs, ...contract, granularity, files: sourceFiles.length, edges: [...weights.values()], externals, packages: [...new Set(sourceFiles.map((file) => packageOf(file.path)))].sort(), ...packageTruncated }, metrics);
   }
   const limit = Math.min(Math.max(opts.limit ?? 500, 1), 20000); const kept = edges.slice(0, limit); const result: CallGraphResult = { root: rootAbs, ...contract, granularity, files: sourceFiles.length, edges: kept, externals };
-  if (kept.length < edges.length) result.truncated = { returned: kept.length, total: edges.length, omitted: edges.length - kept.length }; return measured(result, metrics);
+  if (kept.length < totalResolvedEdges) result.truncated = { returned: kept.length, total: totalResolvedEdges, omitted: totalResolvedEdges - kept.length }; return measured(result, metrics);
 }
 
 const FIELD_NODES: Record<SupportedLanguage, Set<string>> = {
