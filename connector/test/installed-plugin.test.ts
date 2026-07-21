@@ -31,13 +31,16 @@ test("clean installed plugin bootstraps and parses all bundled languages", { ski
   const pluginRoot = join(workspace, "plugin Ω space");
   const installedConnector = join(pluginRoot, "connector");
   const target = join(workspace, "target repo 한글");
-  cpSync(connector, installedConnector, {
-    recursive: true,
-    filter(source) {
-      const first = relative(connector, source).split(/[\\/]/)[0];
-      return first !== "node_modules" && first !== "dist";
-    },
-  });
+  // Copy the connector entry-by-entry, skipping the built/installed dirs, to
+  // mirror exactly what a git-installed plugin ships (no node_modules, no dist).
+  // A recursive cpSync with a denylist `filter` is not reliable on Windows —
+  // the filter fails to prune node_modules/dist there — so never hand those
+  // directories to cpSync in the first place.
+  mkdirSync(installedConnector, { recursive: true });
+  for (const entry of readdirSync(connector)) {
+    if (entry === "node_modules" || entry === "dist") continue;
+    cpSync(join(connector, entry), join(installedConnector, entry), { recursive: true });
+  }
   cpSync(resolve(connector, "..", ".codex-plugin"), join(pluginRoot, ".codex-plugin"), { recursive: true });
   cpSync(resolve(connector, "..", ".claude-plugin"), join(pluginRoot, ".claude-plugin"), { recursive: true });
   cpSync(resolve(connector, "..", "skills"), join(pluginRoot, "skills"), { recursive: true });
