@@ -116,10 +116,31 @@ cpSync가 `\\?\` 접두사 경로를 넘기는 순간 깨지는 **잠재 버그*
 | Node 20에서 실제로 그 동작이 일어나 누출됐는가 | ✅ 확정 (windows-latest Node 20.20.2 러너 직접 관측) |
 | Node 22에서는 `\\?\` 없이 정상인가 | ✅ 확정 (동일 러너 관측) |
 | 20→22 사이 어느 PR/릴리스가 filter 경로에서 `\\?\`를 제거했는가 | ⬜ 미확정 (#45143은 그 변경이 아님 — 별도 후속 변경으로 추정, 커밋 미특정) |
-| 실제 connector가 §1 표대로 Node 22 Windows에서도 실패했는가 | ⬜ 미확정 (최소 재현은 Node 20에서만 실패; 닫힌 PR #33~#39의 CI 로그 없이는 불가) |
+| 실제 connector가 §1 표대로 Node 22 Windows에서도 실패했는가 | ✅ 확정 — **단, cpSync 때문이 아님** (아래 (C) 참조) |
 
-> 위 두 미확정 항목은 실무 영향이 없다: #39의 allowlist 수정이 `relative()`에 의존하지 않아
-> 경로 형태·Node 버전과 무관하게 두 경우 모두를 원천 차단하기 때문이다.
+> 첫 항목(정확한 수정 커밋)은 실무 영향이 없다: #39의 allowlist 수정이 `relative()`에 의존하지 않아
+> 경로 형태·Node 버전과 무관하게 cpSync 누출을 원천 차단하기 때문이다.
+
+### (C) 두 번째 Windows 실패: 정리 단계의 `EBUSY` (cpSync와 별개, 미해결)
+
+allowlist 수정으로 §2의 `node_modules` assert는 통과하지만, **#39의 최신 CI는 여전히
+windows-latest Node 20·22 둘 다 실패한다.** 실패 지점이 §2와 완전히 다르다:
+
+```
+error: "EBUSY: resource busy or locked, rmdir '...\plugin Ω space\connector'"
+  at rmSync(workspace, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })  // finally 블록
+```
+
+- 테스트 본문은 ~62초간 **끝까지 성공**한다(bootstrap → `npm ci` → build → 5개 언어 `index_symbols`).
+- `finally`의 `rmSync(workspace, …)` 정리에서 Windows가 아직 열린 파일 핸들(스폰된 MCP 서버
+  자식 프로세스가 잡고 있는 `connector` 하위 파일 추정)을 놓지 못해 **EBUSY**로 실패.
+- Node 20·22 **둘 다** 여기서 죽으므로 **버전 의존이 아니라** Windows 일반의 파일락/teardown 문제.
+- `maxRetries: 10 / retryDelay: 100`(총 ~1s)로는 핸들 해제를 못 기다린다.
+
+즉 §1 표의 “Node 22 Windows도 실패”는 사실이었고, 그 원인은 cpSync가 아니라 **이 EBUSY teardown**이다.
+cpSync 누출(§B, Node 20 한정)과 EBUSY 정리(§C, 전 Windows)는 **서로 다른 두 버그**이며,
+#39는 전자만 고쳤다. 후자는 아직 미해결(예상 조치: 클라이언트 close 후 자식 프로세스 종료를 확실히
+대기, `rmSync` 재시도/대기 시간 상향, 또는 정리 실패를 비치명적으로 처리).
 
 ## 4. 조치 (별도 진행)
 
