@@ -27,3 +27,23 @@ jobs:
         working-directory: connector
       - run: npm test
         working-directory: connector
+
+  # Diagnostic-only: reproduce the Windows-only cpSync recursive+filter
+  # behaviour from docs/pr-failures-root-cause.md. Self-contained (no npm ci)
+  # and non-gating (continue-on-error) — read the VERDICT block in its log,
+  # then remove this job once the question is settled.
+  cpsync-repro:
+    name: cpSync recursive+filter repro (${{ matrix.os }}, Node ${{ matrix.node }})
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        node: [20, 22]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: node scripts/repro-cpsync-win.mjs
