@@ -81,6 +81,8 @@ The connector exposes fourteen tools:
 
 Without the connector the skill still runs, LLM-only, with weaker guarantees.
 
+Despite its compatibility-preserving name, `build_call_graph` returns a syntax-level **module dependency graph**, not a method call graph. Its response labels this contract as `graph_type: "module_dependency"` and `resolution: "syntax"`, and reports `resolved` and `unresolved` import-relationship counts. It does not resolve symbols, method calls, runtime dispatch, or dynamic dispatch; unresolved imports remain in `externals` rather than being guessed.
+
 ### Missing language SDKs
 
 The machine running the connector does not have to match the repository's development environment. `assess_language_toolchains` detects Python, JavaScript/TypeScript, Java, C#, and Go source, reads common repository version pins, checks local SDK commands, and returns structured consent metadata without downloading or executing anything. If enhanced analysis needs a missing parser or SDK, the agent uses that result to ask before downloading it and identifies the version, purpose, source, approximate size when known, and isolated cache location. Declining does not stop reconstruction: the agent continues with direct source reading, or syntax-only analysis when a parser is available, and reports the semantic checks it could not perform.

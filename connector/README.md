@@ -13,7 +13,7 @@ The deterministic engine behind `legacy-spec-agent`, packaged as a stdio MCP ser
 | `cancel_toolchain_download` | Cancels an active artifact download |
 | `verify_citation` | Checks a `path:line` citation against the actual source and returns a verdict with the surrounding code |
 | `index_symbols` | Indexes functions, methods, classes, interfaces, records, and structs across Python, JS/TS, Java, C#, and Go (Lezer + Tree-sitter WASM) |
-| `build_call_graph` | Builds module-to-module edges from Python/JS/TS/Java/C#/Go import constructs; unresolved imports are listed as externals |
+| `build_call_graph` | Builds syntax-level module dependency edges from Python/JS/TS/Java/C#/Go import constructs; labels the graph and resolution, reports resolved/unresolved relationship counts, and lists unresolved imports as externals. It is not a method call or dynamic-dispatch graph. |
 | `detect_drift` | Classifies each citation in an existing spec as intact, moved, drifted, orphaned, or unresolved, by comparing the cited line's content at the spec's baseline commit against the current tree |
 | `extract_data_model` | Turns Python models and typed JS/TS/Java/C#/Go classes or structs into entities, fields, and declared-type relations |
 | `extract_project_meta` | Collects name, version, dependencies, run commands, and environment variables from manifests and code |

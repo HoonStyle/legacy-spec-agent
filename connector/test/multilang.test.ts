@@ -30,7 +30,14 @@ test("multilang dependency graph resolves relative TypeScript imports", async ()
   const root = mkdtempSync(join(tmpdir(), "lsc-multigraph-"));
   writeFileSync(join(root, "a.ts"), "import { b } from './b'; export const a = b;\n");
   writeFileSync(join(root, "b.ts"), "export const b = 1;\n");
-  try { const result = await buildCallGraphMulti(root); assert.ok(result.edges.some((edge) => edge.from === "a.ts" && edge.to === "b.ts")); }
+  try {
+    const result = await buildCallGraphMulti(root);
+    assert.ok(result.edges.some((edge) => edge.from === "a.ts" && edge.to === "b.ts"));
+    assert.deepEqual(
+      { graph_type: result.graph_type, resolution: result.resolution, resolved: result.resolved, unresolved: result.unresolved },
+      { graph_type: "module_dependency", resolution: "syntax", resolved: 1, unresolved: 0 },
+    );
+  }
   finally { rmSync(root, { recursive: true, force: true }); }
 });
 
