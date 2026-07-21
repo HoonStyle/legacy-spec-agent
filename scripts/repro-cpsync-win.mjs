@@ -23,6 +23,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -69,22 +70,24 @@ function buildSource(root) {
 }
 
 // Variant A — the approach that failed: one recursive cpSync + denylist filter.
+// Logs EVERY filter invocation (raw src + computed rel/first), capped, so that
+// when the copy leaks we can see the actual path form cpSync handed the filter
+// — that is the only way to explain WHY relative()/first stopped matching.
 function copyWithRecursiveFilter(source, dest) {
   const seen = [];
+  let calls = 0;
   cpSync(source, dest, {
     recursive: true,
     filter(src) {
+      calls++;
       const rel = relative(source, src);
       const first = rel.split(/[\\/]/)[0];
       const keep = !DENY.has(first);
-      // Record only the paths that touch the excluded trees, to keep it short.
-      if (first === "node_modules" || first === "dist" || rel === "") {
-        seen.push({ src, rel, first, keep });
-      }
+      if (seen.length < 40) seen.push({ src, rel, first, keep });
       return keep;
     },
   });
-  return seen;
+  return { seen, calls };
 }
 
 // Variant B — the fix that landed on #39: never hand the excluded dirs to
@@ -112,12 +115,21 @@ function run() {
 
   buildSource(source);
 
+  // Reveal whether the source string differs from its realpath — the 8.3
+  // short-name vs long-name divergence (e.g. RUNNER~1) that would make
+  // relative(source, src) never yield the expected first segment.
+  const realSource = realpathSync(source);
+  log(`source     = ${source}`);
+  log(`realpath   = ${realSource}`);
+  log(`source === realpath: ${source === realSource}`);
+
   log("\n=== Variant A: cpSync(recursive:true, filter) — the FAILING approach ===");
-  const seen = copyWithRecursiveFilter(source, destA);
-  log("filter() calls touching the excluded trees (src | relative | firstSeg | keep):");
+  const { seen, calls } = copyWithRecursiveFilter(source, destA);
+  log(`filter() invoked ${calls} time(s). First ${seen.length} call(s) (src | relative | firstSeg | keep):`);
   for (const s of seen) {
     log(`  ${s.src}\n      rel=${JSON.stringify(s.rel)} first=${JSON.stringify(s.first)} keep=${s.keep}`);
   }
+  if (calls === 0) log("  (filter was NEVER called — cpSync skipped the filter entirely on this platform/version)");
   const leakA = leaks(destA);
   log(`\nVariant A copy top-level: ${JSON.stringify(readdirSync(destA))}`);
   log(`Variant A leaked (should be []): ${JSON.stringify(leakA)}`);
