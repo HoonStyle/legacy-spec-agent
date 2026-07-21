@@ -16,7 +16,10 @@
   | ubuntu-latest, Node 20 | ✅ success |
   | ubuntu-latest, Node 22 | ✅ success |
   | **windows-latest, Node 20** | ❌ failure |
-  | **windows-latest, Node 22** | ❌ failure |
+  | **windows-latest, Node 22** | ❌ failure (※) |
+
+  > (※) 이 표는 당시 관측 기록이다. 이후 최소 재현(§3)에서는 **Node 20에서만** 재현됐고
+  > Node 22 Windows 실패는 재확인하지 못했다 — §3 “근거 구분” 표의 미확정 항목 참조.
 
 - 메인 유닛/통합 테스트(97개)는 Windows 포함 전 플랫폼에서 통과.
   실패하는 것은 오직 이 PR들이 **새로 추가한** `Installed plugin smoke` 단계
@@ -95,10 +98,28 @@ cpSync가 `\\?\` 접두사 경로를 넘기는 순간 깨지는 **잠재 버그*
 고쳐진 버전 의존 동작**이다. 근본원인은 ① cpSync가 filter에 `\\?\` 확장 경로를 넘긴 점,
 ② 그 경로 형태에 취약한 `relative().split()[0]` 필터 식, 두 가지의 조합이다.
 
-> 남은 미해결: 최초 실패 표(§1)에는 실제 connector가 **Node 22 Windows에서도** 실패했다고
-> 기록돼 있으나, 위 최소 재현은 **Node 20에서만** 실패한다. 실제 connector의 Node 22 실패는
-> 다른 트리거(가득 찬 실제 node_modules 등)일 가능성이 있으며, 닫힌 PR(#33~#39)의 CI 로그
-> 없이는 확정 불가. 다만 #39의 allowlist 수정이 두 경우 모두를 원천 차단하므로 실무상 영향은 없다.
+**이것은 Node에 문서화된 알려진 이슈다 — 우리 코드 특유의 문제가 아니다.**
+
+- [nodejs/node#44720 — “[fs.cp] fails with EPERM despite filter”](https://github.com/nodejs/node/issues/44720):
+  Windows에서 `cpSync`가 filter 콜백에 `\\?\` 접두사 절대경로를 넘긴다는 사실이 그대로 보고돼 있다
+  (예: filter가 받은 경로 = `\\?\B:\System Volume Information`). 우리가 관측한 `first=""`와 동일한 원인.
+- 그 이슈의 수정([PR #45143](https://github.com/nodejs/node/pull/45143), 커밋 `1db20c8`)은 filter를
+  stat *이전에* 평가하도록 옮겨 **EPERM 크래시만** 없앴을 뿐, **filter에 넘기는 경로 형태(`\\?\`)는
+  바꾸지 않았다.** 이 EPERM 수정은 Node 20 이전 릴리스에 포함됐으므로, Node 20은
+  “크래시는 안 나지만 filter가 여전히 `\\?\` 경로를 받는” 상태였다 → 그래서 denylist가 무력화된다.
+
+**근거 구분 (넘겨짚지 않도록):**
+
+| 항목 | 상태 |
+|---|---|
+| Windows에서 filter가 `\\?\` 경로를 받는 것이 알려진 이슈인가 | ✅ 확정 (#44720) |
+| Node 20에서 실제로 그 동작이 일어나 누출됐는가 | ✅ 확정 (windows-latest Node 20.20.2 러너 직접 관측) |
+| Node 22에서는 `\\?\` 없이 정상인가 | ✅ 확정 (동일 러너 관측) |
+| 20→22 사이 어느 PR/릴리스가 filter 경로에서 `\\?\`를 제거했는가 | ⬜ 미확정 (#45143은 그 변경이 아님 — 별도 후속 변경으로 추정, 커밋 미특정) |
+| 실제 connector가 §1 표대로 Node 22 Windows에서도 실패했는가 | ⬜ 미확정 (최소 재현은 Node 20에서만 실패; 닫힌 PR #33~#39의 CI 로그 없이는 불가) |
+
+> 위 두 미확정 항목은 실무 영향이 없다: #39의 allowlist 수정이 `relative()`에 의존하지 않아
+> 경로 형태·Node 버전과 무관하게 두 경우 모두를 원천 차단하기 때문이다.
 
 ## 4. 조치 (별도 진행)
 
@@ -124,10 +145,11 @@ cpSync가 `\\?\` 접두사 경로를 넘기는 순간 깨지는 **잠재 버그*
 
 - **Codex 태스크당 1 PR** 운영 — 같은 태스크 반복 실행 시 병렬 PR이 쌓임.
 - **크로스플랫폼 파일 조작 원칙**: `cpSync(recursive) + denylist filter`에 기대지 말 것.
-  filter가 받는 경로 형태는 플랫폼·Node 버전마다 다르며(Windows Node 20은 `\\?\` 접두사),
-  `relative(base, src)` 기반 매칭은 이때 깨진다. 제외 대상은 아예 대상 경로를 넘기지 않는
-  **allowlist / 개별 복사** 방식이 안전. filter 안에서 경로 비교가 꼭 필요하면 양쪽을
-  `path.resolve()`로 정규화한 뒤 비교할 것.
+  filter가 받는 경로 형태는 플랫폼·Node 버전마다 다르며(Windows Node 20은 `\\?\` 접두사 —
+  [nodejs/node#44720](https://github.com/nodejs/node/issues/44720)), `relative(base, src)` 기반
+  매칭은 이때 깨진다. 제외 대상은 아예 대상 경로를 넘기지 않는 **allowlist / 개별 복사** 방식이
+  안전. filter 안에서 경로 비교가 꼭 필요하면 filter 인자를 `path.resolve()`로 정규화하고
+  비교 기준(base)도 같은 방식으로 정규화한 뒤 비교할 것 — 문자열 접두사에 의존하지 말 것.
 - **Windows 지원 필요성 재검토**: 이 플러그인이 Windows 중심 사용자층이 아니라면,
   Windows 레그를 `continue-on-error`로 두거나 설치형 스모크를 ubuntu에서만 돌려
   머지 게이트에서 제외하는 것도 유효한 선택지.
