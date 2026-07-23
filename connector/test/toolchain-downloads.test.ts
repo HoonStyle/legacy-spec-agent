@@ -17,6 +17,13 @@ function response(chunks = [body]): typeof fetch {
   }), { status: 200, headers: { "content-length": String(chunks.reduce((n, x) => n + x.length, 0)) } })) as typeof fetch;
 }
 
+// Windows refuses to delete files that still hold an open handle, so a recursive
+// teardown can race an in-flight download's async cleanup and throw ENOTEMPTY.
+// Node retries ENOTEMPTY/EBUSY/EPERM with linear backoff when maxRetries is set.
+function removeDir(dir: string) {
+  rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
+}
+
 async function terminal(manager: ToolchainDownloadManager, id: string) {
   for (let i = 0; i < 100; i++) {
     const job = manager.get(id);
@@ -51,7 +58,7 @@ test("download manager reports byte progress and atomically publishes a verified
     assert.equal(done.url, "https://builds.dotnet.microsoft.com/sdk.tgz");
     assert.ok(done.artifact_path && existsSync(done.artifact_path));
     assert.deepEqual(readFileSync(done.artifact_path!), body);
-  } finally { rmSync(cache, { recursive: true, force: true }); }
+  } finally { removeDir(cache); }
 });
 
 test("download manager deletes checksum failures and reports the error", async () => {
@@ -64,7 +71,7 @@ test("download manager deletes checksum failures and reports the error", async (
     assert.equal(done.state, "failed");
     assert.match(done.error!, /checksum mismatch/);
     assert.equal(done.artifact_path, undefined);
-  } finally { rmSync(cache, { recursive: true, force: true }); }
+  } finally { removeDir(cache); }
 });
 
 test("download manager exposes cancellation", async () => {
@@ -86,7 +93,7 @@ test("download manager exposes cancellation", async () => {
     assert.equal(manager.cancel(started.id).state, "cancelled");
     release();
     assert.equal((await terminal(manager, started.id)).state, "cancelled");
-  } finally { rmSync(cache, { recursive: true, force: true }); }
+  } finally { removeDir(cache); }
 });
 
 test("download manager validates and follows a bounded official redirect", async () => {
@@ -104,7 +111,7 @@ test("download manager validates and follows a bounded official redirect", async
     const token = approvals.issue({ language: "csharp", version: "8", url: "https://builds.dotnet.microsoft.com/sdk.tgz", sha256 }, true).consent_token;
     assert.equal((await terminal(manager, manager.start(token).id)).state, "complete");
     assert.equal(calls, 2);
-  } finally { rmSync(cache, { recursive: true, force: true }); }
+  } finally { removeDir(cache); }
 });
 
 test("download manager fails closed when the declared artifact exceeds its size limit", async () => {
@@ -116,7 +123,7 @@ test("download manager fails closed when the declared artifact exceeds its size 
     const done = await terminal(manager, manager.start(token).id);
     assert.equal(done.state, "failed");
     assert.match(done.error!, /maximum download size/);
-  } finally { rmSync(cache, { recursive: true, force: true }); }
+  } finally { removeDir(cache); }
 });
 
 test("download manager rejects a managed-cache symlink escape before writing outside", () => {
@@ -129,7 +136,7 @@ test("download manager rejects a managed-cache symlink escape before writing out
     const token = approvals.issue({ language: "csharp", version: "8", url: "https://builds.dotnet.microsoft.com/sdk.tgz", sha256 }, true).consent_token;
     assert.throws(() => manager.start(token), /real directory|symlink/);
   } finally {
-    rmSync(cache, { recursive: true, force: true });
-    rmSync(outside, { recursive: true, force: true });
+    removeDir(cache);
+    removeDir(outside);
   }
 });
