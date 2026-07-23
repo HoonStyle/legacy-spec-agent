@@ -49,6 +49,8 @@ Record the provider's non-overlapping token counters exactly as reported, their 
 
 **Decision gate:** after the five pairs, stop and write a short decision record. Continue only if the connector reduces the primary metered token or cost measure in at least four pairs, improves its median, and causes no task-quality or citation-accuracy regression. Narrow or stop if it increases the median, agents routinely reopen most indexed source, or benefits depend on excluding connector overhead. If the pilot is genuinely inconclusive, document why before expanding to at most 10–20 tasks; do not build more connector features to make the pilot pass.
 
+Use `END_TO_END_REPLAY.md` for the task manifest, paired-run controls, run-record fields, comparison, and decision template.
+
 ### 5. Language-specific module resolution
 
 **Status: paused pending item 4.** TypeScript `baseUrl`, `paths`, project references, package exports, and missing-extension support is implemented. Validate or add another language only when replay evidence identifies module resolution as a material source of wasted reads or failed tasks.

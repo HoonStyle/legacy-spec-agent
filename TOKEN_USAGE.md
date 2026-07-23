@@ -63,6 +63,8 @@ After five pairs, write a short decision record. Continue only when the connecto
 
 Do not implement another language resolver or semantic backend merely to improve the benchmark. A replay must first show that the missing resolution or semantic information materially causes wasted reads or failed tasks.
 
+Follow `END_TO_END_REPLAY.md` to prepare the task manifest and record each paired run without changing the protocol after results are visible.
+
 ## Recommended workflow
 
 1. Start with `granularity: "package"` to select relevant packages.
