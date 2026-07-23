@@ -114,6 +114,20 @@ test("multilang TypeScript leaves an unconfigured bare import unresolved", async
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
+test("multilang TypeScript survives a malformed tsconfig paths entry", async () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-tsbadpaths-"));
+  // `paths` value is a string, not the required array: the analysis must not
+  // abort — the relative edge still resolves and the bad alias stays external.
+  writeFileSync(join(root, "tsconfig.json"), JSON.stringify({ compilerOptions: { baseUrl: ".", paths: { "@x/*": "src/*" } } }));
+  writeFileSync(join(root, "a.ts"), "import { b } from './b';\nimport { z } from '@x/z';\nexport const a = b + z;\n");
+  writeFileSync(join(root, "b.ts"), "export const b = 1;\n");
+  try {
+    const result = await buildCallGraphMulti(root);
+    assert.ok(result.edges.some((edge) => edge.from === "a.ts" && edge.to === "b.ts"));
+    assert.ok(result.externals.some((item) => item.module === "@x/z"));
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
 test("multilang dependency graph emits each grouped Go import once", async () => {
   const root = mkdtempSync(join(tmpdir(), "lsc-multigo-"));
   for (const dir of ["a", "b", "c"]) mkdirSync(join(root, dir));

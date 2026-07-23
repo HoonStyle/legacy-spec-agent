@@ -140,7 +140,11 @@ export function buildTypeScriptResolver(rootAbs: string, sourceFiles: SourceLike
     if (!config.paths || !config.pathsBase) return undefined;
     const base = config.pathsBase;
     const matches: { prefixLen: number; targets: string[] }[] = [];
-    for (const [pattern, targets] of Object.entries(config.paths)) {
+    for (const [pattern, rawTargets] of Object.entries(config.paths)) {
+      // A malformed tsconfig can carry non-array/non-string path targets; keep
+      // only the valid ones so one bad entry cannot abort the whole analysis.
+      if (!Array.isArray(rawTargets)) continue;
+      const targets = rawTargets.filter((target): target is string => typeof target === "string");
       const star = pattern.indexOf("*");
       if (star === -1) { if (pattern === specifier) matches.push({ prefixLen: pattern.length, targets }); continue; }
       const prefix = pattern.slice(0, star); const suffix = pattern.slice(star + 1);
