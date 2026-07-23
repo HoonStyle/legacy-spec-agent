@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-This roadmap separates release blockers from optional semantic enhancements. Work proceeds in the listed order, and each numbered item should remain an independently buildable, tested commit or short commit series.
+This roadmap separates release blockers from optional semantic enhancements. The next decision point is effect validation: pause feature expansion, run the bounded replay in item 4, and use its evidence to decide whether any later resolver or semantic work is justified. Each implementation item should remain an independently buildable, tested commit or short commit series.
 
 ## Current usable scope
 
@@ -41,50 +41,59 @@ Label current graph output as `module_dependency` with `resolution: "syntax"`, r
 
 **Exit gate:** clients cannot mistake syntax imports for a semantic call graph.
 
-### 4. Language-specific module resolution
+### 4. Bounded end-to-end token replay
+
+**Status: next priority.** Treat the current syntax connector, including the implemented TypeScript resolver, as the MVP. Start with a deliberately small pilot: five representative tasks from one or two repositories at pinned revisions, each run once with and once without the connector. Keep the task, prompt, model, model settings, available non-connector tools, and completion criteria identical. Alternate which condition runs first to reduce ordering and cache-warmth bias, and preserve the raw run records.
+
+Record the provider's non-overlapping token counters exactly as reported, their pricing or billing units when known, connector calls and response bytes, unique and repeated file reads, elapsed time, task success, citation coverage, and citation accuracy. Do not add tool-response tokens to input tokens when the provider already includes them there. Report both raw counters and the paired difference; do not present structural-index size as billing-token savings.
+
+**Decision gate:** after the five pairs, stop and write a short decision record. Continue only if the connector reduces the primary metered token or cost measure in at least four pairs, improves its median, and causes no task-quality or citation-accuracy regression. Narrow or stop if it increases the median, agents routinely reopen most indexed source, or benefits depend on excluding connector overhead. If the pilot is genuinely inconclusive, document why before expanding to at most 10–20 tasks; do not build more connector features to make the pilot pass.
+
+### 5. Language-specific module resolution
+
+**Status: paused pending item 4.** TypeScript `baseUrl`, `paths`, project references, package exports, and missing-extension support is implemented. Validate or add another language only when replay evidence identifies module resolution as a material source of wasted reads or failed tasks.
 
 Implement separately:
 
-1. TypeScript `baseUrl`, `paths`, project references, package exports, and missing extensions.
-2. C# solutions, project references, namespaces, global/aliased `using`, and namespace-to-project edges.
-3. Go workspaces, nested modules, `replace`, vendor, and major-version suffixes.
-4. Java Maven/Gradle source roots, modules, wildcard imports, and static imports.
+1. C# solutions, project references, namespaces, global/aliased `using`, and namespace-to-project edges.
+2. Go workspaces, nested modules, `replace`, vendor, and major-version suffixes.
+3. Java Maven/Gradle source roots, modules, wildcard imports, and static imports.
 
 Uncertain imports must remain external/unresolved instead of being guessed from a filename.
 
-### 5. Per-file failure isolation
+### 6. Per-file failure isolation
+
+**Status: minimum reliability fixes only pending item 4.** Fix failures that prevent representative replay tasks from completing; defer exhaustive edge-case hardening until the effect gate justifies continued investment.
 
 Continue after unreadable, changing, oversized, invalid-encoding, grammar-load, or parse-error files. Return structured `failed_files` diagnostics separately from `unsupported_files`.
 
 **Exit gate:** one bad file cannot abort an otherwise useful repository analysis.
 
-### 6. Cache lifecycle and concurrency
+### 7. Cache lifecycle and concurrency
+
+**Status: paused pending item 4.** Address demonstrated correctness or resource failures first; do not expand concurrency infrastructure speculatively.
 
 Cover simultaneous access, mutation during analysis, eviction beyond 512 entries, repository deletion, explicit cleanup, and server shutdown. Prevent duplicate parsing and tree use-after-delete.
 
 **Exit gate:** bounded memory and deterministic results under concurrent MCP calls.
 
-## Effect validation
-
-### 7. End-to-end token replay
-
-After output contracts stabilize, replay the same repository revision, task, prompt, and model with and without the connector. Record input, cached-input, tool-response, output, and reasoning tokens when provided, plus repeated file reads, elapsed time, citation coverage, and citation accuracy.
-
-Suggested gate: at least 40% fewer input tokens and 70% fewer duplicate source reads, with no citation-accuracy loss and no more than a three-point citation-coverage drop.
-
-The existing 25-file `o200k_base` benchmark remains a deterministic structural-index fixture, not an end-to-end billing-token claim.
-
 ## Optional semantic precision
 
 ### 8. TypeScript semantic backend
+
+**Status: paused pending item 4 and a demonstrated semantic gap.**
 
 Discover projects, load the compiler API, resolve types/symbols/calls, and emit cited semantic edges. This is first because it can run inside the existing Node connector without an external SDK installer.
 
 ### 9. C# Roslyn backend
 
+**Status: paused pending item 4 and a demonstrated semantic gap.**
+
 Discover solutions/projects, launch an isolated analyzer, resolve symbols and calls, and map every result back to source citations.
 
 ### 10. Go, Java, and Python semantic backends
+
+**Status: paused pending item 4 and a demonstrated semantic gap.**
 
 Implement and gate each language independently. Set `semantic_backend_available: true` only when that backend is actually usable.
 
