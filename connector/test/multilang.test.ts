@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { clearMultiLanguageCache, indexSymbolsMulti, buildCallGraphMulti, extractDataModelMulti } from "../src/multilang.js";
@@ -214,6 +214,57 @@ test("multilang TypeScript survives a malformed tsconfig paths entry", async () 
     assert.ok(result.edges.some((edge) => edge.from === "a.ts" && edge.to === "b.ts"));
     assert.ok(result.externals.some((item) => item.module === "@x/z"));
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("multilang TypeScript resolves a package with a root conditional exports object", async () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-tscondexp-"));
+  mkdirSync(join(root, "packages", "ui"), { recursive: true });
+  writeFileSync(join(root, "package.json"), JSON.stringify({ name: "root", workspaces: ["packages/*"] }));
+  // exports is a bare condition map with no subpath keys — the "." target is the object itself.
+  writeFileSync(join(root, "packages", "ui", "package.json"), JSON.stringify({ name: "@org/ui", exports: { import: "./index.ts", default: "./index.js" } }));
+  writeFileSync(join(root, "packages", "ui", "index.ts"), "export const Button = 1;\n");
+  writeFileSync(join(root, "app.ts"), "import { Button } from '@org/ui';\nexport const app = Button;\n");
+  try {
+    const result = await buildCallGraphMulti(root);
+    assert.ok(result.edges.some((edge) => edge.from === "app.ts" && edge.to === "packages/ui/index.ts"));
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("multilang TypeScript excludes a negated workspace package", async () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-tsneg-"));
+  mkdirSync(join(root, "packages", "ui"), { recursive: true });
+  mkdirSync(join(root, "packages", "private"), { recursive: true });
+  writeFileSync(join(root, "package.json"), JSON.stringify({ name: "root", workspaces: ["packages/*", "!packages/private"] }));
+  writeFileSync(join(root, "packages", "ui", "package.json"), JSON.stringify({ name: "@org/ui", main: "./index.ts" }));
+  writeFileSync(join(root, "packages", "ui", "index.ts"), "export const Button = 1;\n");
+  writeFileSync(join(root, "packages", "private", "package.json"), JSON.stringify({ name: "@org/private", main: "./index.ts" }));
+  writeFileSync(join(root, "packages", "private", "index.ts"), "export const secret = 1;\n");
+  writeFileSync(join(root, "app.ts"), "import { Button } from '@org/ui';\nimport { secret } from '@org/private';\nexport const a = Button + secret;\n");
+  try {
+    const result = await buildCallGraphMulti(root);
+    assert.ok(result.edges.some((edge) => edge.to === "packages/ui/index.ts"));
+    assert.ok(!result.edges.some((edge) => edge.to === "packages/private/index.ts"));
+    assert.ok(result.externals.some((item) => item.module === "@org/private"));
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("multilang TypeScript reads pnpm workspace globs with inline comments and globstar", async () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-tspnpm-"));
+  mkdirSync(join(root, "packages", "ui"), { recursive: true });
+  writeFileSync(join(root, "pnpm-workspace.yaml"), "packages:\n  - 'packages/**/ui' # ui packages\n");
+  writeFileSync(join(root, "packages", "ui", "package.json"), JSON.stringify({ name: "@org/ui", main: "./index.ts" }));
+  writeFileSync(join(root, "packages", "ui", "index.ts"), "export const Button = 1;\n");
+  writeFileSync(join(root, "app.ts"), "import { Button } from '@org/ui';\nexport const app = Button;\n");
+  try {
+    const result = await buildCallGraphMulti(root);
+    assert.ok(result.edges.some((edge) => edge.from === "app.ts" && edge.to === "packages/ui/index.ts"));
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("ts-resolve source is tracked as text (no NUL bytes)", () => {
+  // A NUL byte makes git treat the whole resolver as binary, hiding it from
+  // diffs and search; keep any glob/regex sentinel as an escaped literal.
+  assert.equal(readFileSync("src/ts-resolve.ts").includes(0x00), false);
 });
 
 test("multilang dependency graph emits each grouped Go import once", async () => {
