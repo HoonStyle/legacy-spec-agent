@@ -44,6 +44,27 @@ This is a deterministic synthetic fixture, not an end-to-end agent-session bench
 
 An end-to-end claim requires replaying the same reconstruction task, model, prompt, repository revision, and token accounting with and without the connector. Until that eval exists, only the fixture numbers above should be quoted.
 
+## Next decision: bounded end-to-end replay
+
+Feature expansion is paused while the current connector is evaluated as an MVP. Begin with five representative tasks from one or two repositories at pinned revisions, paired with and without the connector. For every pair, keep the prompt, model and model settings, available non-connector tools, completion criteria, and repository revision identical. Alternate which condition runs first, avoid sharing warmed connector state across only one condition, and retain the raw run records. Expand to at most 10–20 tasks only when the pilot is genuinely inconclusive and the reason is documented.
+
+Capture, when the provider exposes them:
+
+- the provider's token counters exactly as reported, including input, cached-input, output, reasoning, and tool-related counters when separately exposed;
+- pricing or billing units and the provider/model version when known;
+- connector calls and their response bytes;
+- unique and repeated source-file reads;
+- elapsed time and task success;
+- citation coverage and citation accuracy.
+
+Choose one primary metered token or cost measure supported by the provider data, and publish every raw counter alongside it. Token categories may overlap—for example, tool responses may already be included in input tokens—so never sum counters without confirming that they are disjoint. Include connector responses and follow-up source reads rather than silently excluding overhead.
+
+After five pairs, write a short decision record. Continue only when the connector improves the primary measure in at least four pairs and improves its median without a task-quality or citation-accuracy regression. Narrow or stop when it increases the median, agents routinely reopen most indexed source, or the apparent benefit requires excluding connector overhead. These are pilot decision rules, not a general performance claim.
+
+Do not implement another language resolver or semantic backend merely to improve the benchmark. A replay must first show that the missing resolution or semantic information materially causes wasted reads or failed tasks.
+
+Follow `END_TO_END_REPLAY.md` to prepare the task manifest and record each paired run without changing the protocol after results are visible.
+
 ## Recommended workflow
 
 1. Start with `granularity: "package"` to select relevant packages.
