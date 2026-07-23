@@ -261,6 +261,48 @@ test("multilang TypeScript reads pnpm workspace globs with inline comments and g
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
+test("multilang TypeScript normalizes a leading ./ in workspace globs", async () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-tsdotslash-"));
+  mkdirSync(join(root, "packages", "ui"), { recursive: true });
+  writeFileSync(join(root, "package.json"), JSON.stringify({ name: "root", workspaces: ["./packages/*"] }));
+  writeFileSync(join(root, "packages", "ui", "package.json"), JSON.stringify({ name: "@org/ui", main: "./index.ts" }));
+  writeFileSync(join(root, "packages", "ui", "index.ts"), "export const Button = 1;\n");
+  writeFileSync(join(root, "app.ts"), "import { Button } from '@org/ui';\nexport const app = Button;\n");
+  try {
+    const result = await buildCallGraphMulti(root);
+    assert.ok(result.edges.some((edge) => edge.from === "app.ts" && edge.to === "packages/ui/index.ts"));
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("multilang TypeScript expands brace alternatives in workspace globs", async () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-tsbrace-"));
+  mkdirSync(join(root, "packages", "client", "ui"), { recursive: true });
+  writeFileSync(join(root, "package.json"), JSON.stringify({ name: "root", workspaces: ["packages/{client,server}/*"] }));
+  writeFileSync(join(root, "packages", "client", "ui", "package.json"), JSON.stringify({ name: "@org/ui", main: "./index.ts" }));
+  writeFileSync(join(root, "packages", "client", "ui", "index.ts"), "export const Button = 1;\n");
+  writeFileSync(join(root, "app.ts"), "import { Button } from '@org/ui';\nexport const app = Button;\n");
+  try {
+    const result = await buildCallGraphMulti(root);
+    assert.ok(result.edges.some((edge) => edge.from === "app.ts" && edge.to === "packages/client/ui/index.ts"));
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("multilang TypeScript picks conditional exports in declaration order", async () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-tscondorder-"));
+  mkdirSync(join(root, "packages", "ui"), { recursive: true });
+  writeFileSync(join(root, "package.json"), JSON.stringify({ name: "root", workspaces: ["packages/*"] }));
+  // "default" is declared before "import"; declaration order must select it.
+  writeFileSync(join(root, "packages", "ui", "package.json"), JSON.stringify({ name: "@org/ui", exports: { default: "./default.ts", import: "./import.ts" } }));
+  writeFileSync(join(root, "packages", "ui", "default.ts"), "export const Button = 1;\n");
+  writeFileSync(join(root, "packages", "ui", "import.ts"), "export const Button = 2;\n");
+  writeFileSync(join(root, "app.ts"), "import { Button } from '@org/ui';\nexport const app = Button;\n");
+  try {
+    const result = await buildCallGraphMulti(root);
+    assert.ok(result.edges.some((edge) => edge.to === "packages/ui/default.ts"));
+    assert.ok(!result.edges.some((edge) => edge.to === "packages/ui/import.ts"));
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
 test("ts-resolve source is tracked as text (no NUL bytes)", () => {
   // A NUL byte makes git treat the whole resolver as binary, hiding it from
   // diffs and search; keep any glob/regex sentinel as an escaped literal.

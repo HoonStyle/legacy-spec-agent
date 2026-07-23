@@ -21,7 +21,7 @@ const JS_TO_TS: Record<string, string[]> = {
   ".js": [".ts", ".tsx", ".d.ts"], ".jsx": [".tsx"], ".mjs": [".mts", ".d.mts"], ".cjs": [".cts", ".d.cts"],
 };
 const JS_LIKE = /\.(js|jsx|mjs|cjs)$/;
-const CONDITION_ORDER = ["import", "module", "default", "require", "types"];
+const CONDITIONS = new Set(["import", "module", "require", "node", "browser", "development", "production", "default", "types"]);
 const REGEX_SPECIAL = new Set([".", "+", "^", "$", "{", "}", "(", ")", "|", "[", "]", "\\"]);
 
 // Strip comments and trailing commas so a JSONC tsconfig/package manifest parses.
@@ -33,10 +33,32 @@ function parseJsonc(text: string): Record<string, unknown> | undefined {
   try { return JSON.parse(withoutTrailingCommas) as Record<string, unknown>; } catch { return undefined; }
 }
 
+// Expand top-level brace alternatives (`a/{x,y}/z` -> `a/x/z`, `a/y/z`) the way
+// package-manager workspace globbing does, recursing for nested braces.
+function expandBraces(glob: string): string[] {
+  const open = glob.indexOf("{");
+  if (open === -1) return [glob];
+  let depth = 0; let close = -1;
+  for (let i = open; i < glob.length; i++) {
+    if (glob[i] === "{") depth++;
+    else if (glob[i] === "}" && --depth === 0) { close = i; break; }
+  }
+  if (close === -1) return [glob];
+  const prefix = glob.slice(0, open); const suffix = glob.slice(close + 1); const body = glob.slice(open + 1, close);
+  const options: string[] = []; let segmentDepth = 0; let start = 0;
+  for (let i = 0; i < body.length; i++) {
+    if (body[i] === "{") segmentDepth++;
+    else if (body[i] === "}") segmentDepth--;
+    else if (body[i] === "," && segmentDepth === 0) { options.push(body.slice(start, i)); start = i + 1; }
+  }
+  options.push(body.slice(start));
+  return options.flatMap((option) => expandBraces(prefix + option + suffix));
+}
 // Convert an npm/pnpm workspace glob to an anchored regex over POSIX paths. `**`
-// spans zero or more whole segments; `*`/`?` stay within a single segment.
+// spans zero or more whole segments; `*`/`?` stay within a single segment. A
+// leading `./` is stripped, matching how package managers normalise patterns.
 function globToRegex(glob: string): RegExp {
-  const cleaned = glob.replace(/\/+$/, "");
+  const cleaned = glob.replace(/^\.\//, "").replace(/\/+$/, "");
   let out = "";
   for (let i = 0; i < cleaned.length; i++) {
     const ch = cleaned[i];
@@ -53,11 +75,17 @@ function globToRegex(glob: string): RegExp {
   }
   return new RegExp(`^${out}$`);
 }
+// Known limitations, all in the safe "stays external" direction: a package
+// reached only through an ordered exclude/re-include sequence, a bare terminal
+// `/**` excluding the directory itself, or a root-package self-reference is left
+// unresolved rather than risking a wrong edge.
 function splitGlobs(globs: string[]): { includes: RegExp[]; excludes: RegExp[] } {
   const includes: RegExp[] = []; const excludes: RegExp[] = [];
-  for (const glob of globs) {
-    if (glob.startsWith("!")) excludes.push(globToRegex(glob.slice(1)));
-    else includes.push(globToRegex(glob));
+  for (const raw of globs) {
+    const negated = raw.startsWith("!");
+    for (const glob of expandBraces(negated ? raw.slice(1) : raw)) {
+      (negated ? excludes : includes).push(globToRegex(glob));
+    }
   }
   return { includes, excludes };
 }
@@ -196,11 +224,16 @@ export function buildTypeScriptResolver(rootAbs: string, sourceFiles: SourceLike
     return fromExtensionless(baseAbs);
   }
 
+  // Pick a target from a conditional-exports value. Conditions are matched in
+  // declaration order (as Node does), so `{ default, import }` selects `default`.
+  // `types` maps to a `.d.ts`, so it is only consulted as a last resort.
   function firstConditionString(value: unknown): string | undefined {
     if (typeof value === "string") return value;
     if (value && typeof value === "object" && !Array.isArray(value)) {
       const conditions = value as Record<string, unknown>;
-      for (const key of CONDITION_ORDER) { const picked = firstConditionString(conditions[key]); if (picked) return picked; }
+      const keys = Object.keys(conditions);
+      for (const key of keys) { if (key === "types" || !CONDITIONS.has(key)) continue; const picked = firstConditionString(conditions[key]); if (picked) return picked; }
+      for (const key of keys) { if (key !== "types") continue; const picked = firstConditionString(conditions[key]); if (picked) return picked; }
     }
     return undefined;
   }
