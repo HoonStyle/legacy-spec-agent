@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-This roadmap separates release blockers from optional semantic enhancements. The next decision point is effect validation: pause feature expansion, run the bounded replay in item 4, and use its evidence to decide whether any later resolver or semantic work is justified. Each implementation item should remain an independently buildable, tested commit or short commit series.
+This roadmap separates release blockers from optional semantic enhancements. The five-pair pilot in item 4 is complete but inconclusive because the provider did not expose per-run token counters. Feature expansion remains paused until the same bounded comparison can be run in an environment that exposes the primary metered measure. Each implementation item should remain an independently buildable, tested commit or short commit series.
 
 ## Current usable scope
 
@@ -43,11 +43,13 @@ Label current graph output as `module_dependency` with `resolution: "syntax"`, r
 
 ### 4. Bounded end-to-end token replay
 
-**Status: next priority.** Treat the current syntax connector, including the implemented TypeScript resolver, as the MVP. Start with a deliberately small pilot: five representative tasks from one or two repositories at pinned revisions, each run once with and once without the connector. Keep the task, prompt, model, model settings, available non-connector tools, and completion criteria identical. Alternate which condition runs first to reduce ordering and cache-warmth bias, and preserve the raw run records.
+**Status: pilot complete; decision inconclusive pending provider counters.** The first pilot ran five paired tasks (10 runs) against FerMass at pinned revision `1984b4e324b9e4bec7fa2c7f48fc1b105737fbee`. Both conditions passed all five tasks with no citation errors. Connector runs reduced direct source reads in four pairs with a median paired change of -1, but the provider did not expose per-run token counters and the apparent improvement mostly replaced one direct read with one connector call. The decision record therefore does not establish a metered token or cost reduction. Raw results are preserved in `evals/end-to-end-replay/fermass-pilot/`.
+
+Keep the current syntax connector, including the implemented TypeScript resolver, as the MVP. The next permitted replay step is to repeat or extend the bounded comparison only in an environment that exposes the provider's per-run input, cached-input, output, reasoning, and separately reported tool counters. Preserve the same paired controls and include connector response bytes; do not substitute read counts for a metered token or cost measure.
 
 Record the provider's non-overlapping token counters exactly as reported, their pricing or billing units when known, connector calls and response bytes, unique and repeated file reads, elapsed time, task success, citation coverage, and citation accuracy. Do not add tool-response tokens to input tokens when the provider already includes them there. Report both raw counters and the paired difference; do not present structural-index size as billing-token savings.
 
-**Decision gate:** after the five pairs, stop and write a short decision record. Continue only if the connector reduces the primary metered token or cost measure in at least four pairs, improves its median, and causes no task-quality or citation-accuracy regression. Narrow or stop if it increases the median, agents routinely reopen most indexed source, or benefits depend on excluding connector overhead. If the pilot is genuinely inconclusive, document why before expanding to at most 10–20 tasks; do not build more connector features to make the pilot pass.
+**Decision gate:** not yet satisfied. The required decision record exists and selects **Inconclusive**, specifically because provider counters and elapsed time were unavailable and connector overhead could not be included in a metered comparison. Continue only if a counter-enabled replay shows that the connector reduces the primary metered token or cost measure in at least four pairs, improves its median, and causes no task-quality or citation-accuracy regression. Narrow or stop if it increases the median, agents routinely reopen most indexed source, or benefits depend on excluding connector overhead. Do not build more connector features to make the pilot pass.
 
 Use `END_TO_END_REPLAY.md` for the task manifest, paired-run controls, run-record fields, comparison, and decision template.
 

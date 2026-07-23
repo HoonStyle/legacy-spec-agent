@@ -2,6 +2,10 @@
 
 This is the operating checklist for the bounded replay in roadmap item 4. Its purpose is to make a cheap continue, narrow, or stop decision—not to produce a general performance claim.
 
+## Pilot status
+
+The first five-pair pilot is preserved in `evals/end-to-end-replay/fermass-pilot/`. Its decision is **Inconclusive** because the provider did not expose per-run token counters and elapsed time was not measured. Direct source-read counts improved in four pairs, but those counts cannot establish savings when connector response overhead is unmetered. Any repeat or expansion must run in an environment that exposes provider usage; feature work must not be used to make the replay pass.
+
 ## Scope
 
 - Select one or two repositories and pin a commit SHA for each.

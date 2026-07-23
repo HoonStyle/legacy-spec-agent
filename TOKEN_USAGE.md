@@ -42,11 +42,17 @@ The corpus is generated in the system temporary directory and removed after the 
 
 This is a deterministic synthetic fixture, not an end-to-end agent-session benchmark. It measures the context required to transmit source versus a structural index; it does not include prompts, reasoning, tool-call envelopes, citations opened after indexing, output tokens, or provider-side cache accounting. Results also vary by repository shape and tokenizer.
 
-An end-to-end claim requires replaying the same reconstruction task, model, prompt, repository revision, and token accounting with and without the connector. Until that eval exists, only the fixture numbers above should be quoted.
+An end-to-end claim requires replaying the same reconstruction task, model, prompt, repository revision, and token accounting with and without the connector. The first bounded pilot now exists, but it did not expose provider token counters. It therefore does not support a billing-token or cost-savings claim; only the fixture numbers above should be quoted as token measurements.
 
-## Next decision: bounded end-to-end replay
+## First bounded replay result
 
-Feature expansion is paused while the current connector is evaluated as an MVP. Begin with five representative tasks from one or two repositories at pinned revisions, paired with and without the connector. For every pair, keep the prompt, model and model settings, available non-connector tools, completion criteria, and repository revision identical. Alternate which condition runs first, avoid sharing warmed connector state across only one condition, and retain the raw run records. Expand to at most 10–20 tasks only when the pilot is genuinely inconclusive and the reason is documented.
+The preserved pilot record is in `evals/end-to-end-replay/fermass-pilot/`. It paired five tasks against FerMass revision `1984b4e324b9e4bec7fa2c7f48fc1b105737fbee`, once without and once with the connector. Both conditions passed all five tasks without citation errors. Direct source reads decreased in four of five connector runs, with a median paired change of -1, but most decreases were a one-for-one replacement of a source read with a connector call.
+
+The provider exposed no per-run input, cached-input, output, reasoning, or tool token counters, and elapsed time was not measured. Consequently, read counts are diagnostic trace data rather than the protocol's primary metered token or cost measure. The decision is **Inconclusive**: it neither establishes end-to-end savings nor justifies resuming resolver or semantic-backend work. A follow-up may repeat or expand the comparison only in an environment that exposes provider usage and permits connector overhead to be included.
+
+## Next decision: counter-enabled bounded replay
+
+Feature expansion remains paused while the current connector is evaluated as an MVP. The initial five-pair pilot was genuinely inconclusive because provider usage was unavailable. Repeat those pairs, or expand to at most 10–20 tasks, only in a counter-enabled environment. For every pair, keep the prompt, model and model settings, available non-connector tools, completion criteria, and repository revision identical. Alternate which condition runs first, avoid sharing warmed connector state across only one condition, and retain the raw run records.
 
 Capture, when the provider exposes them:
 
