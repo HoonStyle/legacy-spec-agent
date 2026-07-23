@@ -26,7 +26,14 @@ function directoryDigest(root: string): string {
   return hash.digest("hex");
 }
 
-test("clean installed plugin bootstraps and parses all bundled languages", { skip: !enabled, timeout: 120_000 }, async () => {
+// First run bootstraps the installed plugin (npm ci + TypeScript build) before
+// the MCP server can answer, and a lock serializes that across the concurrent
+// clients. On a cold Windows Node 20 runner this legitimately exceeds the MCP
+// SDK's 60s default per-request timeout (initialize and the first index_symbols
+// both wait on the bootstrap), so give the initialize/tool requests — and the
+// enclosing node:test timeout — enough headroom to cover the slow first setup.
+const BOOTSTRAP_REQUEST = { timeout: 180_000 } as const;
+test("clean installed plugin bootstraps and parses all bundled languages", { skip: !enabled, timeout: 240_000 }, async () => {
   // Paths keep spaces (legitimate cross-platform coverage) but stay ASCII:
   // on Windows fs.cpSync silently copies nothing when the destination path
   // contains non-ASCII characters (nodejs/node#61878), which made this smoke
@@ -77,11 +84,15 @@ test("clean installed plugin bootstraps and parses all bundled languages", { ski
   try {
     assert.equal(existsSync(join(installedConnector, "node_modules")), false);
     assert.equal(existsSync(join(installedConnector, "dist")), false);
-    await Promise.all([client.connect(transport), secondClient.connect(secondTransport), claudeClient.connect(claudeTransport)]);
+    await Promise.all([
+      client.connect(transport, BOOTSTRAP_REQUEST),
+      secondClient.connect(secondTransport, BOOTSTRAP_REQUEST),
+      claudeClient.connect(claudeTransport, BOOTSTRAP_REQUEST),
+    ]);
     const [response, secondResponse, claudeResponse] = await Promise.all([
-      client.callTool({ name: "index_symbols", arguments: {} }),
-      secondClient.callTool({ name: "index_symbols", arguments: { granularity: "package" } }),
-      claudeClient.callTool({ name: "index_symbols", arguments: { subdir: "." } }),
+      client.callTool({ name: "index_symbols", arguments: {} }, undefined, BOOTSTRAP_REQUEST),
+      secondClient.callTool({ name: "index_symbols", arguments: { granularity: "package" } }, undefined, BOOTSTRAP_REQUEST),
+      claudeClient.callTool({ name: "index_symbols", arguments: { subdir: "." } }, undefined, BOOTSTRAP_REQUEST),
     ]);
     assert.notEqual(response.isError, true);
     assert.notEqual(secondResponse.isError, true);
