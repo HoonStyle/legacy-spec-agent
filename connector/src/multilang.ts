@@ -6,6 +6,7 @@ import type { ModuleIndex, Symbol, IndexResult, PackageSummary, Edge, CallGraphR
 import { buildCallGraph, packageOf } from "./indexer.js";
 import { extractDataModel } from "./extractors.js";
 import type { DataModelResult, Entity, Field, Relation } from "./extractors.js";
+import { buildTypeScriptResolver } from "./ts-resolve.js";
 
 export type SupportedLanguage = "python" | "typescript" | "java" | "csharp" | "go";
 type Grammar = "python" | "javascript" | "typescript" | "tsx" | "java" | "c_sharp" | "go";
@@ -187,10 +188,9 @@ export async function buildCallGraphMulti(root: string, opts: { subdir?: string;
   const rootAbs = resolve(root); const sourceFiles = files(rootAbs, opts.subdir).supported; const metrics = metricAccumulator(rootAbs, sourceFiles); const pythonGraph = buildCallGraph(rootAbs, { subdir: opts.subdir, granularity: "file", limit: 20000 }); const edges: Edge[] = [...pythonGraph.edges]; let nonPythonResolved = 0; const external = new Map<string, Set<string>>(pythonGraph.externals.map((item) => [item.module, new Set(item.imported_by)]));
   const goMod = join(rootAbs, "go.mod");
   const goModule = existsSync(goMod) ? readFileSync(goMod, "utf8").match(/^\s*module\s+(\S+)/m)?.[1] : undefined;
+  const resolveTypeScript = buildTypeScriptResolver(rootAbs, sourceFiles);
   const resolveTarget = (from: SourceFile, target: string): string | undefined => {
-    if (from.language === "typescript" && target.startsWith(".")) {
-      const base = resolve(rootAbs, join(from.path, ".."), target); const matches = sourceFiles.filter((file) => [base, `${base}.ts`, `${base}.tsx`, `${base}.js`, `${base}.jsx`, join(base, "index.ts"), join(base, "index.js")].includes(resolve(rootAbs, file.path))); return matches[0]?.path;
-    }
+    if (from.language === "typescript") return resolveTypeScript(from.path, target);
     if (from.language === "java") {
       const suffix = `${target.replace(/\./g, "/")}.java`;
       return sourceFiles.find((file) => file.language === "java" && (file.path === suffix || file.path.endsWith(`/${suffix}`)))?.path;

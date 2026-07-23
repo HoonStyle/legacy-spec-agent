@@ -41,6 +41,79 @@ test("multilang dependency graph resolves relative TypeScript imports", async ()
   finally { rmSync(root, { recursive: true, force: true }); }
 });
 
+test("multilang TypeScript resolves a baseUrl-relative bare import", async () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-tsbase-"));
+  mkdirSync(join(root, "src", "utils"), { recursive: true });
+  writeFileSync(join(root, "tsconfig.json"), JSON.stringify({ compilerOptions: { baseUrl: "src" } }));
+  writeFileSync(join(root, "src", "a.ts"), "import { b } from 'utils/b';\nexport const a = b;\n");
+  writeFileSync(join(root, "src", "utils", "b.ts"), "export const b = 1;\n");
+  try {
+    const result = await buildCallGraphMulti(root);
+    assert.ok(result.edges.some((edge) => edge.from === "src/a.ts" && edge.to === "src/utils/b.ts"));
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("multilang TypeScript resolves a tsconfig paths alias", async () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-tspaths-"));
+  mkdirSync(join(root, "src"), { recursive: true });
+  writeFileSync(join(root, "tsconfig.json"), JSON.stringify({ compilerOptions: { baseUrl: ".", paths: { "@app/*": ["src/*"] } } }));
+  writeFileSync(join(root, "a.ts"), "import { b } from '@app/b';\nexport const a = b;\n");
+  writeFileSync(join(root, "src", "b.ts"), "export const b = 1;\n");
+  try {
+    const result = await buildCallGraphMulti(root);
+    assert.ok(result.edges.some((edge) => edge.from === "a.ts" && edge.to === "src/b.ts"));
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("multilang TypeScript rewrites a .js specifier to its .ts source", async () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-tsjsext-"));
+  writeFileSync(join(root, "a.ts"), "import { b } from './b.js';\nexport const a = b;\n");
+  writeFileSync(join(root, "b.ts"), "export const b = 1;\n");
+  try {
+    const result = await buildCallGraphMulti(root);
+    assert.ok(result.edges.some((edge) => edge.from === "a.ts" && edge.to === "b.ts"));
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("multilang TypeScript honours the nearest project's tsconfig, not the root", async () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-tsnested-"));
+  mkdirSync(join(root, "packages", "app", "src", "lib"), { recursive: true });
+  // Root tsconfig has no baseUrl: if it governed, the bare import stays external.
+  writeFileSync(join(root, "tsconfig.json"), JSON.stringify({}));
+  writeFileSync(join(root, "packages", "app", "tsconfig.json"), JSON.stringify({ compilerOptions: { baseUrl: "src" } }));
+  writeFileSync(join(root, "packages", "app", "src", "main.ts"), "import { helper } from 'lib/helper';\nexport const main = helper;\n");
+  writeFileSync(join(root, "packages", "app", "src", "lib", "helper.ts"), "export const helper = 1;\n");
+  try {
+    const result = await buildCallGraphMulti(root);
+    assert.ok(result.edges.some((edge) => edge.from === "packages/app/src/main.ts" && edge.to === "packages/app/src/lib/helper.ts"));
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("multilang TypeScript resolves a local package export map", async () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-tsexports-"));
+  mkdirSync(join(root, "packages", "ui"), { recursive: true });
+  writeFileSync(join(root, "packages", "ui", "package.json"), JSON.stringify({ name: "@org/ui", exports: { ".": "./index.ts" } }));
+  writeFileSync(join(root, "packages", "ui", "index.ts"), "export const Button = 1;\n");
+  writeFileSync(join(root, "app.ts"), "import { Button } from '@org/ui';\nexport const app = Button;\n");
+  try {
+    const result = await buildCallGraphMulti(root);
+    assert.ok(result.edges.some((edge) => edge.from === "app.ts" && edge.to === "packages/ui/index.ts"));
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("multilang TypeScript leaves an unconfigured bare import unresolved", async () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-tsbare-"));
+  // No tsconfig baseUrl/paths and no matching package: a bare specifier must not
+  // be guessed onto a same-named file.
+  writeFileSync(join(root, "a.ts"), "import { thing } from 'thing';\nexport const a = thing;\n");
+  writeFileSync(join(root, "thing.ts"), "export const thing = 1;\n");
+  try {
+    const result = await buildCallGraphMulti(root);
+    assert.equal(result.edges.length, 0);
+    assert.deepEqual(result.externals, [{ module: "thing", imported_by: ["a.ts"] }]);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
 test("multilang dependency graph emits each grouped Go import once", async () => {
   const root = mkdtempSync(join(tmpdir(), "lsc-multigo-"));
   for (const dir of ["a", "b", "c"]) mkdirSync(join(root, dir));
