@@ -3,7 +3,7 @@
 <p align="center">
   <a href="README.md"><img alt="Language: English" src="https://img.shields.io/badge/lang-English-blue"></a>
   <a href="README.ko.md"><img alt="Language: Korean" src="https://img.shields.io/badge/lang-%ED%95%9C%EA%B5%AD%EC%96%B4-blue"></a>
-  <img alt="Version 0.1.3" src="https://img.shields.io/badge/version-0.1.3-informational">
+  <img alt="Version 0.2.0" src="https://img.shields.io/badge/version-0.2.0-informational">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green"></a>
   <br>
   <a href="https://claude.com/claude-code"><img alt="Claude Code plugin" src="https://img.shields.io/badge/Claude%20Code-plugin-D97757?logo=claude&logoColor=white"></a>
