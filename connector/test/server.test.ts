@@ -45,6 +45,16 @@ test("stdio smoke: lists all tools and answers verify_citation", async () => {
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
     assert.deepEqual(names, [...EXPECTED_TOOLS].sort());
+    const graphTool = tools.find((tool) => tool.name === "build_call_graph")!;
+    assert.match(graphTool.description ?? "", /syntax-resolved module dependency graph/i);
+    assert.match(graphTool.description ?? "", /not a method call graph/i);
+
+    const graph = await client.callTool({ name: "build_call_graph", arguments: {} });
+    const graphParsed = JSON.parse((graph.content as Array<{ text: string }>)[0].text);
+    assert.deepEqual(
+      { graph_type: graphParsed.graph_type, resolution: graphParsed.resolution, resolved: graphParsed.resolved, unresolved: graphParsed.unresolved },
+      { graph_type: "module_dependency", resolution: "syntax", resolved: 0, unresolved: 0 },
+    );
 
     const result = await client.callTool({
       name: "verify_citation",
