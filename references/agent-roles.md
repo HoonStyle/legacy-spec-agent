@@ -1,108 +1,77 @@
 # Agent Roles & Schemas — legacy-spec-agent
 
-Detailed prompts for each phase. The main SKILL.md orchestrates; this file holds the contracts you hand to subagents (Phase 1 fan-out) and the checklists for the inline phases.
+Detailed contracts for Mode A. `SKILL.md` controls profile selection: `standard` is the default and `core` is an explicit reduced-output request. Every role preserves the same evidence, stable-ID, absence, and cross-reference rules.
 
----
+## Shared contract
+
+- Ground every factual claim in a `path:line` citation. Otherwise assign a stable `UV-*` ID and isolate it under Unverified.
+- Assign stable IDs by type: `BR-*` business rules, `API-*` interfaces, `DM-*` entities/contracts, `TC-*` tests/scenarios, `RSK-*` risks, and `UV-*` unverified items. Preserve IDs for unchanged items; never reuse an ID for a different item.
+- Express cross-document links as exact IDs and require each link to resolve to exactly one item of the expected type.
+- If a required concept is absent, report the searched paths/file types/symbols and **Not found**. Do not emit an empty section or invent content.
 
 ## Phase 1 — Extractor (per-module subagent)
 
-Hand each subagent exactly one module path plus this contract.
+**Role:** Reverse-engineer what one module actually does. Read every source file in scope and report grounded boundaries, actors/entrypoints, use cases, business rules, validation/errors, state transitions, configuration, persistence/side effects, operational behavior, known limitations, interfaces, data contracts, existing tests, and potential risks.
 
-**Role**: You reverse-engineer what one module *actually does* from its source. You report only what the code shows. You never infer intent that the code does not support; when you must infer, you mark it clearly and it will be quarantined downstream.
+For interfaces capture caller, protocol, exact signature, request/response schema, validation, errors, side effects, timeout/cancellation, and idempotency. For data, distinguish persistent entities from configuration/interface contracts and capture field type, requiredness, default, validation, explicit relations, lifecycle, and evidence. Never infer external contracts, keys, cardinality, cascade behavior, or runtime semantics.
 
-**Task**:
-1. Read every source file in the assigned module path.
-2. For each meaningful unit (entry point, public function, class, handler, job), record:
-   - **Responsibility** — one line, what it does
-   - **Business rules** — conditionals, thresholds, validations, state transitions that encode domain logic
-   - **Inputs / Outputs** — parameters, return shapes, emitted events
-   - **Side effects / External calls** — DB writes, network calls, file/queue I/O
-   - **Constraints** — assumptions the code depends on (ordering, non-null, config keys)
-3. Attach a `path:line` citation to **every** item. If you cannot cite it, put it under `unverified` with the reason.
-
-**Output schema** (return this exact JSON, nothing else):
+**Output schema:**
 ```json
 {
   "module": "<path>",
-  "responsibility": "<one line>",
+  "search_scope": ["<paths/globs/symbol sources>"],
   "items": [
-    {"kind": "rule|io|side_effect|constraint|entrypoint",
-     "claim": "<short statement>",
-     "evidence": "path:line",
-     "confidence": "high|medium"}
+    {
+      "id": "BR-*|API-*|DM-*|TC-*|RSK-*",
+      "kind": "rule|interface|data_model|test|risk|entrypoint|behavior",
+      "claim": "<short statement>",
+      "evidence": ["path:line"],
+      "related_ids": ["<stable ID>"],
+      "details": {},
+      "confidence": "high|medium"
+    }
   ],
-  "unverified": [
-    {"claim": "<inference the code does not fully support>", "reason": "<why>"}
-  ]
+  "not_found": [{"concept": "<required concept>", "searched": "<scope>"}],
+  "unverified": [{"id": "UV-*", "claim": "<claim>", "reason": "<why>", "searched": "<scope>"}]
 }
 ```
 
-**Rules for the extractor**:
-- Prefer quoting behavior over guessing purpose. "Rejects orders where qty <= 0 (`orders.py:88`)" beats "validates business constraints."
-- Do not read other modules. Cross-module wiring is the Architect's job.
-- Round nothing, invent no metrics, add no domain terms the code doesn't use.
-
----
+Prefer precise behavior over guessed purpose. Do not round, invent metrics, introduce unsupported domain terms, or silently inspect outside the assigned module; cross-module wiring belongs to the Architect.
 
 ## Phase 2 — Architect (inline)
 
-**Role**: Assemble the per-module JSON into a system picture.
+**Role:** Assemble extractor results into `ARCHITECTURE.md` and the architectural portions of the other documents.
 
-**Task**:
-1. Build the module→module edge list from imports, calls, and shared stores found in the extractor outputs (open code to confirm an edge if unsure).
-2. Identify external dependencies (DBs, queues, third-party APIs).
-3. Emit a Mermaid `flowchart TD` into `ARCHITECTURE.md`: nodes = modules + external systems, edges = calls/data flow. Keep labels short.
-4. Write a short data/control-flow narrative for `SPEC.md` — no diagram duplication.
+Include system context, component inventory, runtime/deployment view, module dependency view, external systems/data stores, major execution flows, trust boundaries, and analysis limitations. Confirm each node, flow, store, deployment statement, and trust boundary against source; otherwise use `UV-*` or **Not found** with search scope.
 
-**Guardrail**: an edge in the diagram must trace to real code. If you drew it from a guess, drop it or mark the narrative as unverified.
-
----
+When using `build_call_graph`, display `graph_type: module_dependency` and `resolution: syntax`. It represents syntax-level import/module dependency edges, not actual method calls, compiler-resolved calls, runtime dispatch, or dynamic dispatch. Never relabel it as a call graph merely because of the tool's compatibility-preserving name.
 
 ## Phase 3 — Critic / Validator (inline, mandatory)
 
-**Role**: Adversarial checker. Assume each claim is wrong until the cited code proves it.
+**Role:** Adversarially validate the complete selected-profile document set.
 
-**Task** — for every item across all modules:
-1. Open the `path:line`.
-2. Decision:
-   - **verified** — code substantiates the claim as written.
-   - **flagged** — citation missing / points to the wrong place / code doesn't support the claim → move to *Unverified* in `SPEC.md` with the reason.
-3. Emit one `audit_log.jsonl` line per decision (`action: "verified"` or `"flagged"`).
-4. Before final emission, scan the generated markdown set for every backticked `path:line` citation and ensure the audit log has an entry for each one. A mechanically valid line is not automatically a semantically verified claim; record that distinction in `note` when needed.
+1. Open every cited `path:line` and verify that it supports the factual claim as written. Move unsupported or missing claims to a stable `UV-*` item rather than deleting them.
+2. Emit one `audit_log.jsonl` entry for every citation in every markdown deliverable. Mechanical line validity is not semantic proof; note that distinction.
+3. Build an ID index across all documents. Verify uniqueness, required prefixes, target existence, correct target type, and the semantic validity of every `Related` reference.
+4. Check required sections and fields, profile membership, **Not found** search scopes, separation of external contracts, and prohibited inferences (including keys/cardinality/cascades and method-call semantics).
+5. Reject emission if any factual markdown claim lacks audit coverage, any ID reference is invalid, or any unsupported claim remains in a verified section.
 
-**Bias**: when the code is ambiguous, flag rather than pass. A smaller spec you can trust beats a fuller one you can't. Do not let a plausible-sounding claim through just because it reads well.
-
----
+Bias toward flagging ambiguity. A smaller grounded specification is better than plausible fiction.
 
 ## Phase 4 — Emitter (inline)
 
-Assemble verified items into `SPEC.md` (template in SKILL.md), write `ARCHITECTURE.md`, finalize `audit_log.jsonl`. Use separate provenance lines (`Analyzed source commit`, `Generated at`) and an explicit coverage line that names omitted scope/truncation. Report to the user: modules covered / total, verified count, unverified count, top 3 risks or unknowns, and whether the connector-generated report Quality tab found missing or line-mismatched citations.
+Emit the explicit `core` profile (`SPEC.md`, `ARCHITECTURE.md`, `audit_log.jsonl`) or the default `standard` profile (core plus `INTERFACES.md`, `DATA_MODEL.md`, `ONBOARDING.md`, `TESTCASES.md`, `RISKS.md`, charts, and `REPORT.html`). Connector availability is the generation condition for charts and `REPORT.html`; disclose an unavailable tool rather than hand-authoring substitutes.
 
----
+Use separate `Analyzed source commit`, `Generated at`, and coverage/search-scope lines. Ensure:
+
+- `SPEC.md` contains boundary, actors/entrypoints, use cases, `BR-*` rules, validation/errors, transitions, configuration, persistence/side effects, operations, limitations, and `UV-*` items.
+- `ARCHITECTURE.md` contains every view and syntax-only limitation in the Architect contract.
+- Every `API-*`, `DM-*`, `TC-*`, and `RSK-*` contains all fields required by `SKILL.md` and links to relevant IDs.
+- `TESTCASES.md` separates existing automated tests, source-derived characterization scenarios, and external-contract test candidates.
+- `RISKS.md` separates confirmed behavior, defect candidates, and unverified gaps.
+
+Report modules covered/total, verified and unverified counts, top three risks/unknowns, profile, omitted connector-dependent artifacts, and Quality-tab results.
 
 ## Drift-Check (Mode B) classifier
 
-For each existing claim, open its citation in current code and classify:
-- **intact** — code still supports the claim at the cited (or trivially shifted) location.
-- **moved** — same behavior, different location → propose updated citation.
-- **drifted** — behavior at/around the citation changed so the stated rule is no longer true → this is the finding that matters most.
-- **orphaned** — cited code no longer exists.
-
-Emit `DRIFT_REPORT.md` and append findings to `audit_log.jsonl`. Never auto-edit `SPEC.md`; present proposed diffs for the human to merge.
-
----
-
-## Optional deliverable emitters (run after the Critic gate)
-
-Only build these from **verified** items. Each row still needs a `path:line`.
-
-**INTERFACES.md** — enumerate public functions/classes/entrypoints. For each: exact signature (read it, don't paraphrase), inputs, output shape, and the I/O contract (stdin/stdout/exit/env for CLI-style entrypoints). Include concrete request/response examples when the code defines schemas or typed payloads. List `_`-prefixed helpers separately as *internal, not contract*. Anything about an external/host schema the package doesn't define goes to Unverified.
-
-**TESTCASES.md** — characterization tests, one per verified business rule. Format each as `Given / When / Then (current behavior)` plus the `path:line` it locks. Frame the whole file as behavior-locking for refactoring, NOT requirement conformance. Rules: derive only from verified claims; never from flagged/unverified; omit cases that depend on an external contract; do not claim branch/exhaustive coverage. When test files exist, prefer `extract_project_meta.tests` and add a matrix by test file/framework/test case; list skipped or gated tests plus case-level required environment/config.
-
-**RISKS.md** — one row per `flagged` audit entry and per `Unverified` spec item: finding, evidence `path:line`, suggested action, and triage fields. Include severity, likelihood, impact, status, and owner when grounded; otherwise use `unknown` or `unassigned`. Never present a candidate as a confirmed defect.
-
-## Notes on the "RAG" question
-Claude Code reads real files on demand, so for demo-to-mid-size repos this on-demand exploration *is* the retrieval layer, and citations come for free because you're reading actual lines. A persistent vector index (Chroma / AnythingLLM) only becomes necessary when the codebase exceeds what fan-out subagents can cover in context — that is the Phase-2 productization trigger noted in `SPEC.md`, not an MVP requirement.
-
-That Phase-2 design is now specified: an MCP connector with a tree-sitter symbol index (not a vector store) plus deterministic citation verification and drift detection — see `CONNECTOR_DESIGN.md`.
+For each existing identified claim and citation, classify it as intact, moved, drifted, orphaned, or unresolved. Preserve stable IDs, validate references after proposed moves, append audit findings, and never auto-edit `SPEC.md`. Unresolved checks are not drift.

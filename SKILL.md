@@ -17,7 +17,7 @@ The premise is deliberate: in real legacy systems the spec is missing but **the 
 
 Decide which mode you are in before doing anything else.
 
-- **Mode A — Reverse-Spec** (default, first run on a repo): produce `SPEC.md`, `ARCHITECTURE.md`, and `audit_log.jsonl` from scratch.
+- **Mode A — Reverse-Spec** (default, first run on a repo): produce a grounded artifact profile from scratch. The default `standard` profile emits the complete documentation set; use `core` only when the user explicitly requests it.
 - **Mode B — Drift-Check** (a prior `SPEC.md` from this skill already exists): re-verify each existing claim's citation against the *current* code and emit `DRIFT_REPORT.md`, appending to `audit_log.jsonl`.
 
 If a `SPEC.md` produced by this skill exists in the target output location, default to Mode B and say so; otherwise Mode A.
@@ -26,7 +26,7 @@ If a `SPEC.md` produced by this skill exists in the target output location, defa
 
 ## Workflow (Mode A)
 
-Run the phases in order. Each phase maps to a role documented in `references/agent-roles.md` — read that file for the detailed extraction/critic prompts before Phase 1.
+Run the phases in order. Each phase maps to a role documented in `references/agent-roles.md` — read that file for the detailed extraction/critic prompts before Phase 1. Select the output profile during scoping: `standard` is the default; `core` requires an explicit user request. Profile selection changes which documents are emitted, never the evidence standard or Critic gate.
 
 ### Phase 0 — Scope & Ingest
 1. Map the tree with Glob; identify the primary language and the top-level modules/packages.
@@ -71,22 +71,29 @@ Re-check every claim from Phase 1–2 against the code:
 This gate is what separates this skill from "ask an LLM to summarize a repo." Do not skip it.
 
 ### Phase 4 — Emit
-Write the three artifacts using the templates below. Report a one-paragraph summary to the user: module count, verified-claim count, unverified count, and the top 3 risks/unknowns.
+Emit the selected profile and report a one-paragraph summary to the user: module count, verified-claim count, unverified count, and the top 3 risks/unknowns.
+
+- **`core` (explicit opt-in):** `SPEC.md`, `ARCHITECTURE.md`, and `audit_log.jsonl`.
+- **`standard` (default):** every `core` artifact plus `INTERFACES.md`, `DATA_MODEL.md`, `ONBOARDING.md`, `TESTCASES.md`, `RISKS.md`, charts, and `REPORT.html`.
+
+A standard-profile document is required even when its subject is absent. Never leave it empty and never fill it with assumptions: state the searched paths/file types/symbols or connector scope and say **Not found**. Put claims blocked by missing source or an external contract in an `Unverified` section with stable `UV-*` IDs. Charts and `REPORT.html` require `emit_charts` and `render_report`; when either connector tool is unavailable, record the generation condition and the reason the artifact was not created rather than hand-authoring misleading substitutes.
 
 Before writing files, normalize provenance and quality metadata:
 - Use separate provenance lines, not one ambiguous source line: `Analyzed source commit: <git ref or date>` and `Generated at: <runtime timestamp/date>`.
 - Coverage lines must name both what was covered and what was deliberately skipped. If connector results are truncated, include `returned`, `total`, and `omitted`.
 - Split product/business rules from implementation/runtime rules. Do not label build scripts, package metadata, or launch behavior as business rules unless the domain code actually makes them business rules.
+- Assign stable IDs within the analysis baseline: business rules `BR-*`, interfaces `API-*`, data models/contracts `DM-*`, test cases `TC-*`, risks `RSK-*`, and unverified items `UV-*`. Preserve an existing ID when the same item is regenerated. References use the exact ID (for example, `Related: BR-003, API-002`); every referenced ID must resolve to exactly one item in the emitted document set. Never reuse an ID for a different item.
 
-If the `render_report` connector tool is available, finish by calling it on the deliverables directory. It assembles everything (the markdown deliverables, `audit_log.jsonl`, and `charts/`) into a single self-contained `REPORT.html` with one tab per document plus an automatically generated **Quality** tab. The Quality tab verifies cited files/line ranges and reports audit coverage; it is a mechanical quality gate, not a replacement for semantic critic review. Save chart SVGs from `emit_charts` into `charts/`; to have a diagram replace a mermaid fence inside a document, save it as `charts/<DOC>.<n>.svg` (or `.png`), where n is the fence's order within that document.
+If `build_call_graph` contributes to `ARCHITECTURE.md`, label its output exactly as `graph_type: module_dependency` and `resolution: syntax`, and explicitly state that it is not a method call graph and does not resolve runtime or dynamic dispatch.
+
+If the `render_report` connector tool is available for the standard profile, finish by calling it on the deliverables directory. It assembles the markdown deliverables, `audit_log.jsonl`, and `charts/` into a self-contained `REPORT.html` with a Quality tab. The Quality tab is a mechanical quality gate, not a replacement for semantic critic review. Save chart SVGs from `emit_charts` into `charts/`; to replace a Mermaid fence, use `charts/<DOC>.<n>.svg` (or `.png`).
 
 Quality floor for generated output:
-- `audit_log.jsonl` entries should cover every emitted markdown citation, not just a small sample.
-- `INTERFACES.md` should include request/response examples for high-value entrypoints and MCP tools when the code schema is available.
-- `TESTCASES.md` should include a file-by-file or feature-by-feature coverage matrix when tests exist. Prefer `extract_project_meta.tests`, which reports test files, framework, test case names, case-level required environment variables, and test-scoped environment variables; list skipped/gated acceptance tests and their enabling environment variables.
-- `RISKS.md` should include at least severity, likelihood, impact, evidence, suggested action, and status/owner when the code or repo metadata supports those fields. If owner/status cannot be grounded, mark them unassigned/unknown rather than guessing.
-- `DATA_MODEL.md` should separate persistent domain entities from configuration/interface data contracts. If no domain model exists, say so and document the code-defined contracts instead of emitting an empty ERD alone.
-- `CHANGELOG.md` should group conventional commits by type and include commit hash plus any available date/author metadata from `extract_changelog`; do not output only a flat recent-commit list unless grouping data is unavailable.
+- Every factual claim in every markdown deliverable has a code/repository citation or is isolated under an identified `UV-*` item.
+- `audit_log.jsonl` covers every emitted markdown citation.
+- All cross-document ID references resolve and match the referenced item type.
+- No unsupported factual claim is promoted into a verified section.
+- When a required concept is absent, the document records the search scope and **Not found** instead of being blank.
 
 ---
 
@@ -102,80 +109,58 @@ If the `detect_drift` connector tool is available, prefer it. Pass the SPEC's ge
 
 ## Output formats
 
+All standard-profile markdown documents begin with analyzed-source, generation-time, and coverage/search-scope metadata. Every factual row or bullet carries evidence; absent concepts use **Not found** plus the search scope. All `Unverified` entries carry a `UV-*` ID and a reason.
+
 ### `SPEC.md`
-ALWAYS use this structure:
+ALWAYS include these sections:
+1. **System purpose and boundary** — what is inside/outside the analyzed system.
+2. **Actors and entrypoints** — human/system actors and code-defined entry surfaces.
+3. **Core use cases** — grounded execution scenarios.
+4. **Business rules** — stable `BR-*` IDs, behavior, evidence, and related IDs.
+5. **Validation and error behavior** — rejection conditions, error types/messages/status when defined.
+6. **State transitions** — source state, trigger, destination state, guards and side effects.
+7. **Configuration** — keys, defaults and behavioral effects defined by code/manifests.
+8. **Persistence and side effects** — durable writes, files, network, queues, processes and events.
+9. **Operational behavior** — startup/shutdown, scheduling, concurrency, retry, timeout, logging and observability when present.
+10. **Known limitations** — limitations explicitly demonstrated by source or repository metadata.
+11. **Unverified / Needs-review** — `UV-*` items with searched scope and why verification failed.
 
-```markdown
-# [System Name] — Reconstructed Specification
-> Generated by legacy-spec-agent from source. Every rule cites code. Unverified items are isolated below.
-- Analyzed source commit: <git ref or date>
-- Generated at: <runtime timestamp/date>
-- Coverage: <modules covered> / <modules total> (<language>)
+When a section has no grounded concept, retain the heading and write **Not found**, including what was searched. Do not infer actors, rules, transitions, or operational guarantees.
 
-## System Purpose
-<2–4 sentences: what this system does, inferred from code, each with a citation>
+### `ARCHITECTURE.md`
+ALWAYS include system context, component inventory, runtime/deployment view, module dependency view, external systems/data stores, major execution flows, trust boundaries, and analysis limitations. Every node and asserted edge needs evidence. A `build_call_graph` result must be captioned `graph_type: module_dependency; resolution: syntax` and described as syntax-only import/module dependency analysis—not an actual method call graph, runtime dispatch graph, or compiler-resolved call graph.
 
-## Modules
-### <module name> — `<path>`
-- **Responsibility**: <what it does>  `path:line`
-- **Business rules**:
-  - <rule>  `path:line`
-- **Inputs / Outputs**: <...>  `path:line`
-- **Side effects / External calls**: <...>  `path:line`
+### `INTERFACES.md`
+For each `API-*`, record interface ID, caller, protocol/transport, exact signature, request schema, response schema, validation, errors, side effects, timeout/cancellation behavior, idempotency, evidence, and related IDs. Use **Not found** for a code-undefined field and cite the search scope. Contracts owned by an external host/service but not defined in the repository belong in a separate `UV-*` **Unverified external contracts** section, never reconstructed from convention.
 
-## Data & Control Flow
-<narrative; defer the diagram to ARCHITECTURE.md>
+### `DATA_MODEL.md`
+Separate **persistent entities** from **configuration/interface contracts**. Each `DM-*` records fields with type, required/optional status, default, validation, relations, lifecycle, evidence, and related IDs. Only claim persistence and relations that code defines. Never infer primary keys, foreign keys, cardinality, cascade behavior, or lifecycle semantics. If no persistent entity exists, say **Not found**, state the model/schema search scope, and still document code-defined configuration/interface contracts.
 
-## Constraints & Assumptions
-- <constraint>  `path:line`
+### `ONBOARDING.md`
+Record grounded prerequisites, dependency/build/test/run commands, configuration, environment, and troubleshooting. Commands must come from manifests, automation, or source citations. Missing setup knowledge is **Not found** or `UV-*`, not an invented procedure.
 
-## ⚠️ Unverified / Needs-review
-> Items that could NOT be grounded in code. Do not treat as fact.
-- <claim> — reason it could not be verified
-```
+### `TESTCASES.md`
+Use three distinct sections: **existing automated tests**, **source-derived characterization scenarios**, and **test candidates unverified because of external contracts**. Every `TC-*` includes Given/When/Then, related `BR-*` (and other IDs where useful), inputs, expected result, side effects, execution command, required environment/configuration, evidence, and status/category. Do not claim that a source-derived scenario already executes. External-contract candidates remain linked to `UV-*` and are not presented as verified tests.
+
+### `RISKS.md`
+Separate **confirmed behavior**, **defect candidates**, and **unverified gaps**. Every `RSK-*` includes severity, likelihood, impact, confidence, evidence, mitigation, suggested action, owner, status, and related IDs. Triage values are assessments, not measured facts; use `unknown`/`unassigned` where the repository does not ground owner or status. Never label a candidate as a confirmed defect.
 
 ### `DRIFT_REPORT.md`
-```markdown
-# Drift Report — [System Name]
-- Compared: SPEC.md (<prev date>) vs code (<current date/commit>)
-- Summary: intact <n> · moved <n> · drifted <n> · orphaned <n> · unresolved <n>
-
-## 🔴 Drifted (behavior changed)
-- **<rule>** — spec said "<...>" (`old path:line`) but code now does "<...>" (`new path:line`)
-
-## 🟡 Moved (citation stale, behavior same)
-- **<rule>** — `old path:line` → `new path:line`
-
-## ⚫ Orphaned (cited code deleted)
-- **<rule>** — `old path:line` no longer exists
-
-## ⚠️ Unresolved (could not check — NOT drift)
-- **<rule>** — `path:line` — <reason: baseline unreadable / not a git repo / bad ref>
-```
+Classify cited claims as intact, moved, drifted, orphaned, or unresolved. Unresolved checks are not drift. Preserve stable IDs and propose changes without automatically rewriting `SPEC.md`.
 
 ### `audit_log.jsonl`
-Append-only. One JSON object per line. Timestamps are supplied by the runtime, not invented.
+Append one JSON object per citation decision. Timestamps come from the runtime. Include the item ID, action, claim, evidence, document, optional note, and baseline reference. Audit coverage must include every citation in every emitted markdown document.
 
-```
-{"id":"<claim-id>","action":"created|verified|flagged|moved|drifted|orphaned","claim":"<short>","evidence":"path:line","document":"<artifact.md>","note":"<optional>","baseline_ref":"<git ref or date>"}
-```
+## Optional deliverables and generation conditions
 
----
+`core` and `standard` are the only artifact profiles. `standard` includes the full set above and is the default; `core` is an explicit reduced-output request. The following additions remain optional even relative to those profiles:
 
-## Optional deliverables (on request)
-Beyond the three core artifacts, this skill can emit additional SI/enterprise-style deliverables — but **only what the code substantiates**, under the same citation gate. Generate these when the user asks for the corresponding document, after the Critic gate has run (they are built from verified items).
+- **`CHANGELOG.md`** — generate only when requested and Git history is available. Group conventional commits by type and include grounded hash/date/author/scope metadata.
+- **Additional charts** — generate only when requested or when a standard document has supported chart data. Never draw an edge or relation that lacks evidence.
 
-- **`INTERFACES.md`** — interface/API definition. Public functions and entrypoints with real signatures, inputs/outputs, and the hook/CLI I/O contract, each cited. Include concrete request/response examples for code-defined schemas (for example MCP tool payloads) when the schema is present. Mark `_`-prefixed helpers as *internal, not contract*. Do not invent an external schema the code doesn't define — quarantine it as Unverified.
-- **`TESTCASES.md`** — **characterization** test cases (given/when/then) that lock in *current* behavior for safe refactoring. Each case derives from a **verified** business rule and cites the line it locks. These assert "what the code does today", not "what it should do". Never build a case on a `flagged`/`unverified` item, and omit any case that would depend on an external contract the package can't assert. When tests are present, add a coverage matrix from `extract_project_meta.tests` by test file/framework/test case and state skipped/gated tests plus case-level env/config needed to enable them.
-- **`RISKS.md`** — risk / defect-candidate register. Promote every `flagged` audit entry and per-deliverable `Unverified` item into a reviewable row. Include severity, likelihood, impact, evidence, suggested action, and owner/status when grounded; use `unknown` or `unassigned` rather than guessing. Severity is a triage hint, not a measured metric — say so. These are candidates for a maintainer decision, never asserted as confirmed defects.
-- **`DATA_MODEL.md`** — the data model as an ER diagram. If the `extract_data_model` connector tool is available, use it to turn dataclasses and ORM models into entities, typed fields, and relations, then render the diagram via `emit_charts` kind `erd`. Otherwise read the model and schema files inline. Emit only the relations a field type actually states; never infer a foreign key. If no persistent domain model exists, say so and document configuration/interface data contracts separately instead of shipping only an empty ERD.
-- **`ONBOARDING.md`** — build and run commands, dependencies, and the config surface. Prefer `extract_project_meta`, which reads the manifests and reports each environment variable with its `path:line`. State only what the manifests and code show; do not invent setup steps. Include a troubleshooting table for code-grounded setup failures, plugin/MCP launch problems, missing env vars, and skipped acceptance tests.
-- **`CHANGELOG.md`** — release notes built from git history via `extract_changelog`, with conventional commits grouped by type. Include commit hash plus available date/author/scope metadata. This is the one deliverable sourced from the repo's log rather than its files; say so in the document, and do not editorialize beyond the commit subjects.
-- **`REPORT.html`** — all of the above in one self-contained tabbed page, generated by the `render_report` connector tool (see Phase 4). Connector-only; without it, deliver the markdown files as they are. Expect the connector to add a Quality tab from the docs and audit log; do not hand-author a separate quality tab unless the user explicitly requests a standalone review document.
+`REPORT.html` and charts are standard-profile deliverables when their connector tools are available. Without those tools, disclose that generation condition and omit them. Honesty rules apply to every profile and deliverable: no empty placeholder, no fabricated template filler, and no ungrounded row outside `Unverified`.
 
-Honesty rules carry over verbatim: no row without a citation, nothing fabricated to fill a template, and anything ungroundable stays in an Unverified/candidate section rather than the body.
-
-> This skill deliberately does not emit ADRs, PRDs, or user manuals. Code shows what a system does, not why one design was chosen over another or what the business intended, and none of that can be grounded in a `path:line`. Those documents are out of scope rather than fabricated. If asked, say so and point the user to the human-authored source.
+This skill does not emit ADRs, PRDs, or user manuals. Code shows behavior, not design intent or business intent; point requests for those documents to human-authored sources.
 
 ---
 
