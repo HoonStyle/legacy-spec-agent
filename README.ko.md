@@ -27,22 +27,20 @@ Legacy Spec Agent는 문서가 없는 코드에 뒤늦게라도 명세서를 만
 
 ## 산출물
 
-| 산출물 | 설명 |
-| --- | --- |
-| `SPEC.md` | 목적, 비즈니스 규칙, 입력, 출력, 제약 조건. |
-| `ARCHITECTURE.md` | 코드까지 추적되는 의존성 그래프와 제어 흐름도. |
-| `INTERFACES.md` | 실제 시그니처가 붙은 공개 API 목록. |
-| `DATA_MODEL.md` | 엔티티, 필드, 관계, Mermaid ER 다이어그램. |
-| `ONBOARDING.md` | 빌드/실행 명령, 의존성, 환경 변수. |
-| `TESTCASES.md` | 리팩터링 전에 현재 동작을 고정해 두는 특성화 테스트. |
-| `RISKS.md` | 검증 중 발견된 결함 후보. |
-| `CHANGELOG.md` | conventional commit 유형별로 묶은 Git 이력. |
-| `DRIFT_REPORT.md` | 인용별 드리프트 분류. |
-| `audit_log.jsonl` | 검증·플래그 이력이 쌓이는 append-only 로그. |
-| Charts | 커버리지, 드리프트, 벤치마크, 아키텍처, ER 다이어그램. |
-| `REPORT.html` | 커넥터가 생성하는 탭 구조의 단일 HTML 보고서. |
+Mode A에는 두 프로파일이 있습니다. **기본값은 `standard`**이며, 축소된 **`core`는 사용자가 명시적으로 요청할 때만** 사용합니다.
 
-ADR, PRD, 사용자 매뉴얼은 일부러 만들지 않습니다. 이런 문서는 의도와 의사결정의 기록인데, 의도는 소스 코드만으로 증명할 수 없기 때문입니다.
+| 프로파일 | 산출물 |
+| --- | --- |
+| `core` | `SPEC.md`, `ARCHITECTURE.md`, `audit_log.jsonl` |
+| `standard` (기본값) | `core` 전체와 `INTERFACES.md`, `DATA_MODEL.md`, `ONBOARDING.md`, `TESTCASES.md`, `RISKS.md`, charts, `REPORT.html` |
+
+`SPEC.md`는 system boundary, actor/entrypoint, 핵심 use case, 식별된 business rule, validation/error, 상태 전이, configuration, persistence/side effect, 운영 동작, 알려진 한계, unverified 항목을 다룹니다. 나머지 standard 문서는 architecture view, 정확한 interface 계약, persistent entity와 configuration/interface contract의 분리, 근거 있는 설정 절차, 테스트 목록·scenario·candidate, 분류된 risk를 정의합니다. `BR-*`, `API-*`, `DM-*`, `TC-*`, `RSK-*`, `UV-*` 안정 ID로 문서 간 참조를 검증합니다.
+
+필수 문서나 섹션을 비워 두거나 추측으로 채우지 않습니다. 저장소에 해당 개념이 없으면 검색 범위와 **발견되지 않음(Not found)**을 기록하고, 저장소가 정의하지 않은 외부 계약은 **Unverified**로 분리합니다. charts와 `REPORT.html`은 커넥터의 chart/report 도구가 있을 때 생성하며, 도구가 없으면 생성하지 못한 조건을 명시합니다.
+
+`build_call_graph` 기반 architecture 결과에는 `graph_type: module_dependency`, `resolution: syntax`를 표시합니다. 이는 syntax-only module/import 분석이며 실제 method call graph나 compiler/runtime/dynamic-dispatch 해석이 아닙니다.
+
+`CHANGELOG.md`는 Git 이력을 사용할 수 있고 사용자가 요청한 경우에만 선택적으로 생성합니다. ADR, PRD, 사용자 매뉴얼은 소스 코드로 설계·사업 의도를 입증할 수 없어 생성하지 않습니다.
 
 ## 모드
 

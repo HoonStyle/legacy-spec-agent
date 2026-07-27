@@ -53,7 +53,13 @@ Record the provider's non-overlapping token counters exactly as reported, their 
 
 Use `END_TO_END_REPLAY.md` for the task manifest, paired-run controls, run-record fields, comparison, and decision template.
 
-### 5. Language-specific module resolution
+### 5. Artifact quality and documentation contracts
+
+**Status: contract implementation complete; per-run output validation remains an emission gate.** This work is independent of bounded end-to-end token replay: it tightens the emitted-document contract without claiming or depending on token savings. Mode A defines explicit `core` and default `standard` profiles, required artifact sections, stable cross-document IDs, honest Not-found handling, and syntax-only architecture disclosures. Role contracts and bilingual user documentation are synchronized with those requirements, and contract tests prevent regressions.
+
+**Exit gate:** every required section is present; `audit_log.jsonl` covers every citation in all emitted markdown; every cross-document ID reference resolves to exactly one correctly typed item; and the verified document body contains zero unsupported claims. Absence must be reported with search scope and **Not found**, never an empty document or fabricated content.
+
+### 6. Language-specific module resolution
 
 **Status: paused pending item 4.** TypeScript `baseUrl`, `paths`, project references, package exports, and missing-extension support is implemented. Validate or add another language only when replay evidence identifies module resolution as a material source of wasted reads or failed tasks.
 
@@ -65,7 +71,7 @@ Implement separately:
 
 Uncertain imports must remain external/unresolved instead of being guessed from a filename.
 
-### 6. Per-file failure isolation
+### 7. Per-file failure isolation
 
 **Status: minimum reliability fixes only pending item 4.** Fix failures that prevent representative replay tasks from completing; defer exhaustive edge-case hardening until the effect gate justifies continued investment.
 
@@ -73,7 +79,7 @@ Continue after unreadable, changing, oversized, invalid-encoding, grammar-load, 
 
 **Exit gate:** one bad file cannot abort an otherwise useful repository analysis.
 
-### 7. Cache lifecycle and concurrency
+### 8. Cache lifecycle and concurrency
 
 **Status: paused pending item 4.** Address demonstrated correctness or resource failures first; do not expand concurrency infrastructure speculatively.
 
@@ -83,19 +89,19 @@ Cover simultaneous access, mutation during analysis, eviction beyond 512 entries
 
 ## Optional semantic precision
 
-### 8. TypeScript semantic backend
+### 9. TypeScript semantic backend
 
 **Status: paused pending item 4 and a demonstrated semantic gap.**
 
 Discover projects, load the compiler API, resolve types/symbols/calls, and emit cited semantic edges. This is first because it can run inside the existing Node connector without an external SDK installer.
 
-### 9. C# Roslyn backend
+### 10. C# Roslyn backend
 
 **Status: paused pending item 4 and a demonstrated semantic gap.**
 
 Discover solutions/projects, launch an isolated analyzer, resolve symbols and calls, and map every result back to source citations.
 
-### 10. Go, Java, and Python semantic backends
+### 11. Go, Java, and Python semantic backends
 
 **Status: paused pending item 4 and a demonstrated semantic gap.**
 
