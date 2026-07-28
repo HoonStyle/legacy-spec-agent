@@ -9,6 +9,7 @@ import { assessLanguageToolchains } from "./toolchains.js";
 import { ToolchainApprovalStore, ToolchainDownloadManager } from "./toolchain-downloads.js";
 import { indexSymbolsMulti, buildCallGraphMulti, extractDataModelMulti } from "./multilang.js";
 import { coverageAuditSchema, evaluateDocumentGate, evidenceAuditSchema, scopeManifestSchema } from "./document-gate.js";
+import { gateAndPublish } from "./document-emission.js";
 import { resolveWithinRoot } from "./matching.js";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
@@ -327,6 +328,30 @@ export function createServer(root: string, options: { cacheRoot?: string; fetchI
       coverage_audit: params.coverage_audit,
       gatekeeper_actor_id: params.gatekeeper_actor_id,
     })),
+  );
+
+  server.registerTool(
+    "publish_approved_documents",
+    {
+      description: "Snapshot and gate a frozen staging draft, then transactionally replace the destination only after approval. Rejected drafts never modify the published directory.",
+      inputSchema: {
+        source_dir: z.string().optional().describe("Frozen source directory relative to connector root (default '.')"),
+        staging_dir: z.string().describe("Frozen draft directory relative to connector root"),
+        destination_dir: z.string().describe("Published directory relative to connector root"),
+        profile: z.enum(["core", "standard"]), scope_manifest: scopeManifestSchema,
+        evidence_audit: evidenceAuditSchema, coverage_audit: coverageAuditSchema,
+        gatekeeper_actor_id: z.string().min(1),
+      },
+    },
+    async (params) => {
+      const staging = resolveWithinRoot(root, params.staging_dir);
+      return json(gateAndPublish({
+        root, source_root: resolveWithinRoot(root, params.source_dir ?? "."), dir: staging,
+        profile: params.profile, scope_manifest: params.scope_manifest,
+        evidence_audit: params.evidence_audit, coverage_audit: params.coverage_audit,
+        gatekeeper_actor_id: params.gatekeeper_actor_id,
+      }, resolveWithinRoot(root, params.destination_dir)));
+    },
   );
 
   server.registerTool(

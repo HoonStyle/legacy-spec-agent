@@ -61,7 +61,7 @@ The Writer produces the complete selected-profile draft from the frozen scope ma
 **Role:** Adversarially validate the complete, frozen selected-profile draft. This role must be a different subagent from the Writer/Architect, receives only the completed draft, frozen scope manifest, and source evidence needed to audit it, and must not use the Writer's internal reasoning or self-verification results as audit evidence.
 
 1. Open every cited `path:line` and verify that it supports the factual claim as written. Move unsupported or missing claims to a stable `UV-*` item rather than deleting them.
-2. Emit one `audit_log.jsonl` entry for every citation in every markdown deliverable. Mechanical line validity is not semantic proof; note that distinction.
+2. Emit one `audit_log.jsonl` entry for every citation in every markdown deliverable. Mechanical line validity is not semantic proof; note that distinction. Every cited factual line must declare a stable `CLM-*` claim ID and have exactly one corresponding `verified` row with the same `claim_id`; never invent audit-only claim IDs.
 3. Build an ID index across all documents. Verify uniqueness, required prefixes, target existence, correct target type, and the semantic validity of every `Related` reference.
 4. Check required sections and fields, profile membership, **Not found** search scopes, separation of external contracts, and prohibited inferences (including keys/cardinality/cascades and method-call semantics).
 5. Reject emission if any factual markdown claim lacks audit coverage, any ID reference is invalid, or any unsupported claim remains in a verified section.
@@ -113,7 +113,7 @@ The Writer and final Gatekeeper must be different subagents regardless of reposi
 
 ## Phase 7 — Emitter (inline)
 
-Emit the explicit `core` profile (`SPEC.md`, `ARCHITECTURE.md`, `audit_log.jsonl`) or the default `standard` profile (core plus `INTERFACES.md`, `DATA_MODEL.md`, `ONBOARDING.md`, `TESTCASES.md`, `RISKS.md`, charts, and `REPORT.html`). Connector availability is the generation condition for charts and `REPORT.html`; disclose an unavailable tool rather than hand-authoring substitutes.
+Emit the explicit `core` profile (`SPEC.md`, `ARCHITECTURE.md`, `audit_log.jsonl`) or the default `standard` profile (core plus `INTERFACES.md`, `DATA_MODEL.md`, `ONBOARDING.md`, `TESTCASES.md`, `RISKS.md`, charts, and `REPORT.html`). Connector availability is the generation condition for charts and `REPORT.html`; disclose an unavailable tool rather than hand-authoring substitutes. Keep the frozen draft in staging until approval; when `publish_approved_documents` is available, use it to transactionally replace the destination only after the gate approves.
 
 Use separate `Analyzed source commit`, `Generated at`, and coverage/search-scope lines. Ensure:
 

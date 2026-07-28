@@ -70,7 +70,7 @@ Freeze the complete selected-profile draft before auditing it. Assign an **Indep
 Re-check every claim from Phase 1–2 against the code:
 - Open the cited `path:line`. If the code substantiates the claim → **verified**.
 - If the citation is missing, wrong, or the code doesn't support it → move the item to an **Unverified / Needs-review** section. Do **not** delete it silently and do **not** promote it to the main spec.
-- Record each verified/flagged decision as an `audit_log.jsonl` entry.
+- Record each verified/flagged decision as an `audit_log.jsonl` entry. Every cited factual line must declare a stable `CLM-*` claim ID, and the same `claim_id` must appear exactly once in its `verified` audit row; the deterministic gate rejects missing, duplicate, or invented claim-ID audits.
 - Audit coverage must match the emitted markdown: every `path:line` citation that appears in a generated markdown deliverable gets an audit entry. If a citation is only mechanically line-valid but the natural-language claim still needs human judgment, say that in the entry `note` instead of inflating it into semantic proof.
 
 This gate is what separates this skill from "ask an LLM to summarize a repo." Do not skip it.
@@ -83,7 +83,7 @@ The Writer may correct audit findings but cannot generate the final audit verdic
 
 A separate **Gatekeeper** does not write or modify documents. It combines the Evidence Auditor, Coverage Sentinel, and deterministic contract-check results and returns only `approved` or `rejected`. Only its `approved` verdict authorizes emission. It must reject unsupported verified claims, citation audit coverage below 100%, unexplained code-surface omissions, duplicate/dangling/type-mismatched IDs, undisclosed truncation, missing required documents or sections, stale draft digests, Writer/auditor/Gatekeeper identity collisions, and syntax module dependencies represented as a call graph.
 
-If `evaluate_document_gate` is available, the Gatekeeper must call it with the completed frozen manifest and both independent audit records; do not substitute the report Quality tab or the Writer's judgment. Its independently extracted code surface and SHA-256 comparison are the deterministic publication result. A `rejected` result returns the draft to correction and independent recheck; only `approved` proceeds to Emit.
+If `evaluate_document_gate` is available, the Gatekeeper must call it with the completed frozen manifest and both independent audit records; do not substitute the report Quality tab or the Writer's judgment. Its independently extracted code surface and SHA-256 comparison are the deterministic publication result. A `rejected` result returns the draft to correction and independent recheck; only `approved` proceeds to Emit. When `publish_approved_documents` is available, keep the frozen draft in a staging directory and use that tool for the final transactional publish; never copy a rejected staging draft into the destination.
 
 ### Phase 5 — Emit
 Emit the selected profile and report a one-paragraph summary to the user: module count, verified-claim count, unverified count, and the top 3 risks/unknowns.

@@ -1,0 +1,5 @@
+{"id":"PY-001","category":"environment","surface":"environment:PY_TOKEN","found_at":"worker.py:2","expected_document_type":"DM","importance":"critical","source_citation":"worker.py:2"}
+{"id":"PY-002","category":"entrypoint","surface":"entrypoint:worker.py","found_at":"worker.py:3","expected_document_type":"BR","importance":"critical","source_citation":"worker.py:3"}
+{"id":"PY-003","category":"external_side_effect","surface":"external_side_effect:save(\"result\")","found_at":"worker.py:4","expected_document_type":"RSK","importance":"critical","source_citation":"worker.py:4"}
+{"id":"PY-004","category":"entrypoint","surface":"entrypoint:worker.py","found_at":"worker.py:5","expected_document_type":"BR","importance":"critical","source_citation":"worker.py:5"}
+{"id":"PY-005","category":"test_file","surface":"test_file:tests/test_worker.py","found_at":"tests/test_worker.py:1","expected_document_type":"TC","importance":"normal","source_citation":"tests/test_worker.py:1"}

@@ -1,0 +1,8 @@
+{"id":"ML-001","category":"data_contract","surface":"data_contract:User","found_at":"api.ts:1","expected_document_type":"DM","importance":"critical","source_citation":"api.ts:1"}
+{"id":"ML-002","category":"registered_api","surface":"registered_api:loadUser","found_at":"api.ts:2","expected_document_type":"API","importance":"normal","source_citation":"api.ts:2"}
+{"id":"ML-003","category":"environment","surface":"environment:REGION","found_at":"worker.py:2","expected_document_type":"DM","importance":"critical","source_citation":"worker.py:2"}
+{"id":"ML-004","category":"registered_api","surface":"registered_api:App","found_at":"App.java:1","expected_document_type":"API","importance":"normal","source_citation":"App.java:1"}
+{"id":"ML-005","category":"environment","surface":"environment:APP_HOME","found_at":"App.java:1","expected_document_type":"DM","importance":"critical","source_citation":"App.java:1"}
+{"id":"ML-006","category":"registered_api","surface":"registered_api:AppContract","found_at":"App.cs:1","expected_document_type":"API","importance":"normal","source_citation":"App.cs:1"}
+{"id":"ML-007","category":"data_contract","surface":"data_contract:AppContract","found_at":"App.cs:1","expected_document_type":"DM","importance":"critical","source_citation":"App.cs:1"}
+{"id":"ML-008","category":"entrypoint","surface":"entrypoint:main.go","found_at":"main.go:2","expected_document_type":"BR","importance":"critical","source_citation":"main.go:2"}

@@ -6,6 +6,10 @@ export interface DiscoveredCoverageSurface {
   surface: string;
   found_at: string;
   expected_document_type: "API" | "DM" | "BR" | "TC" | "RSK";
+  category: "registered_api" | "data_contract" | "environment" | "entrypoint" | "status_value" | "test_file" | "external_side_effect";
+  detector_id: string;
+  confidence: "high" | "medium";
+  evidence_span: { start_line: number; end_line: number };
 }
 
 export interface ExcludedPath {
@@ -55,8 +59,9 @@ export function includedSourceFiles(root: string, includedPaths: string[], exclu
 /** Deterministic syntax surface used as the code→documentation audit denominator. */
 export function extractCoverageSurface(root: string, includedPaths: string[], excludedPaths: ExcludedPath[] = []): DiscoveredCoverageSurface[] {
   const found = new Map<string, DiscoveredCoverageSurface>();
-  const add = (surface: string, file: string, line: number, expected_document_type: DiscoveredCoverageSurface["expected_document_type"]) => {
-    const item = { surface, found_at: `${relative(root, file).replaceAll("\\", "/")}:${line}`, expected_document_type };
+  const add = (surface: string, file: string, line: number, expected_document_type: DiscoveredCoverageSurface["expected_document_type"], detector_id = "line-syntax", confidence: DiscoveredCoverageSurface["confidence"] = "high") => {
+    const category = surface.slice(0, surface.indexOf(":")) as DiscoveredCoverageSurface["category"];
+    const item = { surface, found_at: `${relative(root, file).replaceAll("\\", "/")}:${line}`, expected_document_type, category, detector_id, confidence, evidence_span: { start_line: line, end_line: line } };
     found.set(`${expected_document_type}:${surface}:${item.found_at}`, item);
   };
   for (const file of includedSourceFiles(root, includedPaths, excludedPaths)) {

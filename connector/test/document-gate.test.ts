@@ -86,6 +86,7 @@ test("every deterministic publication rejection condition has a focused regressi
     { name: "unsupported verified claim", code: "unsupported_verified_claim", mutate: (p) => appendFileSync(join(p.dir, "audit_log.jsonl"), "{\"action\":\"flagged\",\"evidence\":\"src/server.ts:1\"}\n") },
     { name: "audit rows without a verified action", code: "citation_audit_incomplete", mutate: (p) => { const path = join(p.dir, "audit_log.jsonl"); writeFileSync(path, readFileSync(path, "utf8").replaceAll("\"verified\"", "\"recorded\"")); } },
     { name: "malformed audit log line", code: "invalid_audit_log", mutate: (p) => appendFileSync(join(p.dir, "audit_log.jsonl"), "{\"action\":\"verified\",\"evidence\":\n") },
+    { name: "invalid audit row schema", code: "invalid_audit_log", mutate: (p) => appendFileSync(join(p.dir, "audit_log.jsonl"), "{\"action\":\"verified\"}\n") },
     { name: "coverage ID missing from the draft", code: "coverage_failed", mutate: (p) => { p.coverage_audit.covered_items[0].document_id = "API-999"; } },
     { name: "undisclosed coverage truncation", code: "undisclosed_truncation", mutate: (p) => { p.coverage_audit.truncated_inputs = [{ source: "surface-enumeration", returned: 1, total: 2, omitted: 1 }]; } },
     { name: "missing provenance declaration", code: "invalid_provenance", mutate: (p) => { const path = join(p.dir, "SPEC.md"); writeFileSync(path, readFileSync(path, "utf8").replace(/Source: fixture-commit\r?\n/, "")); refreshDigest(p); } },
@@ -94,6 +95,8 @@ test("every deterministic publication rejection condition has a focused regressi
     { name: "dangling ID", code: "invalid_id", mutate: (p) => { const path = join(p.dir, "SPEC.md"); writeFileSync(path, `${readFileSync(path, "utf8")}\nRelated: API-999\n`); refreshDigest(p); } },
     { name: "typed ID mismatch", code: "invalid_id", mutate: (p) => { const path = join(p.dir, "SPEC.md"); writeFileSync(path, `${readFileSync(path, "utf8")}\nRelated API: BR-001\n`); refreshDigest(p); } },
     { name: "coverage count mismatch", code: "coverage_failed", mutate: (p) => { p.coverage_audit.expected_count = 99; } },
+    { name: "phantom coverage item", code: "coverage_failed", mutate: (p) => { p.coverage_audit.covered_items[0].surface = "registered_api:invented"; } },
+    { name: "covered ID lacks matching source evidence", code: "coverage_failed", mutate: (p) => { const path = join(p.dir, "ARCHITECTURE.md"); writeFileSync(path, readFileSync(path, "utf8").replace("The lookup operation is exported. `src/server.ts:1`", "The lookup operation is exported. `src/server.ts:2`")); refreshDigest(p); } },
     { name: "duplicate coverage classification", code: "coverage_failed", mutate: (p) => { p.coverage_audit.explained_omissions.push({ ...p.coverage_audit.covered_items[0], reason: "duplicate" }); } },
     { name: "empty omission explanation", code: "coverage_failed", mutate: (p) => { p.coverage_audit.explained_omissions[0].reason = ""; } },
     { name: "scope-unrelated omission", code: "coverage_failed", mutate: (p) => { p.scope_manifest.excluded_paths[0].path = "src/other.ts:2"; } },
@@ -103,6 +106,9 @@ test("every deterministic publication rejection condition has a focused regressi
     { name: "Writer/Coverage actor collision", code: "invalid_provenance", mutate: (p) => { p.coverage_audit.actor_id = p.scope_manifest.writer_actor_id; } },
     { name: "Gatekeeper/Evidence actor collision", code: "invalid_provenance", mutate: (p) => { p.gatekeeper_actor_id = p.evidence_audit.actor_id; } },
     { name: "modified frozen draft", code: "invalid_provenance", mutate: (p) => appendFileSync(join(p.dir, "SPEC.md"), "\npost-freeze mutation\n") },
+    { name: "unaudited claim ID", code: "claim_audit_incomplete", mutate: (p) => { const path = join(p.dir, "SPEC.md"); writeFileSync(path, `${readFileSync(path, "utf8")}\nCLM-999: factual claim \`src/server.ts:1\`\n`); refreshDigest(p); } },
+    { name: "swapped claim evidence", code: "claim_audit_incomplete", mutate: (p) => { const path = join(p.dir, "audit_log.jsonl"); const lines = readFileSync(path, "utf8").trim().split(/\r?\n/).map((line) => JSON.parse(line)); [lines[0].evidence, lines[2].evidence] = [lines[2].evidence, lines[0].evidence]; writeFileSync(path, `${lines.map((line) => JSON.stringify(line)).join("\n")}\n`); } },
+    { name: "multiple claim IDs on one cited line", code: "claim_audit_incomplete", mutate: (p) => { const path = join(p.dir, "SPEC.md"); writeFileSync(path, readFileSync(path, "utf8").replace("CLM-001:", "CLM-001 CLM-999:")); const audit = join(p.dir, "audit_log.jsonl"); appendFileSync(audit, '{"action":"verified","claim_id":"CLM-999","evidence":"src/server.ts:1"}\n'); refreshDigest(p); } },
   ];
   for (const item of cases) await t.test(item.name, () => {
     const { params, cleanup } = isolatedComplete();
@@ -158,4 +164,14 @@ test("coverage surface honors frozen exclusions and never follows symlinks outsi
     rmSync(root, { recursive: true, force: true });
     rmSync(outside, { recursive: true, force: true });
   }
+});
+
+test("coverage surface preserves Unicode and spaced source paths", () => {
+  const root = mkdtempSync(join(tmpdir(), "coverage-한글-"));
+  try {
+    mkdirSync(join(root, "κώδικας space"));
+    writeFileSync(join(root, "κώδικας space", "서비스.ts"), "export interface 요청 { value: string }\nexport const endpoint = process.env.API_URL;\n");
+    const surface = extractCoverageSurface(root, ["κώδικας space"]);
+    assert.ok(surface.some((item) => item.surface === "environment:API_URL" && item.found_at === "κώδικας space/서비스.ts:2"));
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });

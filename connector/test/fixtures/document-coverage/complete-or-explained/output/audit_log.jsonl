@@ -1,8 +1,8 @@
-{"action":"verified","evidence":"src/server.ts:1-2"}
-{"action":"verified","evidence":"src/server.ts:1-2"}
-{"action":"verified","evidence":"src/server.ts:1-2"}
-{"action":"verified","evidence":"src/server.ts:1"}
-{"action":"verified","evidence":"src/server.ts:1"}
-{"action":"verified","evidence":"src/server.ts:1"}
-{"action":"verified","evidence":"src/server.ts:1"}
-{"action":"verified","evidence":"src/server.ts:1"}
+{"action":"verified","claim_id":"CLM-001","evidence":"src/server.ts:1-2","document":"SPEC.md"}
+{"action":"verified","claim_id":"CLM-002","evidence":"src/server.ts:1-2","document":"SPEC.md"}
+{"action":"verified","claim_id":"CLM-003","evidence":"src/server.ts:1","document":"SPEC.md"}
+{"action":"verified","claim_id":"CLM-004","evidence":"src/server.ts:1","document":"SPEC.md"}
+{"action":"verified","claim_id":"CLM-005","evidence":"src/server.ts:1","document":"SPEC.md"}
+{"action":"verified","claim_id":"CLM-006","evidence":"src/server.ts:1-2","document":"ARCHITECTURE.md"}
+{"action":"verified","claim_id":"CLM-007","evidence":"src/server.ts:1","document":"ARCHITECTURE.md"}
+{"action":"verified","claim_id":"CLM-008","evidence":"src/server.ts:1","document":"ARCHITECTURE.md"}

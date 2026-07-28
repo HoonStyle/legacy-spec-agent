@@ -1,0 +1,6 @@
+{"action":"verified","claim_id":"CLM-SPEC-001","evidence":"tests/test_worker.py:1","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-002","evidence":"worker.py:2","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-003","evidence":"worker.py:3","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-004","evidence":"worker.py:4","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-005","evidence":"worker.py:5","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-ARCH-001","evidence":"tests/test_worker.py:1","document":"generated-baseline"}

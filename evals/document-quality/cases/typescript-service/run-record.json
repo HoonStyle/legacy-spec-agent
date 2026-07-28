@@ -1,0 +1,20 @@
+{
+  "case": "typescript-service",
+  "source_revision": "4f571515c6c31942a4d0fab42f1a5391ba55a7092efdff183c0045cc90c06297",
+  "profile": "standard",
+  "gate": {
+    "verdict": "approved",
+    "citation_count": 12,
+    "audited_citation_count": 12,
+    "reasons": []
+  },
+  "elapsed_ms": 40.58,
+  "rss_after_bytes": 60760064,
+  "source_bytes": 239,
+  "gate_result_bytes": 83,
+  "execution_mode": "direct_module",
+  "connector_calls": 0,
+  "unique_file_reads": "not_measured",
+  "repeated_file_reads": "not_measured",
+  "provider_counters": "not_exposed"
+}
