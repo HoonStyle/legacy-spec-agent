@@ -110,7 +110,8 @@ export function calculateDraftDigest(dir: string, profile: DocumentProfile): str
   const hash = createHash("sha256");
   for (const file of REQUIRED[profile].filter((name) => name.endsWith(".md")).sort()) {
     hash.update(file).update("\0");
-    hash.update(existsSync(join(dir, file)) ? readFileSync(join(dir, file)) : Buffer.from("<missing>"));
+    const content = existsSync(join(dir, file)) ? readFileSync(join(dir, file), "utf8").replace(/\r\n/g, "\n") : "<missing>";
+    hash.update(content);
     hash.update("\0");
   }
   return hash.digest("hex");
