@@ -57,6 +57,10 @@ Use `END_TO_END_REPLAY.md` for the task manifest, paired-run controls, run-recor
 
 **Status: contract implementation complete; per-run output validation remains an emission gate.** This work is independent of bounded end-to-end token replay: it tightens the emitted-document contract without claiming or depending on token savings. Mode A defines explicit `core` and default `standard` profiles, required artifact sections, stable cross-document IDs, honest Not-found handling, and syntax-only architecture disclosures. Role contracts and bilingual user documentation are synchronized with those requirements, and contract tests prevent regressions.
 
+**Preliminary strengthening — implementation complete; CI is the merge gate.** Freeze a scope manifest before writing, separate the Writer from the Independent Evidence Auditor, reverse-audit code surfaces with a Coverage Sentinel, and reserve publication approval for a read-only Gatekeeper. The MCP-exposed deterministic document gate validates real Markdown/audit fixtures, independently extracts registered APIs, data contracts, environment variables, entrypoints, status values, tests, and side effects, checks citation lines, typed IDs, coverage consistency, manifest schema/counts, role independence, and the actual draft digest, and rejects accurate-but-incomplete output. This strengthening precedes further artifact-quality work.
+
+**Strengthening completion condition:** the writer and auditor are separate agents, the code-to-document reverse omission check runs, only the Gatekeeper approves publication, and the related contract tests pass.
+
 **Exit gate:** every required section is present; `audit_log.jsonl` covers every citation in all emitted markdown; every cross-document ID reference resolves to exactly one correctly typed item; and the verified document body contains zero unsupported claims. Absence must be reported with search scope and **Not found**, never an empty document or fabricated content.
 
 ### 6. Language-specific module resolution

@@ -60,7 +60,7 @@ Mode A에는 두 프로파일이 있습니다. **기본값은 `standard`**이며
 
 ## 커넥터 도구
 
-번들 커넥터가 제공하는 열네 개 도구입니다.
+번들 커넥터가 제공하는 열다섯 개 도구입니다.
 
 - `assess_language_toolchains`
 - `approve_toolchain_download`
@@ -75,9 +75,12 @@ Mode A에는 두 프로파일이 있습니다. **기본값은 `standard`**이며
 - `extract_project_meta`
 - `extract_changelog`
 - `emit_charts`
+- `evaluate_document_gate`
 - `render_report`
 
 커넥터 없이도 스킬은 동작합니다. 다만 LLM 출력에만 의존하게 되어 보장 수준은 낮아집니다.
+
+Mode A는 Writer 실행 전에 소스 범위를 동결하고, 완성된 초안을 SHA-256으로 동결한 뒤 독립 Evidence Auditor와 코드→문서 역방향 Coverage Sentinel에 전달합니다. 이후 read-only `evaluate_document_gate`를 실행하며 Gatekeeper만 발행을 승인할 수 있습니다. 초안을 수정하면 새 digest와 독립 재검증이 필요합니다.
 
 기존 호출자와의 호환성을 위해 이름은 `build_call_graph`로 유지하지만, 이 도구가 반환하는 것은 메서드 호출 그래프가 아니라 구문 수준의 **모듈 의존성 그래프**입니다. 응답은 이 계약을 `graph_type: "module_dependency"`와 `resolution: "syntax"`로 표시하고 `resolved` 및 `unresolved` import 관계 수를 함께 보고합니다. 심볼, 메서드 호출, 런타임 호출 또는 동적 디스패치는 해석하지 않으며, 해석할 수 없는 import는 추측하지 않고 `externals`에 남깁니다.
 
@@ -121,7 +124,7 @@ SKILL.md             스킬 워크플로, 템플릿, 필수 규칙
 references/          추출, 아키텍처, critic 계약
 SPEC.md              최초 설계 문서(v0.1)
 CONNECTOR_DESIGN.md  커넥터 설계 및 마일스톤 기록(C0-C7)
-connector/           열네 개 도구와 테스트가 포함된 TypeScript MCP 서버
+connector/           열다섯 개 도구와 테스트가 포함된 TypeScript MCP 서버
 demo-hookify/        서드파티 패키지를 대상으로 한 Mode A 예시 실행 결과
 evals/               스킬 사용/미사용 벤치마크 결과
 skills/              플러그인 레이아웃용 스킬 사본

@@ -1,0 +1,253 @@
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { join } from "node:path";
+import { z } from "zod";
+import { CitationLineCache, formatCitation, parseCitation, type CitationRange } from "./citations.js";
+import { extractCoverageSurface, includedSourceFiles } from "./coverage-surface.js";
+
+export type DocumentProfile = "core" | "standard";
+export type DocumentGateReasonCode =
+  | "missing_document" | "missing_section" | "citation_audit_incomplete"
+  | "unsupported_verified_claim" | "invalid_id" | "coverage_failed"
+  | "undisclosed_truncation" | "syntax_dependency_as_call_graph"
+  | "invalid_provenance" | "invalid_citation" | "invalid_manifest"
+  | "invalid_audit_log";
+
+export interface ScopeManifest {
+  analyzed_source_commit: string;
+  included_paths: string[];
+  excluded_paths: Array<{ path: string; reason: string }>;
+  file_counts: { supported: number; unsupported: number; failed: number; skipped: number };
+  truncated: boolean;
+  truncated_inputs: Array<{ source: string; returned: number; total: number; omitted: number }>;
+  module_extractors: Array<{ module: string; actor_id: string }>;
+  writer_actor_id: string;
+  draft_digest: string;
+}
+
+export interface CoverageItem {
+  surface: string;
+  found_at: string;
+  expected_document_type: "API" | "DM" | "BR" | "TC" | "RSK";
+}
+
+export interface CoverageAudit {
+  expected_count: number;
+  documented_count: number;
+  covered_items: Array<CoverageItem & { document_id: string }>;
+  explained_omissions: Array<CoverageItem & { reason: string }>;
+  unexplained_omissions: CoverageItem[];
+  truncated_inputs: Array<{ source: string; returned: number; total: number; omitted: number }>;
+  verdict: "passed" | "failed";
+  actor_id: string;
+  draft_digest: string;
+}
+
+export interface EvidenceAudit {
+  verdict: "passed" | "failed";
+  actor_id: string;
+  draft_digest: string;
+}
+
+export interface DocumentGateParams {
+  root: string;
+  source_root: string;
+  dir: string;
+  profile: DocumentProfile;
+  scope_manifest: ScopeManifest;
+  evidence_audit: EvidenceAudit;
+  coverage_audit: CoverageAudit;
+  gatekeeper_actor_id: string;
+}
+
+export interface DocumentGateReason { code: DocumentGateReasonCode; detail: string }
+export interface DocumentGateResult {
+  verdict: "approved" | "rejected";
+  citation_count: number;
+  audited_citation_count: number;
+  reasons: DocumentGateReason[];
+}
+
+const truncationSchema = z.object({ source: z.string().min(1), returned: z.number().int().nonnegative(), total: z.number().int().nonnegative(), omitted: z.number().int().nonnegative() })
+  .strict()
+  .refine((item) => item.returned + item.omitted === item.total, "returned + omitted must equal total");
+export const scopeManifestSchema = z.object({
+  analyzed_source_commit: z.string().min(1), included_paths: z.array(z.string().min(1)).min(1),
+  excluded_paths: z.array(z.object({ path: z.string().min(1), reason: z.string().trim().min(1) }).strict()),
+  file_counts: z.object({ supported: z.number().int().nonnegative(), unsupported: z.number().int().nonnegative(), failed: z.number().int().nonnegative(), skipped: z.number().int().nonnegative() }).strict(),
+  truncated: z.boolean(), truncated_inputs: z.array(truncationSchema),
+  module_extractors: z.array(z.object({ module: z.string().min(1), actor_id: z.string().min(1) }).strict()).min(1),
+  writer_actor_id: z.string().min(1), draft_digest: z.string().regex(/^[a-f0-9]{64}$/),
+}).strict().superRefine((value, ctx) => {
+  if (value.truncated !== (value.truncated_inputs.length > 0)) ctx.addIssue({ code: "custom", message: "truncated must match truncated_inputs" });
+  const modules = value.module_extractors.map((item) => item.module);
+  if (new Set(modules).size !== modules.length) ctx.addIssue({ code: "custom", message: "module extractor assignments must be unique" });
+  const includedModules = new Set(value.included_paths.map((path) => path.replace(/:\d+(?:-\d+)?$/, "").replaceAll("\\", "/")));
+  if (modules.length !== includedModules.size || modules.some((module) => !includedModules.has(module.replaceAll("\\", "/"))))
+    ctx.addIssue({ code: "custom", message: "module Extractor assignments must exactly match included_paths" });
+});
+const coverageItemSchema = z.object({ surface: z.string().min(1), found_at: z.string().min(1), expected_document_type: z.enum(["API", "DM", "BR", "TC", "RSK"]) }).strict();
+export const coverageAuditSchema = z.object({
+  expected_count: z.number().int().nonnegative(), documented_count: z.number().int().nonnegative(),
+  covered_items: z.array(coverageItemSchema.extend({ document_id: z.string().min(1) })),
+  explained_omissions: z.array(coverageItemSchema.extend({ reason: z.string() })),
+  unexplained_omissions: z.array(coverageItemSchema), truncated_inputs: z.array(truncationSchema),
+  verdict: z.enum(["passed", "failed"]), actor_id: z.string().min(1), draft_digest: z.string().regex(/^[a-f0-9]{64}$/),
+}).strict();
+export const evidenceAuditSchema = z.object({ verdict: z.enum(["passed", "failed"]), actor_id: z.string().min(1), draft_digest: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
+
+const REQUIRED: Record<DocumentProfile, string[]> = {
+  core: ["SPEC.md", "ARCHITECTURE.md", "audit_log.jsonl"],
+  standard: ["SPEC.md", "ARCHITECTURE.md", "INTERFACES.md", "DATA_MODEL.md", "ONBOARDING.md", "TESTCASES.md", "RISKS.md", "audit_log.jsonl"],
+};
+const REQUIRED_SECTIONS: Record<string, string[]> = {
+  "SPEC.md": ["System purpose and boundary", "Actors and entrypoints", "Core use cases", "Business rules", "Validation and error behavior", "State transitions", "Configuration", "Persistence and side effects", "Operational behavior", "Known limitations", "Unverified / Needs-review"],
+  "ARCHITECTURE.md": ["System context", "Component inventory", "Runtime and deployment", "Module dependency", "External systems and data stores", "Major execution flows", "Trust boundaries", "Analysis limitations"],
+  "INTERFACES.md": ["Interfaces"], "DATA_MODEL.md": ["Data model"], "ONBOARDING.md": ["Onboarding"],
+  "TESTCASES.md": ["Existing automated tests", "Source-derived characterization scenarios", "External-contract test candidates"],
+  "RISKS.md": ["Confirmed behavior", "Defect candidates", "Unverified gaps"],
+};
+
+export function calculateDraftDigest(dir: string, profile: DocumentProfile): string {
+  const hash = createHash("sha256");
+  for (const file of REQUIRED[profile].filter((name) => name.endsWith(".md")).sort()) {
+    hash.update(file).update("\0");
+    const content = existsSync(join(dir, file)) ? readFileSync(join(dir, file), "utf8").replace(/\r\n/g, "\n") : "<missing>";
+    hash.update(content);
+    hash.update("\0");
+  }
+  return hash.digest("hex");
+}
+
+function citationsIn(markdown: string): CitationRange[] {
+  return Array.from(markdown.matchAll(/`([^`]+)`/g)).map((m) => parseCitation(m[1])).filter((v): v is CitationRange => v !== undefined);
+}
+
+interface AuditReadResult {
+  entries: Array<{ evidence?: string; action?: string; claim?: string }>;
+  invalidLines: number[];
+}
+
+function readJsonLines(path: string): AuditReadResult {
+  if (!existsSync(path)) return { entries: [], invalidLines: [] };
+  const entries: AuditReadResult["entries"] = [];
+  const invalidLines: number[] = [];
+  readFileSync(path, "utf8").split(/\r?\n/).forEach((raw, index) => {
+    const line = raw.trim();
+    if (!line) return;
+    try { entries.push(JSON.parse(line)); }
+    catch { invalidLines.push(index + 1); }
+  });
+  return { entries, invalidLines };
+}
+
+function regexEscape(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function readGitHead(root: string): string | undefined {
+  const git = join(root, ".git");
+  if (!existsSync(git) || !statSync(git).isDirectory()) return undefined;
+  const headPath = join(git, "HEAD");
+  if (!existsSync(headPath) || !statSync(headPath).isFile()) return undefined;
+  const head = readFileSync(headPath, "utf8").trim();
+  if (/^[a-f0-9]{40}$/i.test(head)) return head;
+  const match = /^ref:\s+(.+)$/.exec(head);
+  if (!match || match[1].includes("..")) return undefined;
+  const refPath = join(git, ...match[1].split("/"));
+  if (existsSync(refPath) && statSync(refPath).isFile()) return readFileSync(refPath, "utf8").trim();
+  const packed = join(git, "packed-refs");
+  if (!existsSync(packed) || !statSync(packed).isFile()) return undefined;
+  const row = readFileSync(packed, "utf8").split(/\r?\n/).find((line) => line.endsWith(` ${match[1]}`));
+  return row?.split(" ")[0];
+}
+
+export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateResult {
+  const reasons: DocumentGateReason[] = [];
+  const markdown = new Map<string, string>();
+  for (const file of REQUIRED[params.profile]) {
+    const path = join(params.dir, file);
+    if (!existsSync(path)) reasons.push({ code: "missing_document", detail: file });
+    else if (file.endsWith(".md")) markdown.set(file, readFileSync(path, "utf8"));
+  }
+  for (const [file, sections] of Object.entries(REQUIRED_SECTIONS)) {
+    const body = markdown.get(file);
+    if (!body) continue;
+    for (const section of sections) if (!new RegExp(`^#+\\s+${section}\\s*$`, "im").test(body))
+      reasons.push({ code: "missing_section", detail: `${file}: ${section}` });
+  }
+
+  const citations = [...markdown.values()].flatMap(citationsIn);
+  const lineCache = new CitationLineCache();
+  for (const citation of citations) {
+    const check = lineCache.check(params.source_root, citation);
+    if (check.verdict !== "valid") reasons.push({ code: "invalid_citation", detail: `${citation.path}:${citation.start}-${citation.end} ${check.verdict}` });
+  }
+  const auditRead = readJsonLines(join(params.dir, "audit_log.jsonl"));
+  const audit = auditRead.entries;
+  for (const line of auditRead.invalidLines) reasons.push({ code: "invalid_audit_log", detail: `audit_log.jsonl:${line}` });
+  const remainingAudit = new Map<string, number>();
+  for (const row of audit) {
+    if (row.action !== "verified") continue;
+    const parsed = row.evidence && parseCitation(row.evidence);
+    if (parsed) remainingAudit.set(formatCitation(parsed), (remainingAudit.get(formatCitation(parsed)) ?? 0) + 1);
+  }
+  let audited = 0;
+  for (const citation of citations) {
+    const key = formatCitation(citation);
+    const remaining = remainingAudit.get(key) ?? 0;
+    if (remaining > 0) { audited++; remainingAudit.set(key, remaining - 1); }
+  }
+  if (citations.length === 0 || audited !== citations.length)
+    reasons.push({ code: "citation_audit_incomplete", detail: `${audited}/${citations.length}` });
+  if (audit.some((row) => row.action === "flagged"))
+    reasons.push({ code: "unsupported_verified_claim", detail: "audit contains a flagged claim" });
+
+  const allMarkdown = [...markdown.values()].join("\n");
+  const definitions = Array.from(allMarkdown.matchAll(/^\s*(?:#{1,6}\s+|[-*]\s+(?:\*\*)?)((?:BR|API|DM|TC|RSK|UV)-[A-Za-z0-9_-]+)\b/gm), (m) => m[1]);
+  const counts = new Map<string, number>();
+  for (const id of definitions) counts.set(id, (counts.get(id) ?? 0) + 1);
+  for (const [id, count] of counts) if (count !== 1) reasons.push({ code: "invalid_id", detail: `duplicate ${id}` });
+  for (const match of allMarkdown.matchAll(/Related:\s*([^\n]+)/g)) {
+    for (const id of match[1].match(/(?:BR|API|DM|TC|RSK|UV)-[A-Za-z0-9_-]+/g) ?? []) {
+      if (!counts.has(id)) reasons.push({ code: "invalid_id", detail: `dangling ${id}` });
+    }
+  }
+  for (const match of allMarkdown.matchAll(/Related\s+(API|DM|BR|TC|RSK|UV):\s*((?:BR|API|DM|TC|RSK|UV)-[A-Za-z0-9_-]+)/g))
+    if (!match[2].startsWith(`${match[1]}-`)) reasons.push({ code: "invalid_id", detail: `type mismatch ${match[1]} -> ${match[2]}` });
+
+  const coverage = params.coverage_audit;
+  const discovered = extractCoverageSurface(params.source_root, params.scope_manifest.included_paths, params.scope_manifest.excluded_paths);
+  const auditedSurface = new Set([...coverage.covered_items, ...coverage.explained_omissions, ...coverage.unexplained_omissions].map((item) => `${item.surface}|${item.found_at}|${item.expected_document_type}`));
+  const missingFromAudit = discovered.filter((item) => !auditedSurface.has(`${item.surface}|${item.found_at}|${item.expected_document_type}`));
+  const allCoverageItems = [...coverage.covered_items, ...coverage.explained_omissions, ...coverage.unexplained_omissions];
+  const itemKeys = allCoverageItems.map((item) => `${item.surface}|${item.found_at}|${item.expected_document_type}`);
+  const uniqueSurfaces = new Set(itemKeys);
+  const invalidCoveredType = coverage.covered_items.some((item) => !item.document_id.startsWith(`${item.expected_document_type}-`) || !counts.has(item.document_id));
+  const invalidExplanation = coverage.explained_omissions.some((item) =>
+    !item.reason.trim() || !params.scope_manifest.excluded_paths.some((excluded) => excluded.path === item.found_at && excluded.reason.trim()),
+  );
+  if (coverage.verdict !== "passed" || coverage.unexplained_omissions.length > 0 || coverage.expected_count !== uniqueSurfaces.size || uniqueSurfaces.size !== itemKeys.length || coverage.documented_count !== coverage.covered_items.length || invalidCoveredType || invalidExplanation || missingFromAudit.length > 0)
+    reasons.push({ code: "coverage_failed", detail: "coverage audit is failed or internally inconsistent" });
+
+  const declaredTruncations = new Set(params.scope_manifest.truncated_inputs.map((item) => item.source));
+  const undeclaredTruncations = coverage.truncated_inputs.filter((item) => !declaredTruncations.has(item.source));
+  if (undeclaredTruncations.length > 0)
+    reasons.push({ code: "undisclosed_truncation", detail: undeclaredTruncations.map((item) => item.source).join(", ") });
+  const mislabelledCallGraph = allMarkdown.split(/\r?\n/).some((line) => /\b(?:call graph|call-graph)\b/i.test(line) && !/\bnot\b/i.test(line));
+  if (mislabelledCallGraph && /graph_type:\s*module_dependency|resolution:\s*syntax/i.test(allMarkdown))
+    reasons.push({ code: "syntax_dependency_as_call_graph", detail: "syntax module dependency is labelled as a call graph" });
+
+  const { scope_manifest: scope, evidence_audit: evidence } = params;
+  const parsedManifest = scopeManifestSchema.safeParse(scope);
+  if (!parsedManifest.success || scope.file_counts.supported !== includedSourceFiles(params.source_root, scope.included_paths, scope.excluded_paths).length)
+    reasons.push({ code: "invalid_manifest", detail: parsedManifest.success ? "supported file count differs from included source inventory" : parsedManifest.error.issues.map((issue) => issue.message).join("; ") });
+  const actors = [scope.writer_actor_id, evidence.actor_id, coverage.actor_id, params.gatekeeper_actor_id];
+  const provenancePattern = new RegExp(`^(?:Analyzed source commit|Source):\\s*${regexEscape(scope.analyzed_source_commit)}\\s*$`, "im");
+  const docsMatchSource = [...markdown.values()].every((body) => provenancePattern.test(body));
+  const gitHead = readGitHead(params.source_root);
+  if (evidence.verdict !== "passed" || actors.some((actor) => !actor) || new Set(actors).size !== actors.length || evidence.draft_digest !== scope.draft_digest || coverage.draft_digest !== scope.draft_digest || calculateDraftDigest(params.dir, params.profile) !== scope.draft_digest || !docsMatchSource || (gitHead !== undefined && gitHead !== scope.analyzed_source_commit))
+    reasons.push({ code: "invalid_provenance", detail: "audits are not independent or do not address the frozen draft" });
+
+  return { verdict: reasons.length === 0 ? "approved" : "rejected", citation_count: citations.length, audited_citation_count: audited, reasons };
+}

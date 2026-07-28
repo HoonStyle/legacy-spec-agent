@@ -4,6 +4,7 @@ import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { verifyCitation } from "../src/verify.js";
+import { parseCitation } from "../src/citations.js";
 
 const FIXTURE = [
   "import re",                          // 1
@@ -27,6 +28,11 @@ function withFixture(fn: (root: string) => void) {
     rmSync(root, { recursive: true, force: true });
   }
 }
+
+test("citation parser accepts every supported source extension", () => {
+  for (const extension of ["java", "cs", "go", "cjs", "mjs"])
+    assert.deepEqual(parseCitation(`src/example.${extension}:7`), { path: `src/example.${extension}`, start: 7, end: 7 });
+});
 
 test("valid location without snippet → match + numbered source", () => {
   withFixture((root) => {
