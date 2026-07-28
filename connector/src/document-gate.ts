@@ -149,6 +149,7 @@ function resolveGitHead(sourceRoot: string): string | undefined {
     const refMatch = /^ref:\s*(.+)$/.exec(head);
     if (!refMatch) return /^[0-9a-f]{40,64}$/i.test(head) ? head.toLowerCase() : undefined;
     const ref = refMatch[1].trim();
+    if (ref.includes("..")) return undefined;
     const refPath = join(sourceRoot, ".git", ...ref.split("/"));
     if (existsSync(refPath)) return readFileSync(refPath, "utf8").trim().toLowerCase();
     const packedPath = join(sourceRoot, ".git", "packed-refs");
