@@ -41,7 +41,9 @@ Some acceptance tests are skipped unless `HOOKIFY_ROOT` points to a Claude Code 
 
 ## Typical first run
 
-Ask the agent to document a target repository. When no prior generated `SPEC.md` exists in the output location, the skill defaults to reverse-spec mode and writes the initial specification artifacts.
+Ask the agent to document a target repository. When no prior generated `SPEC.md` exists in the output location, the skill defaults to reverse-spec mode and the `standard` output profile. That profile writes `SPEC.md`, `ARCHITECTURE.md`, `audit_log.jsonl`, `INTERFACES.md`, `DATA_MODEL.md`, `ONBOARDING.md`, `TESTCASES.md`, `RISKS.md`, charts, and `REPORT.html`. Explicitly request the reduced `core` profile when only `SPEC.md`, `ARCHITECTURE.md`, and `audit_log.jsonl` are needed.
+
+Review the result for audit coverage and resolvable stable IDs. A required concept that is absent from the repository should say what was searched and **Not found**; it should not produce an empty document or a guessed claim.
 
 ## Typical drift check
 
