@@ -1,0 +1,17 @@
+{
+  "scope_manifest": {
+    "analyzed_source_commit": "fixture-commit", "included_paths": ["src/server.ts:1"],
+    "excluded_paths": [{ "path": "src/server.ts:2", "reason": "update operation excluded by the frozen line-level fixture scope" }],
+    "file_counts": { "supported": 1, "unsupported": 0, "failed": 0, "skipped": 0 },
+    "truncated": false, "truncated_inputs": [], "module_extractors": [{ "module": "src", "actor_id": "extractor-1" }],
+    "writer_actor_id": "writer-1", "draft_digest": "be46ad1816933d4342f096fff2e1f798ff51a503a22732837e316a8469da48ca"
+  },
+  "evidence_audit": { "verdict": "passed", "actor_id": "auditor-1", "draft_digest": "be46ad1816933d4342f096fff2e1f798ff51a503a22732837e316a8469da48ca" },
+  "coverage_audit": {
+    "expected_count": 2, "documented_count": 1,
+    "covered_items": [{ "surface": "registered_api:getUser", "found_at": "src/server.ts:1", "expected_document_type": "API", "document_id": "API-001" }],
+    "explained_omissions": [{ "surface": "registered_api:updateUser", "found_at": "src/server.ts:2", "expected_document_type": "API", "reason": "excluded by frozen scope at src/server.ts:2" }],
+    "unexplained_omissions": [], "truncated_inputs": [], "verdict": "passed", "actor_id": "sentinel-1", "draft_digest": "be46ad1816933d4342f096fff2e1f798ff51a503a22732837e316a8469da48ca"
+  },
+  "gatekeeper_actor_id": "gatekeeper-1"
+}

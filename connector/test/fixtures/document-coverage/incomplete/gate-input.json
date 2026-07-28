@@ -1,0 +1,17 @@
+{
+  "scope_manifest": {
+    "analyzed_source_commit": "fixture-commit", "included_paths": ["src"], "excluded_paths": [],
+    "file_counts": { "supported": 1, "unsupported": 0, "failed": 0, "skipped": 0 },
+    "truncated": false, "truncated_inputs": [], "module_extractors": [{ "module": "src", "actor_id": "extractor-1" }],
+    "writer_actor_id": "writer-1", "draft_digest": "fd31063656da1b389400df27d40c7fa8f35db6e10e0584fe9697c6c942eb560c"
+  },
+  "evidence_audit": { "verdict": "passed", "actor_id": "auditor-1", "draft_digest": "fd31063656da1b389400df27d40c7fa8f35db6e10e0584fe9697c6c942eb560c" },
+  "coverage_audit": {
+    "expected_count": 2, "documented_count": 1,
+    "covered_items": [{ "surface": "registered_api:getUser", "found_at": "src/server.ts:1", "expected_document_type": "API", "document_id": "API-001" }],
+    "explained_omissions": [],
+    "unexplained_omissions": [{ "surface": "registered_api:updateUser", "found_at": "src/server.ts:2", "expected_document_type": "API" }],
+    "truncated_inputs": [], "verdict": "failed", "actor_id": "sentinel-1", "draft_digest": "fd31063656da1b389400df27d40c7fa8f35db6e10e0584fe9697c6c942eb560c"
+  },
+  "gatekeeper_actor_id": "gatekeeper-1"
+}

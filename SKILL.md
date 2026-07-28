@@ -28,10 +28,13 @@ If a `SPEC.md` produced by this skill exists in the target output location, defa
 
 Run the phases in order. Each phase maps to a role documented in `references/agent-roles.md` — read that file for the detailed extraction/critic prompts before Phase 1. Select the output profile during scoping: `standard` is the default; `core` requires an explicit user request. Profile selection changes which documents are emitted, never the evidence standard or Critic gate.
 
+The mandatory sequence is **Extract → Architect/Writer → draft freeze → independent Evidence Audit + Coverage Audit → correction → independent recheck → Gatekeeper → Emit**. Regardless of repository size, the Writer and the final Critic/Gatekeeper must be different subagents.
+
 ### Phase 0 — Scope & Ingest
 1. Map the tree with Glob; identify the primary language and the top-level modules/packages.
 2. If the codebase is large or multi-language, **confirm scope with the user** (one language / a subtree) rather than silently sampling. Never cap coverage silently — if you scope down, say what you left out.
 3. Build a module list. This list drives the fan-out in Phase 1.
+4. Before the Writer runs, freeze the scope fields of a manifest conforming to `references/scope-manifest.schema.json`: the analyzed source commit, included paths, excluded paths and reasons, `supported`/`unsupported`/`failed`/`skipped` file counts, truncation status (including returned/total/omitted when truncated), the Extractor assigned to every module, and the Writer's opaque `actor_id`. At draft freeze, add the SHA-256 `draft_digest` of the selected-profile Markdown files and do not mutate the manifest thereafter. Give the identical completed manifest to both auditors and Gatekeeper. Auditor results carry their own `actor_id` and the audited `draft_digest`. A scope or draft change requires a newly frozen manifest and fresh audits; do not record internal reasoning as provenance.
 
 **Missing language toolchains.** The analysis environment may not match the source repository's development environment. When a parser, SDK, or semantic-analysis tool required for a detected language is absent:
 - If `assess_language_toolchains` is available, call it before choosing language-specific analysis tools. It detects the five supported language families, repository version pins, local SDK availability, and returns a structured `consent_required` list without downloading or executing anything.
@@ -59,8 +62,10 @@ For each module, extract what it *actually does*: entry points, business rules, 
 ### Phase 2 — Architect
 Synthesize the per-module findings into system structure: module boundaries, call/data-flow edges, and external dependencies. Emit a Mermaid diagram (`flowchart` or `graph`) into `ARCHITECTURE.md`. On a large repo, prefer a **package-granularity** graph (or `cluster: true`) so the diagram stays legible instead of rendering hundreds of nodes.
 
-### Phase 3 — Critic gate (mandatory)
+### Phase 3 — Draft freeze and independent audits (mandatory)
 If the `verify_citation` connector tool is available in the session, use it for every citation check below (it is deterministic and returns the exact source); fall back to inline Read/Grep only when the connector is absent.
+
+Freeze the complete selected-profile draft before auditing it. Assign an **Independent Evidence Auditor** that is a different subagent from the Writer/Architect. It receives the completed draft and frozen scope manifest; the Writer's internal reasoning and self-verification are not admissible audit evidence.
 
 Re-check every claim from Phase 1–2 against the code:
 - Open the cited `path:line`. If the code substantiates the claim → **verified**.
@@ -70,7 +75,17 @@ Re-check every claim from Phase 1–2 against the code:
 
 This gate is what separates this skill from "ask an LLM to summarize a repo." Do not skip it.
 
-### Phase 4 — Emit
+In parallel, assign a **Coverage Sentinel** to reverse-check code → documentation. It enumerates registered APIs, extracted data contracts, environment variables, entrypoints, status/state values, test files, and external side effects from the frozen code scope, then matches them to correctly typed `API-*`, `DM-*`, `BR-*`, `TC-*`, and `RSK-*` entries. It must report the structured schema in `references/agent-roles.md`, including discovered locations and expected document types for every omission. Citation accuracy alone cannot make an incomplete draft pass.
+
+### Phase 4 — Correction, independent recheck, and Gatekeeper
+
+The Writer may correct audit findings but cannot generate the final audit verdict or approve its own documents. After a draft correction, independent auditors must re-verify every changed claim, citation, and ID, then rerun affected deterministic contract checks.
+
+A separate **Gatekeeper** does not write or modify documents. It combines the Evidence Auditor, Coverage Sentinel, and deterministic contract-check results and returns only `approved` or `rejected`. Only its `approved` verdict authorizes emission. It must reject unsupported verified claims, citation audit coverage below 100%, unexplained code-surface omissions, duplicate/dangling/type-mismatched IDs, undisclosed truncation, missing required documents or sections, stale draft digests, Writer/auditor/Gatekeeper identity collisions, and syntax module dependencies represented as a call graph.
+
+If `evaluate_document_gate` is available, the Gatekeeper must call it with the completed frozen manifest and both independent audit records; do not substitute the report Quality tab or the Writer's judgment. Its independently extracted code surface and SHA-256 comparison are the deterministic publication result. A `rejected` result returns the draft to correction and independent recheck; only `approved` proceeds to Emit.
+
+### Phase 5 — Emit
 Emit the selected profile and report a one-paragraph summary to the user: module count, verified-claim count, unverified count, and the top 3 risks/unknowns.
 
 - **`core` (explicit opt-in):** `SPEC.md`, `ARCHITECTURE.md`, and `audit_log.jsonl`.
