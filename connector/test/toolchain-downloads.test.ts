@@ -19,9 +19,19 @@ function response(chunks = [body]): typeof fetch {
 
 // Windows refuses to delete files that still hold an open handle, so a recursive
 // teardown can race an in-flight download's async cleanup and throw ENOTEMPTY.
-// Node retries ENOTEMPTY/EBUSY/EPERM with linear backoff when maxRetries is set.
-function removeDir(dir: string) {
-  rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
+// rmSync's built-in maxRetries backs off synchronously, which blocks the event
+// loop and prevents the racing stream's close callback from ever running; retry
+// asynchronously instead so teardown yields until the handle is released.
+async function removeDir(dir: string) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      rmSync(dir, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      if (attempt >= 50) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
 }
 
 async function terminal(manager: ToolchainDownloadManager, id: string) {
@@ -58,7 +68,7 @@ test("download manager reports byte progress and atomically publishes a verified
     assert.equal(done.url, "https://builds.dotnet.microsoft.com/sdk.tgz");
     assert.ok(done.artifact_path && existsSync(done.artifact_path));
     assert.deepEqual(readFileSync(done.artifact_path!), body);
-  } finally { removeDir(cache); }
+  } finally { await removeDir(cache); }
 });
 
 test("download manager deletes checksum failures and reports the error", async () => {
@@ -71,7 +81,7 @@ test("download manager deletes checksum failures and reports the error", async (
     assert.equal(done.state, "failed");
     assert.match(done.error!, /checksum mismatch/);
     assert.equal(done.artifact_path, undefined);
-  } finally { removeDir(cache); }
+  } finally { await removeDir(cache); }
 });
 
 test("download manager exposes cancellation", async () => {
@@ -93,7 +103,7 @@ test("download manager exposes cancellation", async () => {
     assert.equal(manager.cancel(started.id).state, "cancelled");
     release();
     assert.equal((await terminal(manager, started.id)).state, "cancelled");
-  } finally { removeDir(cache); }
+  } finally { await removeDir(cache); }
 });
 
 test("download manager validates and follows a bounded official redirect", async () => {
@@ -111,7 +121,7 @@ test("download manager validates and follows a bounded official redirect", async
     const token = approvals.issue({ language: "csharp", version: "8", url: "https://builds.dotnet.microsoft.com/sdk.tgz", sha256 }, true).consent_token;
     assert.equal((await terminal(manager, manager.start(token).id)).state, "complete");
     assert.equal(calls, 2);
-  } finally { removeDir(cache); }
+  } finally { await removeDir(cache); }
 });
 
 test("download manager fails closed when the declared artifact exceeds its size limit", async () => {
@@ -123,10 +133,10 @@ test("download manager fails closed when the declared artifact exceeds its size 
     const done = await terminal(manager, manager.start(token).id);
     assert.equal(done.state, "failed");
     assert.match(done.error!, /maximum download size/);
-  } finally { removeDir(cache); }
+  } finally { await removeDir(cache); }
 });
 
-test("download manager rejects a managed-cache symlink escape before writing outside", () => {
+test("download manager rejects a managed-cache symlink escape before writing outside", async () => {
   const cache = mkdtempSync(join(tmpdir(), "lsc-download-symlink-"));
   const outside = mkdtempSync(join(tmpdir(), "lsc-download-outside-"));
   symlinkSync(outside, join(cache, "csharp"), "dir");
@@ -136,7 +146,7 @@ test("download manager rejects a managed-cache symlink escape before writing out
     const token = approvals.issue({ language: "csharp", version: "8", url: "https://builds.dotnet.microsoft.com/sdk.tgz", sha256 }, true).consent_token;
     assert.throws(() => manager.start(token), /real directory|symlink/);
   } finally {
-    removeDir(cache);
-    removeDir(outside);
+    await removeDir(cache);
+    await removeDir(outside);
   }
 });
