@@ -10,7 +10,8 @@ Use reverse-spec mode for a first pass over an undocumented codebase.
 2. **Extract behavior** — inspect modules for entry points, rules, inputs, outputs, side effects, external calls, and constraints.
 3. **Synthesize architecture** — combine module-level findings into dependency and control-flow views.
 4. **Critic gate** — re-check every cited claim against the referenced source line.
-5. **Emit artifacts** — write the spec, architecture, audit log, optional supporting docs, charts, and report.
+5. **Emit artifacts** — use the default `standard` profile to write the spec, architecture, audit log, interfaces, data model, onboarding guide, test cases, risks, charts, and report. Use the reduced `core` profile only when the user explicitly requests it.
+6. **Validate the document set** — confirm required sections exist, all citations are audit-covered, and every stable cross-document ID resolves exactly once. Missing concepts are reported with the searched scope and **Not found**, not an empty section or invented content.
 
 ## Mode B: Drift-Check
 
@@ -35,6 +36,7 @@ The connector makes the evidence layer reproducible. Instead of asking the model
 ## Quality expectations
 
 - Every emitted Markdown citation should have a matching audit entry.
+- Stable `BR-*`, `API-*`, `DM-*`, `TC-*`, `RSK-*`, and `UV-*` references should resolve to exactly one correctly typed item.
 - Truncated connector output must include returned, total, and omitted counts.
-- Unverified items stay in explicit needs-review sections.
+- Repository-undefined external contracts stay in explicit **Unverified** sections; absent concepts state the search scope and **Not found**.
 - Product or business rules are separated from implementation/runtime facts.

@@ -17,6 +17,7 @@ Legacy Spec Agent reconstructs a grounded specification from source code that do
 2. **No silent gaps** — skipped scope, truncated connector output, and unverified inferences must be stated explicitly.
 3. **Deterministic checks** — parsing, citation verification, drift detection, and report rendering are handled by the TypeScript connector when available.
 4. **Human-owned intent** — the tool reconstructs what the code does, not why past design decisions were made.
+5. **Validated document set** — Mode A defaults to the full `standard` profile, citations are audit-covered, stable IDs resolve across artifacts, and missing concepts are reported as **Not found** with their search scope.
 
 ## Main use cases
 
