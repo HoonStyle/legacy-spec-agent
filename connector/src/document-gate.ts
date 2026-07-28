@@ -10,7 +10,7 @@ export type DocumentGateReasonCode =
   | "missing_document" | "missing_section" | "citation_audit_incomplete"
   | "unsupported_verified_claim" | "invalid_id" | "coverage_failed"
   | "undisclosed_truncation" | "syntax_dependency_as_call_graph"
-  | "invalid_provenance" | "invalid_citation" | "invalid_manifest";
+  | "invalid_provenance" | "invalid_citation" | "invalid_manifest" | "invalid_audit_log";
 
 export interface ScopeManifest {
   analyzed_source_commit: string;
@@ -79,10 +79,11 @@ export const scopeManifestSchema = z.object({
   writer_actor_id: z.string().min(1), draft_digest: z.string().regex(/^[a-f0-9]{64}$/),
 }).strict().superRefine((value, ctx) => {
   if (value.truncated !== (value.truncated_inputs.length > 0)) ctx.addIssue({ code: "custom", message: "truncated must match truncated_inputs" });
-  const modules = value.module_extractors.map((item) => item.module);
+  const modules = value.module_extractors.map((item) => item.module.replaceAll("\\", "/"));
   if (new Set(modules).size !== modules.length) ctx.addIssue({ code: "custom", message: "module extractor assignments must be unique" });
-  const includedModules = new Set(value.included_paths.map((path) => path.replace(/:\d+(?:-\d+)?$/, "").split(/[\\/]/)[0]));
+  const includedModules = new Set(value.included_paths.map((path) => path.replace(/:\d+(?:-\d+)?$/, "").replaceAll("\\", "/")));
   for (const module of includedModules) if (!modules.includes(module)) ctx.addIssue({ code: "custom", message: `included module lacks Extractor assignment: ${module}` });
+  for (const module of modules) if (!includedModules.has(module)) ctx.addIssue({ code: "custom", message: `Extractor assignment does not match a frozen included path: ${module}` });
 });
 const coverageItemSchema = z.object({ surface: z.string().min(1), found_at: z.string().min(1), expected_document_type: z.enum(["API", "DM", "BR", "TC", "RSK"]) }).strict();
 export const coverageAuditSchema = z.object({
@@ -99,8 +100,8 @@ const REQUIRED: Record<DocumentProfile, string[]> = {
   standard: ["SPEC.md", "ARCHITECTURE.md", "INTERFACES.md", "DATA_MODEL.md", "ONBOARDING.md", "TESTCASES.md", "RISKS.md", "audit_log.jsonl"],
 };
 const REQUIRED_SECTIONS: Record<string, string[]> = {
-  "SPEC.md": ["System purpose and boundary", "Actors and entrypoints", "Core use cases", "Validation and error behavior", "State transitions", "Configuration", "Persistence and side effects", "Operational behavior", "Known limitations"],
-  "ARCHITECTURE.md": ["System context", "Component inventory", "Module dependency"],
+  "SPEC.md": ["System purpose and boundary", "Actors and entrypoints", "Core use cases", "Business rules", "Validation and error behavior", "State transitions", "Configuration", "Persistence and side effects", "Operational behavior", "Known limitations", "Unverified / Needs-review"],
+  "ARCHITECTURE.md": ["System context", "Component inventory", "Runtime and deployment", "Module dependency", "External systems and data stores", "Major execution flows", "Trust boundaries", "Analysis limitations"],
   "INTERFACES.md": ["Interfaces"], "DATA_MODEL.md": ["Data model"], "ONBOARDING.md": ["Onboarding"],
   "TESTCASES.md": ["Existing automated tests", "Source-derived characterization scenarios", "External-contract test candidates"],
   "RISKS.md": ["Confirmed behavior", "Defect candidates", "Unverified gaps"],
@@ -121,9 +122,45 @@ function citationsIn(markdown: string): CitationRange[] {
   return Array.from(markdown.matchAll(/`([^`]+)`/g)).map((m) => parseCitation(m[1])).filter((v): v is CitationRange => v !== undefined);
 }
 
-function readJsonLines(path: string): Array<{ evidence?: string; action?: string; claim?: string }> {
-  if (!existsSync(path)) return [];
-  return readFileSync(path, "utf8").split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
+interface AuditLog {
+  rows: Array<{ evidence?: string; action?: string; claim?: string }>;
+  malformed_lines: number[];
+}
+
+function readJsonLines(path: string): AuditLog {
+  const log: AuditLog = { rows: [], malformed_lines: [] };
+  if (!existsSync(path)) return log;
+  readFileSync(path, "utf8").split(/\r?\n/).forEach((line, index) => {
+    if (!line.trim()) return;
+    try {
+      log.rows.push(JSON.parse(line));
+    } catch {
+      log.malformed_lines.push(index + 1);
+    }
+  });
+  return log;
+}
+
+function resolveGitHead(sourceRoot: string): string | undefined {
+  try {
+    const headPath = join(sourceRoot, ".git", "HEAD");
+    if (!existsSync(headPath)) return undefined;
+    const head = readFileSync(headPath, "utf8").trim();
+    const refMatch = /^ref:\s*(.+)$/.exec(head);
+    if (!refMatch) return /^[0-9a-f]{40,64}$/i.test(head) ? head.toLowerCase() : undefined;
+    const ref = refMatch[1].trim();
+    const refPath = join(sourceRoot, ".git", ...ref.split("/"));
+    if (existsSync(refPath)) return readFileSync(refPath, "utf8").trim().toLowerCase();
+    const packedPath = join(sourceRoot, ".git", "packed-refs");
+    if (!existsSync(packedPath)) return undefined;
+    for (const line of readFileSync(packedPath, "utf8").split(/\r?\n/)) {
+      const packed = /^([0-9a-f]{40,64})\s+(.+)$/.exec(line.trim());
+      if (packed && packed[2] === ref) return packed[1].toLowerCase();
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateResult {
@@ -144,12 +181,15 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
   const citations = [...markdown.values()].flatMap(citationsIn);
   const lineCache = new CitationLineCache();
   for (const citation of citations) {
-    const check = lineCache.check(params.root, citation);
+    const check = lineCache.check(params.source_root, citation);
     if (check.verdict !== "valid") reasons.push({ code: "invalid_citation", detail: `${citation.path}:${citation.start}-${citation.end} ${check.verdict}` });
   }
   const audit = readJsonLines(join(params.dir, "audit_log.jsonl"));
+  if (audit.malformed_lines.length > 0)
+    reasons.push({ code: "invalid_audit_log", detail: `malformed audit_log.jsonl line(s): ${audit.malformed_lines.join(", ")}` });
   const remainingAudit = new Map<string, number>();
-  for (const row of audit) {
+  for (const row of audit.rows) {
+    if (row.action !== "verified") continue;
     const parsed = row.evidence && parseCitation(row.evidence);
     if (parsed) remainingAudit.set(formatCitation(parsed), (remainingAudit.get(formatCitation(parsed)) ?? 0) + 1);
   }
@@ -161,7 +201,7 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
   }
   if (citations.length === 0 || audited !== citations.length)
     reasons.push({ code: "citation_audit_incomplete", detail: `${audited}/${citations.length}` });
-  if (audit.some((row) => row.action === "flagged"))
+  if (audit.rows.some((row) => row.action === "flagged"))
     reasons.push({ code: "unsupported_verified_claim", detail: "audit contains a flagged claim" });
 
   const allMarkdown = [...markdown.values()].join("\n");
@@ -178,7 +218,7 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
     if (!match[2].startsWith(`${match[1]}-`)) reasons.push({ code: "invalid_id", detail: `type mismatch ${match[1]} -> ${match[2]}` });
 
   const coverage = params.coverage_audit;
-  const discovered = extractCoverageSurface(params.source_root, params.scope_manifest.included_paths);
+  const discovered = extractCoverageSurface(params.source_root, params.scope_manifest.included_paths, params.scope_manifest.excluded_paths);
   const auditedSurface = new Set([...coverage.covered_items, ...coverage.explained_omissions, ...coverage.unexplained_omissions].map((item) => `${item.surface}|${item.found_at}|${item.expected_document_type}`));
   const missingFromAudit = discovered.filter((item) => !auditedSurface.has(`${item.surface}|${item.found_at}|${item.expected_document_type}`));
   const allCoverageItems = [...coverage.covered_items, ...coverage.explained_omissions, ...coverage.unexplained_omissions];
@@ -190,16 +230,33 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
   );
   if (coverage.verdict !== "passed" || coverage.unexplained_omissions.length > 0 || coverage.expected_count !== uniqueSurfaces.size || uniqueSurfaces.size !== itemKeys.length || coverage.documented_count !== coverage.covered_items.length || invalidCoveredType || invalidExplanation || missingFromAudit.length > 0)
     reasons.push({ code: "coverage_failed", detail: "coverage audit is failed or internally inconsistent" });
+  const danglingCoverageIds = coverage.covered_items.filter((item) => !counts.has(item.document_id));
+  if (danglingCoverageIds.length > 0)
+    reasons.push({ code: "coverage_failed", detail: `covered surface cites nonexistent document ID(s): ${danglingCoverageIds.map((item) => item.document_id).join(", ")}` });
 
-  if (params.scope_manifest.truncated || coverage.truncated_inputs.length > 0)
-    reasons.push({ code: "undisclosed_truncation", detail: "publication requires complete, non-truncated gate inputs" });
-  if (/\b(?:call graph|call-graph)\b/i.test(allMarkdown) && /graph_type:\s*module_dependency|resolution:\s*syntax/i.test(allMarkdown))
-    reasons.push({ code: "syntax_dependency_as_call_graph", detail: "syntax module dependency is labelled as a call graph" });
+  const declaredTruncationSources = new Set(params.scope_manifest.truncated_inputs.map((item) => item.source));
+  const undisclosedCoverageTruncation = coverage.truncated_inputs.filter((item) => !declaredTruncationSources.has(item.source));
+  if (undisclosedCoverageTruncation.length > 0)
+    reasons.push({ code: "undisclosed_truncation", detail: `coverage truncation source(s) missing from the frozen manifest: ${undisclosedCoverageTruncation.map((item) => item.source).join(", ")}` });
+  const syntaxLabelled = /graph_type:\s*module_dependency|resolution:\s*syntax/i.test(allMarkdown);
+  const undisclaimedCallGraphLine = allMarkdown.split(/\r?\n/).some((line) => /\bcall[- ]graph\b/i.test(line) && !/\bnot\b/i.test(line));
+  if (syntaxLabelled && undisclaimedCallGraphLine)
+    reasons.push({ code: "syntax_dependency_as_call_graph", detail: "syntax module dependency is labelled as a call graph without the required negative disclaimer" });
 
   const { scope_manifest: scope, evidence_audit: evidence } = params;
   const parsedManifest = scopeManifestSchema.safeParse(scope);
-  if (!parsedManifest.success || scope.file_counts.supported !== includedSourceFiles(params.source_root, scope.included_paths).length)
+  if (!parsedManifest.success || scope.file_counts.supported !== includedSourceFiles(params.source_root, scope.included_paths, scope.excluded_paths).length)
     reasons.push({ code: "invalid_manifest", detail: parsedManifest.success ? "supported file count differs from included source inventory" : parsedManifest.error.issues.map((issue) => issue.message).join("; ") });
+  for (const [file, body] of markdown) {
+    const declaresAnalyzedCommit = body.split(/\r?\n/).some((line) =>
+      /^(?:>\s*)?(?:[*_-]{0,2})(?:Source|Analyzed source|analyzed_source_commit)\b/i.test(line.trim()) && line.includes(scope.analyzed_source_commit),
+    );
+    if (!declaresAnalyzedCommit)
+      reasons.push({ code: "invalid_provenance", detail: `${file} does not declare analyzed_source_commit ${scope.analyzed_source_commit}` });
+  }
+  const headCommit = resolveGitHead(params.source_root);
+  if (headCommit !== undefined && headCommit !== scope.analyzed_source_commit.toLowerCase())
+    reasons.push({ code: "invalid_provenance", detail: "analyzed_source_commit does not match the source tree HEAD" });
   const actors = [scope.writer_actor_id, evidence.actor_id, coverage.actor_id, params.gatekeeper_actor_id];
   if (evidence.verdict !== "passed" || actors.some((actor) => !actor) || new Set(actors).size !== actors.length || evidence.draft_digest !== scope.draft_digest || coverage.draft_digest !== scope.draft_digest || calculateDraftDigest(params.dir, params.profile) !== scope.draft_digest)
     reasons.push({ code: "invalid_provenance", detail: "audits are not independent or do not address the frozen draft" });

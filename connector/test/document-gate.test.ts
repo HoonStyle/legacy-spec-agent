@@ -40,18 +40,41 @@ test("accurate citations cannot hide an undocumented registered interface", () =
 
 test("complete documentation or a frozen, explained exclusion is approved", () => {
   const result = evaluateDocumentGate(fixture("complete-or-explained"));
-  assert.deepEqual(result, { verdict: "approved", citation_count: 6, audited_citation_count: 6, reasons: [] });
+  assert.deepEqual(result, { verdict: "approved", citation_count: 8, audited_citation_count: 8, reasons: [] });
 });
 
 test("Gatekeeper rejects stale/self audits and undisclosed truncation", () => {
   const params = fixture("complete-or-explained");
   params.evidence_audit.actor_id = params.scope_manifest.writer_actor_id;
   params.coverage_audit.draft_digest = "old-draft";
-  params.scope_manifest.truncated = true;
+  params.coverage_audit.truncated_inputs = [{ source: "surface-enumeration", returned: 1, total: 2, omitted: 1 }];
   const result = evaluateDocumentGate(params);
   assert.equal(result.verdict, "rejected");
   assert.ok(result.reasons.some((reason) => reason.code === "invalid_provenance"));
   assert.ok(result.reasons.some((reason) => reason.code === "undisclosed_truncation"));
+});
+
+test("fully disclosed truncation does not block publication", () => {
+  const params = fixture("complete-or-explained");
+  const truncation = { source: "surface-enumeration", returned: 1, total: 2, omitted: 1 };
+  params.scope_manifest.truncated = true;
+  params.scope_manifest.truncated_inputs = [truncation];
+  params.coverage_audit.truncated_inputs = [{ ...truncation }];
+  const result = evaluateDocumentGate(params);
+  assert.deepEqual(result.reasons, []);
+  assert.equal(result.verdict, "approved");
+});
+
+test("the required negative call-graph disclaimer is not treated as a mislabeled graph", () => {
+  const { params, cleanup } = isolatedComplete();
+  try {
+    const path = join(params.dir, "ARCHITECTURE.md");
+    writeFileSync(path, `${readFileSync(path, "utf8")}\nThis module dependency view (graph_type: module_dependency; resolution: syntax) is not a method call graph.\n`);
+    refreshDigest(params);
+    const result = evaluateDocumentGate(params);
+    assert.deepEqual(result.reasons, []);
+    assert.equal(result.verdict, "approved");
+  } finally { cleanup(); }
 });
 
 test("every deterministic publication rejection condition has a focused regression", async (t) => {
@@ -60,7 +83,13 @@ test("every deterministic publication rejection condition has a focused regressi
     { name: "required section", code: "missing_section", mutate: (p) => { const path = join(p.dir, "SPEC.md"); writeFileSync(path, readFileSync(path, "utf8").replace("## Configuration", "## Settings")); refreshDigest(p); } },
     { name: "citation line validity", code: "invalid_citation", mutate: (p) => { const path = join(p.dir, "SPEC.md"); writeFileSync(path, readFileSync(path, "utf8").replace("src/server.ts:1-2", "src/server.ts:999")); refreshDigest(p); } },
     { name: "citation audit coverage", code: "citation_audit_incomplete", mutate: (p) => writeFileSync(join(p.dir, "audit_log.jsonl"), "") },
-    { name: "unsupported verified claim", code: "unsupported_verified_claim", mutate: (p) => appendFileSync(join(p.dir, "audit_log.jsonl"), "{\"action\":\"flagged\",\"evidence\":\"connector/test/fixtures/document-coverage/complete-or-explained/src/server.ts:1\"}\n") },
+    { name: "unsupported verified claim", code: "unsupported_verified_claim", mutate: (p) => appendFileSync(join(p.dir, "audit_log.jsonl"), "{\"action\":\"flagged\",\"evidence\":\"src/server.ts:1\"}\n") },
+    { name: "audit rows without a verified action", code: "citation_audit_incomplete", mutate: (p) => { const path = join(p.dir, "audit_log.jsonl"); writeFileSync(path, readFileSync(path, "utf8").replaceAll("\"verified\"", "\"recorded\"")); } },
+    { name: "malformed audit log line", code: "invalid_audit_log", mutate: (p) => appendFileSync(join(p.dir, "audit_log.jsonl"), "{\"action\":\"verified\",\"evidence\":\n") },
+    { name: "coverage ID missing from the draft", code: "coverage_failed", mutate: (p) => { p.coverage_audit.covered_items[0].document_id = "API-999"; } },
+    { name: "undisclosed coverage truncation", code: "undisclosed_truncation", mutate: (p) => { p.coverage_audit.truncated_inputs = [{ source: "surface-enumeration", returned: 1, total: 2, omitted: 1 }]; } },
+    { name: "missing provenance declaration", code: "invalid_provenance", mutate: (p) => { const path = join(p.dir, "SPEC.md"); writeFileSync(path, readFileSync(path, "utf8").replace("Source: fixture-commit\n", "")); refreshDigest(p); } },
+    { name: "module extractor path collapse", code: "invalid_manifest", mutate: (p) => { p.scope_manifest.module_extractors = [{ module: "src", actor_id: "extractor-1" }]; } },
     { name: "duplicate ID", code: "invalid_id", mutate: (p) => { const path = join(p.dir, "SPEC.md"); writeFileSync(path, `${readFileSync(path, "utf8")}\n### BR-001 duplicate\n`); refreshDigest(p); } },
     { name: "dangling ID", code: "invalid_id", mutate: (p) => { const path = join(p.dir, "SPEC.md"); writeFileSync(path, `${readFileSync(path, "utf8")}\nRelated: API-999\n`); refreshDigest(p); } },
     { name: "typed ID mismatch", code: "invalid_id", mutate: (p) => { const path = join(p.dir, "SPEC.md"); writeFileSync(path, `${readFileSync(path, "utf8")}\nRelated API: BR-001\n`); refreshDigest(p); } },

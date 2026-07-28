@@ -1,11 +1,16 @@
 # Specification
+
+Source: fixture-commit
+
 ## System purpose and boundary
-The service exposes a user lookup. `connector/test/fixtures/document-coverage/incomplete/src/server.ts:1`
+The service exposes a user lookup. `src/server.ts:1`
 ## Actors and entrypoints
-### BR-001 Lookup entrypoint
-The caller invokes the lookup entrypoint. `connector/test/fixtures/document-coverage/incomplete/src/server.ts:1`
+The caller invokes the lookup entrypoint. `src/server.ts:1`
 ## Core use cases
-Lookup is the documented use case. `connector/test/fixtures/document-coverage/incomplete/src/server.ts:1`
+Lookup is the documented use case. `src/server.ts:1`
+## Business rules
+### BR-001 Lookup entrypoint
+Lookup is exposed to callers. `src/server.ts:1`
 ## Validation and error behavior
 **Not found** after searching the fixture source.
 ## State transitions
@@ -15,6 +20,8 @@ Lookup is the documented use case. `connector/test/fixtures/document-coverage/in
 ## Persistence and side effects
 **Not found** after searching the fixture source.
 ## Operational behavior
-Lookup returns a value. `connector/test/fixtures/document-coverage/incomplete/src/server.ts:1`
+Lookup returns a value. `src/server.ts:1`
 ## Known limitations
 Update is not described in this intentionally incomplete draft.
+## Unverified / Needs-review
+**Not found** after searching the fixture source.
