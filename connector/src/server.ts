@@ -8,6 +8,8 @@ import { renderReport } from "./report.js";
 import { assessLanguageToolchains } from "./toolchains.js";
 import { ToolchainApprovalStore, ToolchainDownloadManager } from "./toolchain-downloads.js";
 import { indexSymbolsMulti, buildCallGraphMulti, extractDataModelMulti } from "./multilang.js";
+import { coverageAuditSchema, evaluateDocumentGate, evidenceAuditSchema, scopeManifestSchema } from "./document-gate.js";
+import { resolveWithinRoot } from "./matching.js";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -297,6 +299,34 @@ export function createServer(root: string, options: { cacheRoot?: string; fetchI
       inputSchema: emitChartsSchema,
     },
     async (params) => json(emitChart(params)),
+  );
+
+  server.registerTool(
+    "evaluate_document_gate",
+    {
+      description:
+        "Read-only final publication gate for Mode A. Independently re-enumerates the frozen source surface and " +
+        "validates required artifacts/sections, citation line validity and 100% audit coverage, IDs, omissions, " +
+        "truncation, syntax graph labels, role independence, and the actual SHA-256 draft digest. Returns approved " +
+        "or rejected with deterministic reason codes; it never edits deliverables.",
+      inputSchema: {
+        source_dir: z.string().optional().describe("Frozen source directory relative to connector root (default '.')"),
+        deliverables_dir: z.string().describe("Draft deliverables directory relative to connector root"),
+        profile: z.enum(["core", "standard"]), scope_manifest: scopeManifestSchema,
+        evidence_audit: evidenceAuditSchema, coverage_audit: coverageAuditSchema,
+        gatekeeper_actor_id: z.string().min(1),
+      },
+    },
+    async (params) => json(evaluateDocumentGate({
+      root,
+      source_root: resolveWithinRoot(root, params.source_dir ?? "."),
+      dir: resolveWithinRoot(root, params.deliverables_dir),
+      profile: params.profile,
+      scope_manifest: params.scope_manifest,
+      evidence_audit: params.evidence_audit,
+      coverage_audit: params.coverage_audit,
+      gatekeeper_actor_id: params.gatekeeper_actor_id,
+    })),
   );
 
   server.registerTool(

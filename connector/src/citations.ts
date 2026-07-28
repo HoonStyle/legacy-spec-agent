@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { resolveWithinRoot, splitLines } from "./matching.js";
 
-const CITATION_RE = /^([\w./\\-]+\.(?:py|ts|js|jsx|tsx|md|json|jsonl|sh|mjs)):(\d+)(?:-(\d+))?$/;
+const CITATION_RE = /^([\w./\\-]+\.(?:py|ts|js|jsx|tsx|md|json|jsonl|sh|mjs|cjs|java|cs|go)):(\d+)(?:-(\d+))?$/;
 
 export interface CitationRange {
   path: string;

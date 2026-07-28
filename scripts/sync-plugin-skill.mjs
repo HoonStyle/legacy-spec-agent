@@ -12,7 +12,7 @@ const repo = join(dirname(fileURLToPath(import.meta.url)), "..");
 const dest = join(repo, "skills/legacy-spec-agent");
 
 mkdirSync(join(dest, "references"), { recursive: true });
-for (const rel of ["SKILL.md", "references/agent-roles.md"]) {
+for (const rel of ["SKILL.md", "references/agent-roles.md", "references/scope-manifest.schema.json"]) {
   copyFileSync(join(repo, rel), join(dest, rel));
   console.log(`synced ${rel} -> skills/legacy-spec-agent/${rel}`);
 }

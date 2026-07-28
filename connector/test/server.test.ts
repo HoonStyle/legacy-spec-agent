@@ -26,6 +26,7 @@ const EXPECTED_TOOLS = [
   "extract_project_meta",
   "extract_changelog",
   "emit_charts",
+  "evaluate_document_gate",
   "render_report",
 ];
 

@@ -13,7 +13,7 @@ const repo = join(dirname(fileURLToPath(import.meta.url)), "../../..");
  * copies are drift-checked. Fix a failure with: node scripts/sync-plugin-skill.mjs
  */
 test("plugin skill copy matches the canonical root files", () => {
-  for (const rel of ["SKILL.md", "references/agent-roles.md"]) {
+  for (const rel of ["SKILL.md", "references/agent-roles.md", "references/scope-manifest.schema.json"]) {
     const canonical = readFileSync(join(repo, rel), "utf8");
     const copy = readFileSync(join(repo, "skills/legacy-spec-agent", rel), "utf8");
     assert.equal(copy, canonical, `${rel} drifted — run: node scripts/sync-plugin-skill.mjs`);

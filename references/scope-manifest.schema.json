@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legacy-spec-agent.local/scope-manifest.schema.json",
+  "title": "Frozen scope manifest",
+  "description": "Frozen before the Writer runs. draft_digest is added once the draft exists and is required by evaluate_document_gate; every other field is fixed at freeze time.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["analyzed_source_commit", "included_paths", "excluded_paths", "file_counts", "truncated", "truncated_inputs", "module_extractors", "writer_actor_id"],
+  "properties": {
+    "analyzed_source_commit": { "type": "string", "minLength": 1 },
+    "included_paths": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "excluded_paths": { "type": "array", "items": { "$ref": "#/$defs/exclusion" } },
+    "file_counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["supported", "unsupported", "failed", "skipped"],
+      "properties": {
+        "supported": { "type": "integer", "minimum": 0 }, "unsupported": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 }, "skipped": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "truncated": { "type": "boolean" },
+    "truncated_inputs": { "type": "array", "items": { "$ref": "#/$defs/truncation" } },
+    "module_extractors": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/moduleExtractor" } },
+    "writer_actor_id": { "type": "string", "minLength": 1 },
+    "draft_digest": {
+      "type": "string", "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 of the frozen draft. Absent in the pre-Writer staged manifest; mandatory when the manifest is submitted to evaluate_document_gate."
+    }
+  },
+  "$defs": {
+    "exclusion": {
+      "type": "object", "additionalProperties": false, "required": ["path", "reason"],
+      "properties": { "path": { "type": "string", "minLength": 1 }, "reason": { "type": "string", "minLength": 1 } }
+    },
+    "truncation": {
+      "type": "object", "additionalProperties": false, "required": ["source", "returned", "total", "omitted"],
+      "properties": {
+        "source": { "type": "string", "minLength": 1 }, "returned": { "type": "integer", "minimum": 0 },
+        "total": { "type": "integer", "minimum": 0 }, "omitted": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "moduleExtractor": {
+      "type": "object", "additionalProperties": false, "required": ["module", "actor_id"],
+      "properties": { "module": { "type": "string", "minLength": 1 }, "actor_id": { "type": "string", "minLength": 1 } }
+    }
+  }
+}
