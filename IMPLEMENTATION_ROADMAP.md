@@ -8,6 +8,37 @@ The connector can currently perform SDK-independent syntax analysis for Python, 
 
 The current graph is a **module dependency graph**, not a compiler-resolved method call graph. Downloaded SDK artifacts are verified cache entries; they are not installed or used by a semantic backend.
 
+## Next-session work queue
+
+Start the next implementation session here. Do not add another connector feature, resolver, semantic backend, SDK installer, publication rule, or synthetic fixture before completing the evidence work below.
+
+### A. External document-quality evaluation
+
+1. Select at least three real external repositories: one small TypeScript service, one Python service, and one mixed or non-TypeScript service. Record the repository URL, license, immutable commit SHA, selected profile, included paths, excluded paths, and execution environment before generating results.
+2. Freeze human-reviewed gold annotations independently of connector output. Gold must include registered APIs, data contracts, configuration/environment variables, entrypoints, states, tests, persistence/side effects, external integrations, and business rules when present. Do not promote current detector output into gold.
+3. Run the actual Mode A `standard` workflow for every pinned repository: separate Writer, Independent Evidence Auditor, Coverage Sentinel, and Gatekeeper actors; generated Markdown rather than hand-authored fixture prose; frozen draft digest; and `evaluate_document_gate` before publication.
+4. Preserve the generated documents, `audit_log.jsonl`, scope manifest, evidence audit, coverage audit, gate result, raw extractor output, gold rows, elapsed time, resource/byte diagnostics, and explicit `not_exposed`/`not_measured` values instead of estimates.
+5. Report raw true positives, false positives, false negatives, category-level precision/recall, critical-surface recall, citation accuracy, unsupported verified claims, unexplained omissions, and rejected-draft publication count. Keep synthetic and external results in separate summaries.
+
+**External quality gate:** critical-surface recall is 100%, citation accuracy is 100%, unexplained omissions and unsupported verified claims are zero, and no rejected draft is published. Do not claim measured document-quality improvement until this gate is evaluated on the pinned external cases.
+
+### B. Counter-enabled bounded replay
+
+1. Obtain an environment that exposes per-run provider input, cached-input, output, reasoning, and separately reported tool counters together with elapsed time. If those counters are unavailable, record the block and do not substitute source reads or bytes.
+2. Repeat the existing five FerMass pairs at revision `1984b4e324b9e4bec7fa2c7f48fc1b105737fbee` using the unchanged prompts, completion criteria, model/settings, alternating order, and connector/control tool policy in `END_TO_END_REPLAY.md`.
+3. Preserve raw provider counters, pricing/billing units when known, connector calls and response bytes, unique/repeated reads, elapsed time, task result, citation coverage, and citation accuracy. Do not double-count overlapping provider categories.
+4. Write the paired differences and decision record. Continue only if at least four of five pairs improve the primary metered token or cost measure, its median improves, and task quality and citation accuracy do not regress.
+
+**Replay gate:** select Continue, Narrow, Stop, or Inconclusive from metered evidence. Do not resume items 6, 8, 9, 10, 11, or SDK installation while the decision remains Inconclusive.
+
+### C. Only evidence-triggered reliability fixes
+
+If either external evaluation or bounded replay fails because one representative file is unreadable, changing, oversized, invalidly encoded, unparsable, or cannot load its grammar, make the minimum per-file isolation fix with a focused regression. Return structured `failed_files` separately from `unsupported_files`; do not perform speculative cache, concurrency, language-resolution, or semantic expansion.
+
+### Next-session completion record
+
+Before ending the next session, update this queue with pinned case identifiers, commands run, raw result locations, satisfied and unsatisfied gates, and the exact blocker when an external counter or environment is unavailable. Keep implementation and direct regression tests in independently buildable functional commits, then run the commit-policy checks at the end of this file.
+
 ## Release-blocking priorities
 
 ### 1. Installed-plugin end-to-end smoke
@@ -57,7 +88,11 @@ Use `END_TO_END_REPLAY.md` for the task manifest, paired-run controls, run-recor
 
 **Status: contract implementation complete; per-run output validation remains an emission gate.** This work is independent of bounded end-to-end token replay: it tightens the emitted-document contract without claiming or depending on token savings. Mode A defines explicit `core` and default `standard` profiles, required artifact sections, stable cross-document IDs, honest Not-found handling, and syntax-only architecture disclosures. Role contracts and bilingual user documentation are synchronized with those requirements, and contract tests prevent regressions.
 
-**Preliminary strengthening — complete; merged with Ubuntu/Windows CI green on Node 20 and 22.** A scope manifest is frozen before writing, the Writer is separate from the Independent Evidence Auditor, a Coverage Sentinel reverse-audits code surfaces, and publication approval is reserved for a read-only Gatekeeper. The MCP-exposed deterministic `evaluate_document_gate` validates real Markdown/audit fixtures, independently extracts registered APIs, data contracts, environment variables, entrypoints, status values, tests, and side effects, checks citation lines, typed IDs, coverage consistency, manifest schema/counts, role independence, provenance against the analyzed revision, and the actual line-ending-normalized draft digest, and rejects accurate-but-incomplete output. Only audit rows with a `verified` action count toward citation coverage, fully disclosed truncation is accepted while undisclosed truncation rejects, and the required negative call-graph disclaimer is distinguished from a mislabeled graph.
+**Preliminary strengthening — complete; merged with Ubuntu/Windows CI green on Node 20 and 22.** A scope manifest is frozen before writing, the Writer is separate from the Independent Evidence Auditor, a Coverage Sentinel reverse-audits code surfaces, and publication approval is reserved for a read-only Gatekeeper. The MCP-exposed deterministic `evaluate_document_gate` validates real Markdown/audit fixtures, independently extracts registered APIs, data contracts, environment variables, entrypoints, status values, tests, and side effects, checks citation lines, typed IDs, bidirectional coverage consistency, manifest schema/counts, role independence, provenance against the analyzed revision, and the actual line-ending-normalized draft digest, and rejects accurate-but-incomplete output. Only audit rows with a `verified` action count toward citation coverage, declared `CLM-*` IDs require a one-to-one verified audit row, fully disclosed truncation is accepted while undisclosed truncation rejects, and the required negative call-graph disclaimer is distinguished from a mislabeled graph. `publish_approved_documents` keeps rejected staging drafts from replacing an existing publication.
+
+**Measured baseline — synthetic only.** `evals/document-quality/` now contains a reproducible three-case TypeScript, Python, and mixed-language extractor baseline with frozen gold rows and category-level precision/recall. Its 24/24 result proves the measurement pipeline against repository-owned examples, not real-world document quality or token savings. Generated standard-profile drafts from external pinned repositories remain required before claiming a measured quality improvement.
+
+**Synthetic emission smoke — complete.** The same three cases now generate every standard-profile Markdown artifact, claim-linked audit rows, distinct actor/digest contract records, and Gatekeeper results. All three synthetic drafts are approved and record elapsed time, an end-of-run RSS snapshot, source bytes, gate-result bytes, direct-module execution mode, and explicitly mark read counts as not measured. This validates the staging-to-gate orchestration only; actor IDs do not prove independently executed agents, the deterministic inventory prose and detector-aligned gold are not a real-world quality comparison, and provider counters remain unavailable.
 
 **Strengthening completion condition: satisfied.** The writer and auditor are separate agents, the code-to-document reverse omission check runs, only the Gatekeeper approves publication, and the related contract tests pass in CI.
 

@@ -77,10 +77,13 @@ Mode A에는 두 프로파일이 있습니다. **기본값은 `standard`**이며
 - `emit_charts`
 - `render_report`
 - `evaluate_document_gate`
+- `publish_approved_documents`
 
 커넥터 없이도 스킬은 동작합니다. 다만 LLM 출력에만 의존하게 되어 보장 수준은 낮아집니다.
 
 `evaluate_document_gate`는 Mode A의 읽기 전용 최종 발행 게이트입니다. Writer가 실행되기 전에 범위 매니페스트를 동결하고, 독립 증거 감사자(Independent Evidence Auditor)와 커버리지 센티널(Coverage Sentinel)이 동결된 초안을 감사하며, Gatekeeper만이 그 기록을 게이트에 제출합니다. 게이트는 동결된 코드 표면을 독립적으로 재열거하고 필수 문서/섹션, 인용 라인과 100% 감사 커버리지, ID, 누락, 절단 공개, 구문 그래프 라벨, 역할 독립성, 실제 SHA-256 초안 다이제스트를 검증한 뒤 결정적 사유 코드와 함께 `approved` 또는 `rejected`를 반환합니다. 산출물을 수정하지는 않습니다.
+
+`publish_approved_documents`는 staging 초안에 동일한 게이트를 적용하고 승인된 경우에만 목적지 디렉터리를 트랜잭션 방식으로 교체합니다. 거절된 초안은 기존 발행본을 변경하지 않습니다.
 
 기존 호출자와의 호환성을 위해 이름은 `build_call_graph`로 유지하지만, 이 도구가 반환하는 것은 메서드 호출 그래프가 아니라 구문 수준의 **모듈 의존성 그래프**입니다. 응답은 이 계약을 `graph_type: "module_dependency"`와 `resolution: "syntax"`로 표시하고 `resolved` 및 `unresolved` import 관계 수를 함께 보고합니다. 심볼, 메서드 호출, 런타임 호출 또는 동적 디스패치는 해석하지 않으며, 해석할 수 없는 import는 추측하지 않고 `externals`에 남깁니다.
 

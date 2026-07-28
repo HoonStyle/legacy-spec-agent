@@ -1,0 +1,9 @@
+{"action":"verified","claim_id":"CLM-SPEC-001","evidence":"api.ts:1","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-002","evidence":"api.ts:2","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-003","evidence":"App.cs:1","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-004","evidence":"App.cs:1","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-005","evidence":"App.java:1","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-006","evidence":"App.java:1","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-007","evidence":"main.go:2","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-008","evidence":"worker.py:2","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-ARCH-001","evidence":"api.ts:1","document":"generated-baseline"}

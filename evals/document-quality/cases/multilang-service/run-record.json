@@ -1,0 +1,20 @@
+{
+  "case": "multilang-service",
+  "source_revision": "86557aa6346d81bd4584f84aa970fe65ebfd5d7e2a032752f64ef7ac2c76327b",
+  "profile": "standard",
+  "gate": {
+    "verdict": "approved",
+    "citation_count": 9,
+    "audited_citation_count": 9,
+    "reasons": []
+  },
+  "elapsed_ms": 8.2,
+  "rss_after_bytes": 62767104,
+  "source_bytes": 236,
+  "gate_result_bytes": 81,
+  "execution_mode": "direct_module",
+  "connector_calls": 0,
+  "unique_file_reads": "not_measured",
+  "repeated_file_reads": "not_measured",
+  "provider_counters": "not_exposed"
+}

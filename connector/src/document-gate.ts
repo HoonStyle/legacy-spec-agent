@@ -10,7 +10,8 @@ export type DocumentGateReasonCode =
   | "missing_document" | "missing_section" | "citation_audit_incomplete"
   | "unsupported_verified_claim" | "invalid_id" | "coverage_failed"
   | "undisclosed_truncation" | "syntax_dependency_as_call_graph"
-  | "invalid_provenance" | "invalid_citation" | "invalid_manifest" | "invalid_audit_log";
+  | "invalid_provenance" | "invalid_citation" | "invalid_manifest" | "invalid_audit_log"
+  | "claim_audit_incomplete";
 
 export interface ScopeManifest {
   analyzed_source_commit: string;
@@ -28,6 +29,10 @@ export interface CoverageItem {
   surface: string;
   found_at: string;
   expected_document_type: "API" | "DM" | "BR" | "TC" | "RSK";
+}
+
+function coverageKey(item: CoverageItem): string {
+  return `${item.surface}|${item.found_at}|${item.expected_document_type}`;
 }
 
 export interface CoverageAudit {
@@ -123,7 +128,7 @@ function citationsIn(markdown: string): CitationRange[] {
 }
 
 interface AuditLog {
-  rows: Array<{ evidence?: string; action?: string; claim?: string }>;
+  rows: Array<{ evidence?: string; action?: string; claim?: string; claim_id?: string; document?: string }>;
   malformed_lines: number[];
 }
 
@@ -133,7 +138,10 @@ function readJsonLines(path: string): AuditLog {
   readFileSync(path, "utf8").split(/\r?\n/).forEach((line, index) => {
     if (!line.trim()) return;
     try {
-      log.rows.push(JSON.parse(line));
+      const row = JSON.parse(line);
+      if (!row || typeof row !== "object" || typeof row.action !== "string" || ((row.action === "verified" || row.action === "flagged") && typeof row.evidence !== "string"))
+        throw new Error("invalid audit row schema");
+      log.rows.push(row);
     } catch {
       log.malformed_lines.push(index + 1);
     }
@@ -206,6 +214,31 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
     reasons.push({ code: "unsupported_verified_claim", detail: "audit contains a flagged claim" });
 
   const allMarkdown = [...markdown.values()].join("\n");
+  const citedClaimLines = allMarkdown.split(/\r?\n/).filter((line) => citationsIn(line).length > 0);
+  const claimDefinitions = citedClaimLines.flatMap((line) => Array.from(line.matchAll(/\b(CLM-[A-Za-z0-9_-]+)\b/g), (match) => match[1]));
+  const auditedClaims = audit.rows.filter((row) => row.action === "verified" && row.claim_id).map((row) => row.claim_id!);
+  if (citedClaimLines.some((line) => Array.from(line.matchAll(/\bCLM-[A-Za-z0-9_-]+\b/g)).length !== 1)) {
+    reasons.push({ code: "claim_audit_incomplete", detail: "every cited factual line must declare exactly one CLM-* ID" });
+  } else if (claimDefinitions.length > 0) {
+    const claimCounts = new Map<string, number>();
+    for (const id of claimDefinitions) claimCounts.set(id, (claimCounts.get(id) ?? 0) + 1);
+    const auditCounts = new Map<string, number>();
+    for (const id of auditedClaims) auditCounts.set(id, (auditCounts.get(id) ?? 0) + 1);
+    const invalid = [...claimCounts].some(([id, count]) => count !== 1 || auditCounts.get(id) !== 1)
+      || [...auditCounts].some(([id]) => !claimCounts.has(id));
+    if (invalid) reasons.push({ code: "claim_audit_incomplete", detail: "claim IDs and verified audit rows must match one-to-one" });
+    const mismatchedEvidence = citedClaimLines.some((line) => {
+      const claimId = /\b(CLM-[A-Za-z0-9_-]+)\b/.exec(line)?.[1];
+      if (!claimId) return false;
+      const expected = citationsIn(line).map(formatCitation).sort();
+      const recorded = audit.rows.filter((row) => row.action === "verified" && row.claim_id === claimId)
+        .flatMap((row) => row.evidence && parseCitation(row.evidence) ? [formatCitation(parseCitation(row.evidence)!)] : []).sort();
+      return expected.length !== recorded.length || expected.some((value, index) => value !== recorded[index]);
+    });
+    if (mismatchedEvidence) reasons.push({ code: "claim_audit_incomplete", detail: "claim audit evidence must match the citations on that claim line" });
+  } else if (auditedClaims.length > 0) {
+    reasons.push({ code: "claim_audit_incomplete", detail: "audit references claim IDs absent from the draft" });
+  }
   const definitions = Array.from(allMarkdown.matchAll(/^\s*(?:#{1,6}\s+|[-*]\s+(?:\*\*)?)((?:BR|API|DM|TC|RSK|UV)-[A-Za-z0-9_-]+)\b/gm), (m) => m[1]);
   const counts = new Map<string, number>();
   for (const id of definitions) counts.set(id, (counts.get(id) ?? 0) + 1);
@@ -220,20 +253,29 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
 
   const coverage = params.coverage_audit;
   const discovered = extractCoverageSurface(params.source_root, params.scope_manifest.included_paths, params.scope_manifest.excluded_paths);
-  const auditedSurface = new Set([...coverage.covered_items, ...coverage.explained_omissions, ...coverage.unexplained_omissions].map((item) => `${item.surface}|${item.found_at}|${item.expected_document_type}`));
-  const missingFromAudit = discovered.filter((item) => !auditedSurface.has(`${item.surface}|${item.found_at}|${item.expected_document_type}`));
+  const discoveredSurface = new Set(discovered.map(coverageKey));
+  const auditedSurface = new Set([...coverage.covered_items, ...coverage.explained_omissions, ...coverage.unexplained_omissions].map(coverageKey));
+  const missingFromAudit = discovered.filter((item) => !auditedSurface.has(coverageKey(item)));
   const allCoverageItems = [...coverage.covered_items, ...coverage.explained_omissions, ...coverage.unexplained_omissions];
-  const itemKeys = allCoverageItems.map((item) => `${item.surface}|${item.found_at}|${item.expected_document_type}`);
+  const itemKeys = allCoverageItems.map(coverageKey);
   const uniqueSurfaces = new Set(itemKeys);
+  const phantomAuditItems = allCoverageItems.filter((item) => !discoveredSurface.has(coverageKey(item)));
   const invalidCoveredType = coverage.covered_items.some((item) => !item.document_id.startsWith(`${item.expected_document_type}-`));
   const invalidExplanation = coverage.explained_omissions.some((item) =>
     !item.reason.trim() || !params.scope_manifest.excluded_paths.some((excluded) => excluded.path === item.found_at && excluded.reason.trim()),
   );
-  if (coverage.verdict !== "passed" || coverage.unexplained_omissions.length > 0 || coverage.expected_count !== uniqueSurfaces.size || uniqueSurfaces.size !== itemKeys.length || coverage.documented_count !== coverage.covered_items.length || invalidCoveredType || invalidExplanation || missingFromAudit.length > 0)
+  if (coverage.verdict !== "passed" || coverage.unexplained_omissions.length > 0 || coverage.expected_count !== uniqueSurfaces.size || uniqueSurfaces.size !== itemKeys.length || coverage.documented_count !== coverage.covered_items.length || invalidCoveredType || invalidExplanation || missingFromAudit.length > 0 || phantomAuditItems.length > 0)
     reasons.push({ code: "coverage_failed", detail: "coverage audit is failed or internally inconsistent" });
   const danglingCoverageIds = coverage.covered_items.filter((item) => !counts.has(item.document_id));
   if (danglingCoverageIds.length > 0)
     reasons.push({ code: "coverage_failed", detail: `covered surface cites nonexistent document ID(s): ${danglingCoverageIds.map((item) => item.document_id).join(", ")}` });
+  const mismatchedCoverageEvidence = coverage.covered_items.filter((item) => {
+    const escapedId = item.document_id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const section = new RegExp(`^#{1,6}\\s+${escapedId}\\b([\\s\\S]*?)(?=^#{1,6}\\s+|(?![\\s\\S]))`, "m").exec(allMarkdown)?.[1] ?? "";
+    return !section.includes(`\`${item.found_at}\``);
+  });
+  if (mismatchedCoverageEvidence.length > 0)
+    reasons.push({ code: "coverage_failed", detail: `covered surface lacks matching evidence at its document ID: ${mismatchedCoverageEvidence.map((item) => item.document_id).join(", ")}` });
 
   const declaredTruncationSources = new Set(params.scope_manifest.truncated_inputs.map((item) => item.source));
   const undisclosedCoverageTruncation = coverage.truncated_inputs.filter((item) => !declaredTruncationSources.has(item.source));

@@ -1,0 +1,13 @@
+{
+  "evaluation_kind": "synthetic_standard_emission_smoke",
+  "cases": 3,
+  "surfaces": 24,
+  "approved": 3,
+  "provider_counters": "not_exposed",
+  "limitations": [
+    "Generated standard-profile drafts are deterministic synthetic inventory documents, not model-written production specifications.",
+    "Actor IDs are distinct contract fixtures, not evidence of independently executed agents.",
+    "RSS is a post-run snapshot and source read counts are not measured.",
+    "This smoke validates orchestration and gate behavior, not semantic claim quality or billing-token savings."
+  ]
+}

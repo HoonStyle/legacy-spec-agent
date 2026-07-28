@@ -1,0 +1,18 @@
+{
+  "evaluation_kind": "synthetic_extractor_baseline",
+  "cases": 3,
+  "gold_surfaces": 24,
+  "actual_surfaces": 24,
+  "true_positive": 24,
+  "false_positive": 0,
+  "false_negative": 0,
+  "micro_precision": 1,
+  "micro_recall": 1,
+  "critical_recall": 1,
+  "provider_counters": "not_exposed",
+  "limitations": [
+    "The three cases are repository-owned synthetic sources, not external production repositories.",
+    "Gold annotations were created for the known detector contract and do not establish real-world precision or recall.",
+    "This baseline measures code-surface extraction only; it does not measure generated-document claim quality or billing-token savings."
+  ]
+}

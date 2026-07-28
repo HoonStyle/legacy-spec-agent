@@ -1,0 +1,56 @@
+{
+  "counts": {
+    "gold": 11,
+    "actual": 11,
+    "true_positive": 11,
+    "false_positive": 0,
+    "false_negative": 0
+  },
+  "precision": 1,
+  "recall": 1,
+  "critical_recall": 1,
+  "categories": {
+    "data_contract": {
+      "precision": 1,
+      "recall": 1,
+      "gold": 1,
+      "actual": 1
+    },
+    "entrypoint": {
+      "precision": 1,
+      "recall": 1,
+      "gold": 1,
+      "actual": 1
+    },
+    "environment": {
+      "precision": 1,
+      "recall": 1,
+      "gold": 1,
+      "actual": 1
+    },
+    "external_side_effect": {
+      "precision": 1,
+      "recall": 1,
+      "gold": 1,
+      "actual": 1
+    },
+    "registered_api": {
+      "precision": 1,
+      "recall": 1,
+      "gold": 5,
+      "actual": 5
+    },
+    "status_value": {
+      "precision": 1,
+      "recall": 1,
+      "gold": 1,
+      "actual": 1
+    },
+    "test_file": {
+      "precision": 1,
+      "recall": 1,
+      "gold": 1,
+      "actual": 1
+    }
+  }
+}

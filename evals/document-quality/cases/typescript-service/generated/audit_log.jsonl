@@ -1,0 +1,12 @@
+{"action":"verified","claim_id":"CLM-SPEC-001","evidence":"app.test.ts:1","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-002","evidence":"app.test.ts:1","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-003","evidence":"app.ts:1","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-004","evidence":"app.ts:2","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-005","evidence":"app.ts:2","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-006","evidence":"app.ts:3","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-007","evidence":"app.ts:3","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-008","evidence":"app.ts:4","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-009","evidence":"app.ts:4","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-010","evidence":"app.ts:4","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-SPEC-011","evidence":"app.ts:5","document":"generated-baseline"}
+{"action":"verified","claim_id":"CLM-ARCH-001","evidence":"app.test.ts:1","document":"generated-baseline"}

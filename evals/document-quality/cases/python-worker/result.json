@@ -1,0 +1,38 @@
+{
+  "counts": {
+    "gold": 5,
+    "actual": 5,
+    "true_positive": 5,
+    "false_positive": 0,
+    "false_negative": 0
+  },
+  "precision": 1,
+  "recall": 1,
+  "critical_recall": 1,
+  "categories": {
+    "entrypoint": {
+      "precision": 1,
+      "recall": 1,
+      "gold": 2,
+      "actual": 2
+    },
+    "environment": {
+      "precision": 1,
+      "recall": 1,
+      "gold": 1,
+      "actual": 1
+    },
+    "external_side_effect": {
+      "precision": 1,
+      "recall": 1,
+      "gold": 1,
+      "actual": 1
+    },
+    "test_file": {
+      "precision": 1,
+      "recall": 1,
+      "gold": 1,
+      "actual": 1
+    }
+  }
+}

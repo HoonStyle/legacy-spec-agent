@@ -1,0 +1,11 @@
+{"id":"TS-001","category":"data_contract","surface":"data_contract:RequestBody","found_at":"app.ts:1","expected_document_type":"DM","importance":"critical","source_citation":"app.ts:1"}
+{"id":"TS-002","category":"registered_api","surface":"registered_api:API_URL","found_at":"app.ts:2","expected_document_type":"API","importance":"normal","source_citation":"app.ts:2"}
+{"id":"TS-003","category":"environment","surface":"environment:API_URL","found_at":"app.ts:2","expected_document_type":"DM","importance":"critical","source_citation":"app.ts:2"}
+{"id":"TS-004","category":"registered_api","surface":"registered_api:status","found_at":"app.ts:3","expected_document_type":"API","importance":"normal","source_citation":"app.ts:3"}
+{"id":"TS-005","category":"status_value","surface":"status_value:ready","found_at":"app.ts:3","expected_document_type":"BR","importance":"normal","source_citation":"app.ts:3"}
+{"id":"TS-006","category":"registered_api","surface":"registered_api:main","found_at":"app.ts:4","expected_document_type":"API","importance":"normal","source_citation":"app.ts:4"}
+{"id":"TS-007","category":"entrypoint","surface":"entrypoint:app.ts","found_at":"app.ts:4","expected_document_type":"BR","importance":"critical","source_citation":"app.ts:4"}
+{"id":"TS-008","category":"external_side_effect","surface":"external_side_effect:export function main() { writeFileSync(\"out.json\", \"{}\"); }","found_at":"app.ts:4","expected_document_type":"RSK","importance":"critical","source_citation":"app.ts:4"}
+{"id":"TS-009","category":"registered_api","surface":"registered_api:/users","found_at":"app.ts:5","expected_document_type":"API","importance":"critical","source_citation":"app.ts:5"}
+{"id":"TS-010","category":"test_file","surface":"test_file:app.test.ts","found_at":"app.test.ts:1","expected_document_type":"TC","importance":"normal","source_citation":"app.test.ts:1"}
+{"id":"TS-011","category":"registered_api","surface":"registered_api:postsUser","found_at":"app.test.ts:1","expected_document_type":"API","importance":"normal","source_citation":"app.test.ts:1"}

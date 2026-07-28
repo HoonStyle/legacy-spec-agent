@@ -77,10 +77,13 @@ The connector exposes fifteen tools:
 - `emit_charts`
 - `render_report`
 - `evaluate_document_gate`
+- `publish_approved_documents`
 
 Without the connector the skill still runs, LLM-only, with weaker guarantees.
 
 `evaluate_document_gate` is the read-only final publication gate for Mode A: the scope manifest is frozen before the Writer runs, the Independent Evidence Auditor and Coverage Sentinel audit the frozen draft, and only the Gatekeeper submits those records to the gate. It independently re-enumerates the frozen code surface, validates required documents/sections, citation lines and 100% audit coverage, IDs, omissions, truncation disclosure, syntax graph labels, role independence, and the actual SHA-256 draft digest, then returns `approved` or `rejected` with deterministic reason codes. It never edits deliverables.
+
+`publish_approved_documents` applies that same gate to a staging draft and transactionally replaces the destination only after approval. A rejected draft leaves the prior publication untouched.
 
 Despite its compatibility-preserving name, `build_call_graph` returns a syntax-level **module dependency graph**, not a method call graph. Its response labels this contract as `graph_type: "module_dependency"` and `resolution: "syntax"`, and reports `resolved` and `unresolved` import-relationship counts. It does not resolve symbols, method calls, runtime dispatch, or dynamic dispatch; unresolved imports remain in `externals` rather than being guessed.
 

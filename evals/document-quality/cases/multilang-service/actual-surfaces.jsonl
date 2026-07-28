@@ -1,0 +1,8 @@
+{"surface":"data_contract:User","found_at":"api.ts:1","expected_document_type":"DM","category":"data_contract","detector_id":"line-syntax","confidence":"high","evidence_span":{"start_line":1,"end_line":1}}
+{"surface":"registered_api:loadUser","found_at":"api.ts:2","expected_document_type":"API","category":"registered_api","detector_id":"line-syntax","confidence":"high","evidence_span":{"start_line":2,"end_line":2}}
+{"surface":"data_contract:AppContract","found_at":"App.cs:1","expected_document_type":"DM","category":"data_contract","detector_id":"line-syntax","confidence":"high","evidence_span":{"start_line":1,"end_line":1}}
+{"surface":"registered_api:AppContract","found_at":"App.cs:1","expected_document_type":"API","category":"registered_api","detector_id":"line-syntax","confidence":"high","evidence_span":{"start_line":1,"end_line":1}}
+{"surface":"environment:APP_HOME","found_at":"App.java:1","expected_document_type":"DM","category":"environment","detector_id":"line-syntax","confidence":"high","evidence_span":{"start_line":1,"end_line":1}}
+{"surface":"registered_api:App","found_at":"App.java:1","expected_document_type":"API","category":"registered_api","detector_id":"line-syntax","confidence":"high","evidence_span":{"start_line":1,"end_line":1}}
+{"surface":"entrypoint:main.go","found_at":"main.go:2","expected_document_type":"BR","category":"entrypoint","detector_id":"line-syntax","confidence":"high","evidence_span":{"start_line":2,"end_line":2}}
+{"surface":"environment:REGION","found_at":"worker.py:2","expected_document_type":"DM","category":"environment","detector_id":"line-syntax","confidence":"high","evidence_span":{"start_line":2,"end_line":2}}
