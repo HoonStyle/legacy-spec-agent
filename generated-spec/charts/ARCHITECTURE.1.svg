@@ -1,0 +1,15 @@
+flowchart LR
+  subgraph _root_["(root)"]
+    Analysis_modules["Analysis modules"]
+    Bootstrap["Bootstrap"]
+    Entry_process["Entry process"]
+    MCP_server["MCP server"]
+    Plugin_host["Plugin host"]
+    Report_modules["Report modules"]
+  end
+  Plugin_host --> Bootstrap
+  Bootstrap --> Entry_process
+  Entry_process --> MCP_server
+  MCP_server --> Analysis_modules
+  MCP_server --> Report_modules
+  MCP_SDK[("MCP SDK")]
