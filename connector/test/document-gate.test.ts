@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import { appendFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { calculateDraftDigest, evaluateDocumentGate, type DocumentGateParams } from "../src/document-gate.js";
-import { extractCoverageSurface } from "../src/coverage-surface.js";
+import { extractCoverageSurface, includedSourceFiles } from "../src/coverage-surface.js";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const fixtureRoot = join(repositoryRoot, "connector/test/fixtures/document-coverage");
@@ -97,10 +97,36 @@ test("coverage surface includes registrations, contracts, env, entrypoints, stat
       "const state = 'ready';",
       "function main() { writeFile('out', 'x'); }",
     ].join("\n"));
+    writeFileSync(join(root, "src", "worker.py"), "import os\ntoken = os.getenv('PY_TOKEN')\n");
+    writeFileSync(join(root, "src", "worker.go"), "package main\n\nvar region = os.Getenv(\"GO_REGION\")\n");
+    writeFileSync(join(root, "src", "Worker.java"), "class Worker { String home = System.getenv(\"JAVA_HOME_DIR\"); }\n");
+    writeFileSync(join(root, "src", "loader.mjs"), "export const loadModule = () => true;\n");
     mkdirSync(join(root, "tests"));
     writeFileSync(join(root, "tests", "main.test.ts"), "export const scenario = true;\n");
     const surface = extractCoverageSurface(root, ["src", "tests"]);
-    for (const expected of ["data_contract:RequestBody", "environment:API_URL", "registered_api:/users", "status_value:ready", "entrypoint:src/main.ts", "test_file:tests/main.test.ts", "external_side_effect:function main() { writeFile('out', 'x'); }"])
+    for (const expected of ["data_contract:RequestBody", "environment:API_URL", "environment:PY_TOKEN", "environment:GO_REGION", "environment:JAVA_HOME_DIR", "registered_api:/users", "registered_api:loadModule", "status_value:ready", "entrypoint:src/main.ts", "test_file:tests/main.test.ts", "external_side_effect:function main() { writeFile('out', 'x'); }"])
       assert.ok(surface.some((item) => item.surface === expected), expected);
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("coverage surface honors frozen exclusions and never follows symlinks outside the root", () => {
+  const root = mkdtempSync(join(tmpdir(), "coverage-surface-"));
+  const outside = mkdtempSync(join(tmpdir(), "coverage-outside-"));
+  try {
+    mkdirSync(join(root, "src", "node_modules", "dep"), { recursive: true });
+    writeFileSync(join(root, "src", "main.ts"), "export const keepMe = 1;\n");
+    writeFileSync(join(root, "src", "node_modules", "dep", "index.ts"), "export const vendored = 1;\n");
+    writeFileSync(join(outside, "secret.ts"), "export const escaped = 1;\n");
+    symlinkSync(outside, join(root, "src", "external"), "dir");
+    const excluded = [{ path: "src/node_modules", reason: "generated dependencies excluded by the frozen scope" }];
+    const files = includedSourceFiles(root, ["src"], excluded);
+    assert.deepEqual(files.map((file) => file.slice(root.length + 1).replaceAll("\\", "/")), ["src/main.ts"]);
+    const surface = extractCoverageSurface(root, ["src"], excluded);
+    assert.ok(surface.some((item) => item.surface === "registered_api:keepMe"));
+    assert.ok(!surface.some((item) => item.surface.includes("vendored") || item.surface.includes("escaped")));
+    assert.deepEqual(includedSourceFiles(root, ["src/external"]), []);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
+  }
 });
