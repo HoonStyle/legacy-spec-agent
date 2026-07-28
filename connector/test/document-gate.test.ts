@@ -88,7 +88,7 @@ test("every deterministic publication rejection condition has a focused regressi
     { name: "malformed audit log line", code: "invalid_audit_log", mutate: (p) => appendFileSync(join(p.dir, "audit_log.jsonl"), "{\"action\":\"verified\",\"evidence\":\n") },
     { name: "coverage ID missing from the draft", code: "coverage_failed", mutate: (p) => { p.coverage_audit.covered_items[0].document_id = "API-999"; } },
     { name: "undisclosed coverage truncation", code: "undisclosed_truncation", mutate: (p) => { p.coverage_audit.truncated_inputs = [{ source: "surface-enumeration", returned: 1, total: 2, omitted: 1 }]; } },
-    { name: "missing provenance declaration", code: "invalid_provenance", mutate: (p) => { const path = join(p.dir, "SPEC.md"); writeFileSync(path, readFileSync(path, "utf8").replace("Source: fixture-commit\n", "")); refreshDigest(p); } },
+    { name: "missing provenance declaration", code: "invalid_provenance", mutate: (p) => { const path = join(p.dir, "SPEC.md"); writeFileSync(path, readFileSync(path, "utf8").replace(/Source: fixture-commit\r?\n/, "")); refreshDigest(p); } },
     { name: "module extractor path collapse", code: "invalid_manifest", mutate: (p) => { p.scope_manifest.module_extractors = [{ module: "src", actor_id: "extractor-1" }]; } },
     { name: "duplicate ID", code: "invalid_id", mutate: (p) => { const path = join(p.dir, "SPEC.md"); writeFileSync(path, `${readFileSync(path, "utf8")}\n### BR-001 duplicate\n`); refreshDigest(p); } },
     { name: "dangling ID", code: "invalid_id", mutate: (p) => { const path = join(p.dir, "SPEC.md"); writeFileSync(path, `${readFileSync(path, "utf8")}\nRelated: API-999\n`); refreshDigest(p); } },
