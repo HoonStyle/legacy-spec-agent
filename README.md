@@ -60,7 +60,7 @@ Takes an existing spec and the commit it was recorded against, compares every ci
 
 ## Connector tools
 
-The connector exposes fourteen tools:
+The connector exposes fifteen tools:
 
 - `assess_language_toolchains`
 - `approve_toolchain_download`
@@ -76,8 +76,11 @@ The connector exposes fourteen tools:
 - `extract_changelog`
 - `emit_charts`
 - `render_report`
+- `evaluate_document_gate`
 
 Without the connector the skill still runs, LLM-only, with weaker guarantees.
+
+`evaluate_document_gate` is the read-only final publication gate for Mode A: the scope manifest is frozen before the Writer runs, the Independent Evidence Auditor and Coverage Sentinel audit the frozen draft, and only the Gatekeeper submits those records to the gate. It independently re-enumerates the frozen code surface, validates required documents/sections, citation lines and 100% audit coverage, IDs, omissions, truncation disclosure, syntax graph labels, role independence, and the actual SHA-256 draft digest, then returns `approved` or `rejected` with deterministic reason codes. It never edits deliverables.
 
 Despite its compatibility-preserving name, `build_call_graph` returns a syntax-level **module dependency graph**, not a method call graph. Its response labels this contract as `graph_type: "module_dependency"` and `resolution: "syntax"`, and reports `resolved` and `unresolved` import-relationship counts. It does not resolve symbols, method calls, runtime dispatch, or dynamic dispatch; unresolved imports remain in `externals` rather than being guessed.
 
@@ -121,7 +124,7 @@ SKILL.md             Skill workflow, templates, and hard rules
 references/          Extraction, architecture, and critic contracts
 SPEC.md              Original design document (v0.1)
 CONNECTOR_DESIGN.md  Connector design and milestone record (C0-C7)
-connector/           TypeScript MCP server with fourteen tools and tests
+connector/           TypeScript MCP server with fifteen tools and tests
 demo-hookify/        Example Mode A run against a third-party package
 evals/               With-skill vs. baseline benchmark results
 skills/              Plugin-layout copy of the skill
