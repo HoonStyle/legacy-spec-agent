@@ -1,0 +1,53 @@
+{
+  "case_id": "external-py-flask-tutorial",
+  "repository_url": "https://github.com/pallets/flask",
+  "analyzed_source_commit": "36e4a824f340fdee7ed50937ba8e7f6bc7d17f81",
+  "commit_validation": {
+    "validated_on": "2026-07-30",
+    "method": "git ls-remote match against remote HEAD, then git clone + git checkout --detach; .git/HEAD equals the 40-character SHA",
+    "result": "confirmed"
+  },
+  "license": {
+    "repository_spdx_id": "BSD-3-Clause",
+    "validated_at_pinned_sha": true,
+    "license_file": "LICENSE.txt",
+    "selected_scope_license_file": "examples/tutorial/LICENSE.txt",
+    "selected_scope_license_field": "examples/tutorial/pyproject.toml declares license = {file = \"LICENSE.txt\"}"
+  },
+  "profile": "standard",
+  "included_paths": [
+    "examples/tutorial/flaskr",
+    "examples/tutorial/tests",
+    "examples/tutorial/pyproject.toml",
+    "examples/tutorial/README.rst"
+  ],
+  "included_paths_note": "Enumerated after inspecting the tree at the pinned SHA, as required by EXTERNAL_EVALUATION_PLAN.md. flaskr/ contains __init__.py, auth.py, blog.py, db.py, schema.sql, static/style.css and templates/**; tests/ contains conftest.py, data.sql and four test modules.",
+  "excluded_paths": [
+    { "path": "src/flask", "reason": "Flask framework implementation is outside the tutorial evaluation scope" },
+    { "path": "tests", "reason": "repository-root tests belong to the Flask framework, not the tutorial" },
+    { "path": "docs", "reason": "framework documentation is not part of the analyzed service" },
+    { "path": "examples/javascript", "reason": "unrelated example project" },
+    { "path": "examples/celery", "reason": "unrelated example project" },
+    { "path": ".git", "reason": "version-control metadata" }
+  ],
+  "execution_environment": {
+    "os": "Linux",
+    "kernel": "6.18.5",
+    "arch": "x86_64",
+    "node_version": "v22.22.2",
+    "connector_revision": "d86c2b0e1781a9e2ca669160cce6b5d02dd05a92",
+    "execution_mode": "separate_subagent_actors; deterministic gate invoked via stdio MCP against connector dist build",
+    "source_checkout": ".external-sources/flask (git clone, detached at pinned SHA; not committed)"
+  },
+  "scope_size": {
+    "python_files": 9,
+    "python_lines": 600,
+    "non_python_in_scope": "schema.sql, data.sql, style.css, six Jinja templates, pyproject.toml, README.rst"
+  },
+  "gold_freeze": {
+    "authored_by": "dedicated gold-annotation subagent reading only the pinned source scope; no connector, detector, or generated-document output was available to it",
+    "human_review": "human_review_pending — draft is NOT frozen; extractor and Mode A runs stay blocked until a human reviews and approves the gold annotations",
+    "digest_file": "gold-digest.txt (written only after human review approval)"
+  },
+  "session_started_utc": "2026-07-30T06:27:16Z"
+}
