@@ -1,0 +1,14 @@
+{
+  "tool": "evaluate_document_gate",
+  "gatekeeper_actor_id": "gatekeeper-ext3",
+  "execution_mode": "stdio MCP client against connector/dist/src/index.js",
+  "invoked_at_utc": "2026-07-30T09:01:33Z",
+  "elapsed_ms": 371.613,
+  "response_bytes": 102,
+  "result": {
+    "verdict": "approved",
+    "citation_count": 131,
+    "audited_citation_count": 131,
+    "reasons": []
+  }
+}
