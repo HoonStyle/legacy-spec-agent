@@ -1,57 +1,97 @@
 # Independent Evidence Audit Notes — external-mixed-online-boutique
 
 - **Actor:** auditor-ext3 (Independent Evidence Auditor; did not write the draft)
-- **Frozen draft digest:** `f358873e7ec8dcf8c115c7e7cc4f056a691dfbac2c6ac5998a6276e2659977c3`
-- **Verdict:** **failed** — 10 of 135 claims flagged
+- **Round 1 frozen draft digest:** `f358873e7ec8dcf8c115c7e7cc4f056a691dfbac2c6ac5998a6276e2659977c3` (135 claims, CLM-001..CLM-135) — **verdict: failed**, 10 of 135 flagged
+- **Round 2 (this re-check) frozen draft digest:** `155ac67a50743a6fd3e8e0d1c5c231bc564442ba1efbe66c449a42cdd9d9f1f8` (146 claims, CLM-001..CLM-146) — **verdict: failed**, 1 of 146 flagged
 - **Source of truth:** `/home/user/legacy-spec-agent/.external-sources/microservices-demo/` (cartservice C#, checkoutservice Go, shippingservice Go)
 
-## Method
+## Round 1 — method and result (preserved, not erased)
 
-1. Read all nine in-scope hand-written source files once, in full (`Program.cs`, `Startup.cs`, `CartService.cs`, `HealthCheckService.cs`, `ICartStore.cs`, `RedisCartStore.cs`, `SpannerCartStore.cs`, `AlloyDBCartStore.cs`, `CartServiceTests.cs`; `main.go`, `money.go`, `money_test.go` for checkoutservice; `main.go`, `quote.go`, `tracker.go`, `shippingservice_test.go` for shippingservice), plus `cartservice/src/appsettings.json` on demand when a claim cited it.
-2. Wrote a Python script (`extract_citations_case3.py`) that scans all seven staged Markdown files, extracts every `(line, CLM id, citation, markdown line)` tuple via a backtick-delimited `path:line[-line]` regex restricted to citable extensions, resolves each citation against the pinned source tree, and prints the actual cited source lines next to each claim. This produced a 135-entry side-by-side review file (`citation_review_case3.txt`) plus a structural-issue report and a per-CLM index (`clm_entries_case3.json`) used to search whether a fact missing from one citation's range was established by *any other* citation anywhere in the draft.
-3. Judged each of the 135 claims against the printed source, watching specifically for: compound claims ("all three", "both X and Y") cited to a range that only proves one branch; claims about env-var defaults/required-ness where the cited line must show the actual read; the AlloyDB-vs-Spanner SQL-construction contrast; the `context.TODO()` bug; insecure gRPC transport credentials; and whether the "dead code" health-check claims are backed by the actual stock-registration evidence.
-4. Ran a second script (`gen_audit_case3.py`) to deterministically emit `audit_log.jsonl` from the recorded verdicts.
+1. Read all in-scope hand-written source files once, in full (`Program.cs`, `Startup.cs`, `CartService.cs`, `HealthCheckService.cs`, `ICartStore.cs`, `RedisCartStore.cs`, `SpannerCartStore.cs`, `AlloyDBCartStore.cs`, `CartServiceTests.cs`; `main.go`, `money.go`, `money_test.go` for checkoutservice; `main.go`, `quote.go`, `tracker.go`, `shippingservice_test.go` for shippingservice), plus `appsettings.json` on demand.
+2. Extracted every `(line, CLM id, citation, markdown line)` tuple from all seven staged Markdown files and resolved each citation against the pinned source tree.
+3. Judged each of the 135 claims, watching especially for compound claims ("all three", "both X and Y") cited to a range that proves only one branch/instance.
+4. Structural checks were clean: 135 unique CLM ids, no gaps/duplicates, one CLM + one citation per line, no citation into `genproto/` or other non-citable extensions, no out-of-range citation.
 
-## Structural checks (all clean)
+**Round 1 flagged claims (10):**
 
-- 135 unique CLM ids in the draft, CLM-001..CLM-135, no gaps, no duplicates.
-- Every tagged line carries exactly one CLM id and exactly one citation (no multi-citation or multi-CLM lines, no citation without a CLM id or vice versa).
-- No citation resolves outside its cited file's line count; no citation targets a missing file.
-- No citation targets `genproto/` (the excluded generated-code tree) or a `.proto`, Dockerfile, `.csproj`, `.sln`, `go.mod`, or `.yaml`/`.yml` fact. All such non-citable facts in the draft are correctly confined to prose without a `CLM-*`/citation pair (scope-manifest coverage lines, `UV-DOCKERFILE-RUNTIME`, `UV-CHECKOUT-SHIPPING-PROTO-SCHEMA`, etc.) or are cross-references inside otherwise-cited lines, never asserted as the cited evidence itself.
-
-## Borderline claims accepted as verified (with reasoning)
-
-- **CLM-005** (SPEC.md, actors): the citation (`main.go:118-123`) shows only the six `mustConnGRPC` calls, not a definitive list of inbound callers. Accepted because "gRPC callers of these three services" is a scoping/definitional statement about who can call a registered gRPC service, not an independent fact requiring its own citation, and the six-connection half of the claim is fully supported.
-- **CLM-009** (SPEC.md, PlaceOrder capability summary — 7 sub-steps cited only to the bare function signature `main.go:230`): accepted because every one of the seven sub-steps (retrieve cart, price it, quote shipping, charge the card, ship the order, clear the cart, email confirmation) has its own dedicated, verified citation elsewhere in the draft (CLM-021, 022/032, 023, 036, 037, 038, 050, 051, 052, 053). The line's own citation is minimal, but no part of the claim is uncited *in the document as a whole*.
-- **CLM-058 / CLM-132** (insecure gRPC transport for all six downstream connections, cited to the single `mustConnGRPC` body at `main.go:214-216`): accepted because `mustConnGRPC` is the one function used for all six connections (established separately by CLM-045/CLM-005's citation to the six call sites at `main.go:118-123`), so the single implementation genuinely governs all six.
-- **CLM-079/080/085(partial)/086/092-097** (single-line env-var-read citations whose "default"/"selects when non-empty" behavior lives in a different, already-cited line): accepted where the fuller behavior is explicitly cross-referenced to an already-verified business rule in the same document set (e.g. `BR-CARTSTORE-SELECTION` = CLM-012, citing `Startup.cs:34-56` in full). CLM-085 is the exception — see flagged list below, because its "(currently no-op)" clause is not established by *any* citation anywhere in the draft, unlike the `BR-CARTSTORE-SELECTION` cross-references.
-- **CLM-115** (TESTCASES.md file-identification row citing `CartServiceTests.cs:1`, the copyright header): accepted as a file-anchor convention; the "xUnit"/`[Fact]` fact it implies is independently and correctly cited elsewhere (CLM-111, `CartServiceTests.cs:41`).
-- **CLM-133** (`context.TODO()` bug, "unlike every other downstream call... which all forward `ctx`"): accepted because each of the other five downstream calls it's compared against (cart, shipping, payment, shipment, email) is independently cited elsewhere in the draft showing `ctx` being forwarded (CLM-050, 051, 054, 055, 056).
-
-The distinguishing test applied throughout: a compound or elaborated claim is accepted if every sub-fact it depends on has a genuine citation *somewhere* in the draft (even under a different CLM id); it is flagged if some sub-fact's only textual support anywhere in the 135 claims is the writer's prose, with no citation backing it at all.
-
-## Flagged claims (10)
-
-| CLM | Document | Cited evidence | Why it fails |
+| CLM | Document | Cited evidence | Why it failed |
 |---|---|---|---|
-| CLM-025 | SPEC.md | `RedisCartStore.cs:62-65` | Claims the `RpcException`/`FailedPrecondition` mapping holds for **all three** cart store implementations, but cites only Redis's catch block. Spanner's (`SpannerCartStore.cs:97-101`/`139-141`/`165-169`) and AlloyDB's (`AlloyDBCartStore.cs:96-100`/`132-136`/`157-161`) equivalent catch blocks are real and identical in pattern (confirmed by direct reading), but neither is cited anywhere else in the draft either — so the "all three" claim rests entirely on one-third of its own evidence. |
-| CLM-034 | SPEC.md | `SpannerCartStore.cs:80-89` | Claims the insert-or-update runs "inside a retriable transaction." The cited range is only the parameterized-command construction; the `RunWithRetriableTransactionAsync` wrapper that actually makes it a retriable transaction is at line 60, uncited anywhere in the draft. The "parameterized command" half of the claim is well-supported; the "retriable transaction" half is not. |
-| CLM-044 | SPEC.md | `checkoutservice/main.go:143-144` | Claims **both** checkoutservice and shippingservice register the stock `health.NewServer()`. Citation covers only checkoutservice. Shippingservice's equivalent registration (`shippingservice/main.go:93-94`, confirmed present and identical in pattern by direct reading) is never cited anywhere in the 135 claims. |
-| CLM-069 | INTERFACES.md | `checkoutservice/main.go:230` | Asserts the `PlaceOrder` response is "order result (ID, tracking ID, shipping cost/address, items)." The citation is only the function signature line. The `OrderResult{...}` construction that actually shows this five-field composition (`main.go:265-271`) is never cited anywhere in the draft. |
-| CLM-073 | INTERFACES.md | `shippingservice/main.go:110` | Claims shippingservice's own `Check`/`Watch` are dead code "because a separate stock `health.NewServer()` instance is registered instead." That registration fact is at `main.go:93-94` and is never cited anywhere in the draft (contrast with the checkout-side equivalent claim, which is legitimately backed elsewhere by CLM-044's citation to `main.go:143-144`, even though CLM-044 itself is flagged above for its shipping half). |
-| CLM-085 | DATA_MODEL.md | `shippingservice/main.go:57` | Characterizes `initTracing` as "(currently no-op)." The cited line is only the `DISABLE_TRACING` condition; the no-op function body itself (`main.go:159-161`, confirmed to contain only a `// TODO` comment) is never cited anywhere in the draft. |
-| CLM-087 | DATA_MODEL.md | `shippingservice/main.go:84` | Claims "both branches currently construct the server identically." The cited line is only the `DISABLE_STATS` condition; the two branch bodies that actually show identical `grpc.NewServer()` calls (`main.go:85-90`, confirmed identical by direct reading) are never cited anywhere in the draft. |
-| CLM-089 | DATA_MODEL.md | `RedisCartStore.cs:43-45` | Asserts the cart shape is "constructed identically by all three store backends." Citation covers only Redis's construction site. Spanner's (`SpannerCartStore.cs:127-131`) and AlloyDB's (`AlloyDBCartStore.cs:119-123`) equivalent `Hipstershop.CartItem{...}` construction sites are real and structurally identical (confirmed by direct reading) but are never cited anywhere else in the draft. |
-| CLM-125 | TESTCASES.md | `checkoutservice/main.go:230` | Asserts `PlaceOrder` "returns an `OrderResult` with a new order ID, the shipping tracking ID from shippingservice, the localized shipping cost, and the priced items." Citation is only the function signature. The `charging the card before shipping` and `clearing the cart afterward` clauses of this same claim ARE independently supported elsewhere (CLM-021, CLM-022/032), but the return-composition clause is not cited anywhere in the draft. |
-| CLM-131 | RISKS.md | `shippingservice/main.go:110-112` | Same defect as CLM-073, restated in RISKS.md: the "a separate stock `health.NewServer()` instance is registered instead" claim depends on `main.go:93-94`, never cited anywhere in the draft. |
+| CLM-025 | SPEC.md | `RedisCartStore.cs:62-65` | "All three" cart-store exception-mapping claim rested on only Redis's catch block; Spanner's and AlloyDB's own catch blocks were never cited anywhere. |
+| CLM-034 | SPEC.md | `SpannerCartStore.cs:80-89` | Claimed the insert-or-update runs "inside a retriable transaction," but the cited range was only the parameterized-command construction; `RunWithRetriableTransactionAsync` (line 60) was outside the range and uncited elsewhere. |
+| CLM-044 | SPEC.md | `checkoutservice/main.go:143-144` | Claimed **both** checkoutservice and shippingservice register the stock `health.NewServer()`; citation covered only checkoutservice. |
+| CLM-069 | INTERFACES.md | `checkoutservice/main.go:230` | Asserted the `PlaceOrder` response composition (ID, tracking ID, shipping cost/address, items) but cited only the bare function signature; the `OrderResult{...}` construction (`main.go:265-271`) was uncited. |
+| CLM-073 | INTERFACES.md | `shippingservice/main.go:110` | "Dead code" claim depended on the stock-health-server registration fact (`main.go:93-94`), never cited anywhere. |
+| CLM-085 | DATA_MODEL.md | `shippingservice/main.go:57` | Characterized `initTracing` as "(currently no-op)" but cited only the `DISABLE_TRACING` condition; the no-op body (`main.go:159-161`) was uncited. |
+| CLM-087 | DATA_MODEL.md | `shippingservice/main.go:84` | Claimed "both branches currently construct the server identically" but cited only the `DISABLE_STATS` condition; the two branch bodies (`main.go:85-90`) were uncited. |
+| CLM-089 | DATA_MODEL.md | `RedisCartStore.cs:43-45` | "Constructed identically by all three store backends" rested on only Redis's construction site; Spanner's and AlloyDB's equivalent sites were uncited. |
+| CLM-125 | TESTCASES.md | `checkoutservice/main.go:230` | Same `OrderResult` return-composition defect as CLM-069, restated in TESTCASES.md. |
+| CLM-131 | RISKS.md | `shippingservice/main.go:110-112` | Same "registered instead" defect as CLM-073, restated in RISKS.md. |
 
-Note the pattern: CLM-025/CLM-089 and CLM-073/CLM-131 are each two independent claims (in different documents) resting on the same underlying uncited fact (Spanner/AlloyDB parity for CLM-025/089; shippingservice's health-server registration for CLM-073/131). CLM-044 is the root cause of the CLM-073/131 gap — no claim anywhere in the 135 ever cites `shippingservice/main.go:93-94`, despite three separate claims depending on what happens there.
+## What the Writer changed (round 2 input)
 
-## Other requested checks — all clean
+- **CLM-025** narrowed to assert only RedisCartStore; two new claims split out the Spanner/AlloyDB halves: **CLM-136** (`SpannerCartStore.cs:99-100`), **CLM-137** (`AlloyDBCartStore.cs:98-99`).
+- **CLM-034** widened to `SpannerCartStore.cs:60-89`, now including the `RunWithRetriableTransactionAsync` call at line 60.
+- **CLM-044** narrowed to checkoutservice only; new **CLM-138** (`shippingservice/main.go:93-94`) carries the shippingservice half.
+- **CLM-069** narrowed to signature/request/error-mapping only; new **CLM-139** (`checkoutservice/main.go:265-271`) carries the response-composition fact.
+- **CLM-073** narrowed to the bare "defines a Check method" fact; new **CLM-140** (`shippingservice/main.go:93-94`) carries the "registered instead" fact.
+- **CLM-085** narrowed, dropping the no-op characterization; new **CLM-141** (`shippingservice/main.go:159-161`) carries it.
+- **CLM-087** now cites only `shippingservice/main.go:84` (the branching fact alone); new **CLM-146** carries the "both branches identical" claim on `main.go:84-90`.
+- **CLM-089** narrowed to RedisCartStore only; new **CLM-142** (`SpannerCartStore.cs:125-131`), **CLM-143** (`AlloyDBCartStore.cs:119-125`).
+- **CLM-125** narrowed, dropping the return-composition clause; new **CLM-144** (`checkoutservice/main.go:265-271`) carries it.
+- **CLM-131** narrowed, dropping the "registered instead" clause; new **CLM-145** (`shippingservice/main.go:93-94`) carries it.
 
-- **Environment variables:** every `DATA_MODEL.md` env-var row's cited line is the actual `Configuration[...]`/`os.Getenv(...)`/`os.LookupEnv(...)` read, and every claimed default/required-ness (`SPANNER_INSTANCE`→`onlineboutique`, `SPANNER_DATABASE`→`carts`, checkoutservice's six `mustMapEnv`-panicking vars, `COLLECTOR_SERVICE_ADDR` only required when tracing is on, shippingservice's `PORT` not `APP_PORT`) matches the source exactly.
-- **Downstream calls from checkoutservice:** the six `*SvcConn` fields and their six call sites (cart, shipping, product catalog, currency, payment, email) are each individually and correctly cited; no call is misattributed to the wrong service.
-- **Health Check/Watch "dead code" claims:** verified true for both Go services by direct reading (the custom `Check`/`Watch` methods on `checkoutService` and `server` are real but the server registers a separate `health.NewServer()`), but as detailed above the citations for the *shippingservice* side of this finding (CLM-073, CLM-131) never actually cite the registration evidence anywhere in the draft — flagged.
-- **AlloyDB vs. Spanner SQL:** CLM-066/090/128 (Spanner, parameterized `SpannerParameterCollection`) and CLM-067/091/129/035 (AlloyDB, `$"...{tableName}...{userId}..."` string interpolation) are all correctly and specifically cited; the contrast is genuine and well-supported.
-- **`context.TODO()` bug (CLM-133):** correctly cited to `main.go:360`, the exact line where `context.TODO()` replaces `ctx`; confirmed genuine defect, not a false positive.
-- **Insecure gRPC transport (CLM-058/CLM-132):** correctly cited to `main.go:214-216`, the exact `insecure.NewCredentials()` call inside the one `mustConnGRPC` helper used for all six outbound connections; confirmed genuine.
+11 new claims total: CLM-136..CLM-146. 146 claims overall.
+
+## Round 2 — per-correction judgment
+
+Each corrected claim was re-checked against the printed source for **every** clause remaining on its line, not only the clause that was originally flagged.
+
+| CLM | Verdict | Basis |
+|---|---|---|
+| CLM-025 | **Verified** | `RedisCartStore.cs:62-65` is exactly the generic `catch (Exception ex) { throw new RpcException(new Status(StatusCode.FailedPrecondition, ...)); }` block; claim is now scoped to Redis only. |
+| CLM-136 | **Verified** | `SpannerCartStore.cs:99-100` is `AddItemAsync`'s own catch block, same `RpcException`/`FailedPrecondition` pattern. |
+| CLM-137 | **Verified** | `AlloyDBCartStore.cs:98-99` is `AddItemAsync`'s own catch block, same pattern. |
+| CLM-034 | **Verified** | `SpannerCartStore.cs:60-89` now opens with `RunWithRetriableTransactionAsync(async transaction => {...}`(line 60) and closes with the parameterized `CreateInsertOrUpdateCommand` (lines 80-89) inside that same transaction lambda — both "retriable transaction" and "parameterized command into `CartItems`" are now supported by one range. |
+| CLM-044 | **Verified** | `checkoutservice/main.go:143-144` is exactly `healthcheck := health.NewServer(); healthpb.RegisterHealthServer(srv, healthcheck)`; claim narrowed to checkoutservice only. |
+| CLM-138 | **Verified** | `shippingservice/main.go:93-94` is the identical registration pattern for shippingservice. |
+| CLM-069 | **Verified** | `main.go:230` is exactly the `PlaceOrder` signature; the line no longer asserts the response composition (moved to CLM-139). |
+| CLM-139 | **Verified** | `main.go:265-271` is the `orderResult := &pb.OrderResult{OrderId, ShippingTrackingId, ShippingCost, ShippingAddress, Items}` literal — all five listed fields present. |
+| CLM-073 | **Verified** | `main.go:110` is exactly `func (s *server) Check(...)`; claim now asserts only that the method exists, not the dead-code conclusion. |
+| CLM-140 | **Verified** | `main.go:93-94` is the stock `health.NewServer()` registration — supports "a separate stock health.NewServer() instance is registered instead." |
+| CLM-085 | **Verified** | `main.go:57` is exactly `if os.Getenv("DISABLE_TRACING") == "" {`; the no-op characterization was dropped from this line. |
+| CLM-141 | **Verified** | `main.go:159-161` is `func initTracing() { // TODO(arbrown) Implement OpenTelemetry tracing }` — a true no-op body with a TODO placeholder. |
+| CLM-087 | **Verified** | `main.go:84` is exactly `if os.Getenv("DISABLE_STATS") == "" {` — the line now asserts only the branching fact, nothing about the branch bodies, as required. |
+| CLM-146 | **Verified** | `main.go:84-90` contains both branches (`srv = grpc.NewServer()` in the `if` body at line 86 and again in the `else` body at line 89) — genuinely identical construction, confirmed by direct reading. |
+| CLM-089 | **Verified** | `RedisCartStore.cs:43-45` is exactly the `Cart`/`CartItem` construction with `UserId`, `ProductId`, `Quantity`; claim narrowed to Redis only. |
+| CLM-142 | **Verified** | `SpannerCartStore.cs:125-131` covers `cart.UserId = userId;` (125) through the `CartItem { ProductId, Quantity }` construction (127-131) inside `GetCartAsync` — full `{UserId, Items[{ProductId, Quantity}]}` shape supported. |
+| CLM-143 | **Verified** | `AlloyDBCartStore.cs:119-125` covers the `CartItem { ProductId = reader.GetString(0), Quantity = reader.GetInt32(1) }` construction (119-123) plus `cart.Items.Add(item)` (124) — the claim is correctly scoped to only the `CartItem` sub-shape (not the outer cart's `UserId`, which sits outside this range at line 108 and is not asserted here), so there is no overreach. |
+| CLM-125 | **Verified** | `main.go:230` is the `PlaceOrder` signature; the "charges the card before shipping and clears the cart afterward" clauses remain independently supported elsewhere in the draft (CLM-021, CLM-022/032, same reasoning accepted in round 1); the previously-uncited return-composition clause was removed from this line. |
+| CLM-144 | **Verified** | `main.go:265-271` — same `OrderResult` literal as CLM-139; the four fields asserted here (order ID, tracking ID, shipping cost, items) are all present in the literal. |
+| CLM-131 | **FLAGGED (still)** — see below | |
+| CLM-145 | **Verified** | `main.go:93-94` is the stock `health.NewServer()` registration for shippingservice — supports "a separate stock health.NewServer() instance is registered instead." |
+
+### CLM-131 — still flagged, new defect surfaced by the full-line re-check
+
+CLM-131's round-1 defect (the "registered instead" clause depending on an uncited `main.go:93-94`) is fixed: that clause was moved to new CLM-145, correctly cited.
+
+However, re-checking the *entire* remaining sentence turned up a second, previously unnoticed defect in the same line: it still reads *"shippingservice's `server` struct likewise defines `Check`/`Watch` methods satisfying the gRPC Health interface"* — a **plural** claim about two methods — cited only to `shippingservice/main.go:110-112`. That range is exactly the `Check` method's signature and three-line body; the `Watch` method is a separate block at `main.go:114-116` and is **not included** in the cited range.
+
+I checked whether shippingservice's `Watch` method is cited anywhere else across all 146 claims (grep of every citation touching `shippingservice/main.go`): it is not. This is unlike the parallel checkoutservice claim (CLM-130, same "Check`/`Watch`" wording, citing `main.go:222-224` which is likewise only `Check`) — checkoutservice's `Watch` method genuinely *is* independently verified elsewhere, by CLM-029 (`checkoutservice/main.go:227`, "checkoutservice's `Watch` health RPC explicitly returns `codes.Unimplemented`"). No equivalent claim exists anywhere for shippingservice's `Watch` method.
+
+Applying the same standard used throughout this audit (a compound claim is accepted only if every sub-fact it depends on has a genuine citation *somewhere* in the draft): the "Watch" half of CLM-131's sentence has zero citation support anywhere in the 146 claims. This is a citation-scope defect of the same kind as the original 10, not a newly invented standard, and it was not part of what the Writer was asked to fix in this round, so it survived uncorrected. **CLM-131 is flagged again** in `audit_log.jsonl`.
+
+## Drift check (round-1-verified claims the Writer did not touch)
+
+Compared all 125 round-1-verified citations (every CLM outside {25, 34, 44, 69, 73, 85, 87, 89, 125, 131}) against their current text in the draft, programmatically, line by line. **Result: zero mismatches.** Every one of the 125 untouched claims carries an identical citation string to round 1. No unexpected drift.
+
+## Structural re-checks (all clean, re-run on the full 146)
+
+- 146 unique CLM ids, CLM-001..CLM-146, no gaps, no duplicates.
+- Every tagged line carries exactly one CLM id and exactly one citation.
+- Every citation resolves inside its cited file's actual line count (programmatically verified against the pinned source tree); no out-of-range citation, no missing file.
+- No citation targets `genproto/` or any other non-citable extension.
+- The three legitimate repeated-range citations (`shippingservice/main.go:93-94` under CLM-138/140/145; `checkoutservice/main.go:265-271` under CLM-139/144) are each on distinct CLM ids and distinct markdown lines, consistent with the "one citation per line, not one line per range" rule.
+
+## Final verdict
+
+**failed** — 145 of 146 claims verified; 1 flagged (CLM-131, "Watch" method claim uncited). Round 1's original 10 defects are all genuinely resolved; the 11 new split-out claims are all correctly supported; no drift on the 125 untouched claims; but CLM-131 carries a second, distinct citation-scope defect that survived this round's correction and must be fixed before the gate can pass.
