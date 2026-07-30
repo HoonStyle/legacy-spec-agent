@@ -1,0 +1,75 @@
+{
+  "analyzed_source_commit": "eb8f4328821c6746680a2ba02e0e5636a085a327",
+  "included_paths": [
+    "deployment-platforms/rest-express-docker-aws-ec2/src",
+    "deployment-platforms/rest-express-docker-aws-ec2/prisma",
+    "deployment-platforms/rest-express-docker-aws-ec2/package.json",
+    "deployment-platforms/rest-express-docker-aws-ec2/tsconfig.json",
+    "deployment-platforms/rest-express-docker-aws-ec2/.env.example",
+    "deployment-platforms/rest-express-docker-aws-ec2/Dockerfile",
+    "deployment-platforms/rest-express-docker-aws-ec2/docker-compose.yml",
+    "deployment-platforms/rest-express-docker-aws-ec2/README.md"
+  ],
+  "excluded_paths": [
+    {
+      "path": "deployment-platforms/rest-express-docker-aws-ec2/.github",
+      "reason": "CI deployment workflow out of documentation scope per EXTERNAL_EVALUATION_PLAN.md"
+    },
+    {
+      "path": "deployment-platforms/rest-express-docker-aws-ec2/node_modules",
+      "reason": "third-party dependencies are not documentation surface"
+    },
+    {
+      "path": "deployment-platforms/rest-express-docker-aws-ec2/dist",
+      "reason": "build output is not documentation surface"
+    },
+    {
+      "path": ".git",
+      "reason": "version-control metadata"
+    }
+  ],
+  "file_counts": {
+    "supported": 4,
+    "unsupported": 8,
+    "failed": 0,
+    "skipped": 0
+  },
+  "truncated": false,
+  "truncated_inputs": [],
+  "module_extractors": [
+    {
+      "module": "deployment-platforms/rest-express-docker-aws-ec2/src",
+      "actor_id": "extractor-ext1"
+    },
+    {
+      "module": "deployment-platforms/rest-express-docker-aws-ec2/prisma",
+      "actor_id": "extractor-ext1"
+    },
+    {
+      "module": "deployment-platforms/rest-express-docker-aws-ec2/package.json",
+      "actor_id": "extractor-ext1"
+    },
+    {
+      "module": "deployment-platforms/rest-express-docker-aws-ec2/tsconfig.json",
+      "actor_id": "extractor-ext1"
+    },
+    {
+      "module": "deployment-platforms/rest-express-docker-aws-ec2/.env.example",
+      "actor_id": "extractor-ext1"
+    },
+    {
+      "module": "deployment-platforms/rest-express-docker-aws-ec2/Dockerfile",
+      "actor_id": "extractor-ext1"
+    },
+    {
+      "module": "deployment-platforms/rest-express-docker-aws-ec2/docker-compose.yml",
+      "actor_id": "extractor-ext1"
+    },
+    {
+      "module": "deployment-platforms/rest-express-docker-aws-ec2/README.md",
+      "actor_id": "extractor-ext1"
+    }
+  ],
+  "writer_actor_id": "writer-ext1",
+  "draft_digest": "71131fd74d1dce960bb5cbbf6c1f21f8e650138e536eefe1a8a1d4f5f1804188"
+}
