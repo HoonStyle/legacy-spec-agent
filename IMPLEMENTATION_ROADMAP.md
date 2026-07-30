@@ -41,6 +41,28 @@ If either external evaluation or bounded replay fails because one representative
 
 Before ending the next session, update this queue with pinned case identifiers, commands run, raw result locations, satisfied and unsatisfied gates, and the exact blocker when an external counter or environment is unavailable. Keep implementation and direct regression tests in independently buildable functional commits, then run the commit-policy checks at the end of this file.
 
+**2026-07-30 review record.** Source-only gold drafts supplied for
+`external-py-flask-tutorial` at `36e4a824f340fdee7ed50937ba8e7f6bc7d17f81`
+and `external-mixed-online-boutique` at
+`9a4616e77f0f9cbcbecaf27d711c38890dda1404` were checked against detached source
+trees. The consolidated decisions are preserved in
+`docs/external-gold-review-summary.md`. Both inputs contained a duplicated JSONL
+copy and require the documented classification corrections. No gold digest,
+extractor output, generated document, or Mode A result was produced. The external
+quality gate therefore remains unevaluated; the immediate blocker is independent
+human approval of the corrected positive annotations.
+
+The documented removals and reclassifications have since been applied to the
+drafts held outside the repository: case 2 goes from 73 rows to 57 (16 removed,
+12 reclassified) and case 3 from 111 rows to 101 (10 removed, 3 reclassified),
+both validating clean on ID uniqueness, category/type mapping,
+`found_at == source_citation`, and source path/line ranges. Per-case
+`gold-review-notes.md` records those decisions. The repository-held draft files
+themselves contained no duplicated copy — each was already unique, sequential
+and one JSON object per line — so that step was a confirmation rather than a
+removal. Independent human approval, the gold digest, and every downstream step
+remain outstanding.
+
 #### Session record — 2026-07-30
 
 **Item A, case 1 of 3 executed.** Case `external-ts-prisma-rest`: `prisma/prisma-examples` at revalidated revision `eb8f4328821c6746680a2ba02e0e5636a085a327`, scope `deployment-platforms/rest-express-docker-aws-ec2`, licenses Apache-2.0 (repository) and MIT (selected package, from its `package.json`), profile `standard`. Cases 2 (`external-py-flask-tutorial`) and 3 (`external-mixed-online-boutique`) are not started, so no combined external summary exists yet.
