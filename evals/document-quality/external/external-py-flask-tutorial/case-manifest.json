@@ -23,12 +23,30 @@
   ],
   "included_paths_note": "Enumerated after inspecting the tree at the pinned SHA, as required by EXTERNAL_EVALUATION_PLAN.md. flaskr/ contains __init__.py, auth.py, blog.py, db.py, schema.sql, static/style.css and templates/**; tests/ contains conftest.py, data.sql and four test modules.",
   "excluded_paths": [
-    { "path": "src/flask", "reason": "Flask framework implementation is outside the tutorial evaluation scope" },
-    { "path": "tests", "reason": "repository-root tests belong to the Flask framework, not the tutorial" },
-    { "path": "docs", "reason": "framework documentation is not part of the analyzed service" },
-    { "path": "examples/javascript", "reason": "unrelated example project" },
-    { "path": "examples/celery", "reason": "unrelated example project" },
-    { "path": ".git", "reason": "version-control metadata" }
+    {
+      "path": "src/flask",
+      "reason": "Flask framework implementation is outside the tutorial evaluation scope"
+    },
+    {
+      "path": "tests",
+      "reason": "repository-root tests belong to the Flask framework, not the tutorial"
+    },
+    {
+      "path": "docs",
+      "reason": "framework documentation is not part of the analyzed service"
+    },
+    {
+      "path": "examples/javascript",
+      "reason": "unrelated example project"
+    },
+    {
+      "path": "examples/celery",
+      "reason": "unrelated example project"
+    },
+    {
+      "path": ".git",
+      "reason": "version-control metadata"
+    }
   ],
   "execution_environment": {
     "os": "Linux",
@@ -46,8 +64,12 @@
   },
   "gold_freeze": {
     "authored_by": "dedicated gold-annotation subagent reading only the pinned source scope; no connector, detector, or generated-document output was available to it",
-    "human_review": "human_review_pending — draft is NOT frozen; extractor and Mode A runs stay blocked until a human reviews and approves the gold annotations",
-    "digest_file": "gold-digest.txt (written only after human review approval)"
+    "human_review": "approved 2026-07-30 by the repository owner as source-only human-reviewed gold, after the corrections in docs/external-gold-review-summary.md were applied and verified",
+    "review_corrections": "73-row draft reduced to 57 (16 removed, 12 reclassified) per docs/external-gold-review-summary.md",
+    "frozen_row_count": 57,
+    "gold_sha256": "739d434e2b61d3b999e7eeff6f8a168d33c324ba499cac8f6d2674a46557c8a1",
+    "digest_file": "gold-digest.txt",
+    "known_limitation": "one reviewer approved the corrected annotations; GOLD_DATASET.md describes a two-reviewer resolution"
   },
   "session_started_utc": "2026-07-30T06:27:16Z"
 }
