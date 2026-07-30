@@ -8,7 +8,7 @@
 
 | 사례 ID | 유형 | 저장소와 선택 범위 | 라이선스 | 고정 후보 SHA |
 | --- | --- | --- | --- | --- |
-| `external-ts-prisma-rest` | 작은 TypeScript 서비스 | [`prisma/prisma-examples`](https://github.com/prisma/prisma-examples)의 `deployment-platforms/rest-express-docker-aws-ec2` | Apache-2.0 | `eb8f4328821c6746680a2ba02e0e5636a085a327` |
+| `external-ts-prisma-rest` | 작은 TypeScript 서비스 | [`prisma/prisma-examples`](https://github.com/prisma/prisma-examples)의 `deployment-platforms/rest-express-docker-aws-ec2` | 저장소 Apache-2.0, 선택 패키지 MIT | `eb8f4328821c6746680a2ba02e0e5636a085a327` |
 | `external-py-flask-tutorial` | Python 서비스 | [`pallets/flask`](https://github.com/pallets/flask)의 `examples/tutorial` | BSD-3-Clause | `36e4a824f340fdee7ed50937ba8e7f6bc7d17f81` |
 | `external-mixed-online-boutique` | 비-TypeScript·혼합 서비스 | [`GoogleCloudPlatform/microservices-demo`](https://github.com/GoogleCloudPlatform/microservices-demo)의 `cartservice`, `checkoutservice`, `shippingservice` | Apache-2.0 | `9a4616e77f0f9cbcbecaf27d711c38890dda1404` |
 
@@ -122,9 +122,11 @@ src/shoppingassistantservice/**
 3. 선택 profile을 `standard`로 기록한다.
 4. included paths와 excluded paths를 파일 또는 glob 수준으로 기록한다.
 5. 운영체제, 아키텍처, Node 버전, connector revision과 실행 방식을 기록한다.
-6. 사람이 소스를 검토해 gold annotation을 작성한다.
-7. gold 파일의 SHA-256 digest를 기록하고 동결한다.
+6. connector, extractor와 생성 문서를 보지 않은 사람이 소스를 검토해 gold annotation을 작성한다.
+7. 별도의 사람이 gold의 완전성과 인용을 검토한 뒤 승인하고, gold 파일의 SHA-256 digest를 기록해 동결한다.
 8. 동결 후에만 extractor와 Mode A workflow를 실행한다.
+
+사람의 검토가 완료되지 않으면 `human_review_pending`을 기록하고 **동결과 추출을 중단**한다. 에이전트가 작성한 초안이나 사용자 무응답을 human-reviewed gold로 간주해서는 안 된다.
 
 브랜치 이름인 `main`, `master`, `latest`는 재현 가능한 식별자가 아니므로 평가 식별자로 사용하지 않는다. 예를 들어 후보 SHA를 검증한 다음 다음과 같이 detached checkout을 사용한다.
 
@@ -145,7 +147,9 @@ Gold는 connector 또는 detector 출력과 독립적으로 사람이 작성하�
 - 외부 서비스와 라이브러리 통합
 - 코드에서 근거를 확인할 수 있는 비즈니스 규칙
 
-어떤 범주가 존재하지 않으면 빈 결과로 두지 않고 검색한 경로와 패턴을 기록한 `Not found` 항목으로 남긴다. 현재 detector 출력은 누락된 gold를 보충하는 자료로 사용하지 않는다.
+`gold-surfaces.jsonl`에는 소스에서 실제 확인한 positive annotation만 넣는다. 어떤 개념 범주가 존재하지 않으면 `Not found`를 gold 행으로 만들지 않고 `gold-review-notes.md`에 검색한 경로, 패턴과 부재 판단을 기록한다. 현재 evaluator는 모든 gold 행을 기대 표면으로 계산하므로 `Not found` 행은 잘못된 false negative를 만든다. 현재 detector 출력은 누락된 gold를 보충하는 자료로 사용하지 않는다.
+
+사람이 검토하는 의미 범주는 등록 API, 데이터 계약, 설정/환경, 진입점, 상태, 테스트, 영속성/부작용, 외부 통합, 비즈니스 규칙의 9개다. 현재 extractor의 채점 vocabulary는 `registered_api`, `data_contract`, `environment`, `entrypoint`, `status_value`, `test_file`, `external_side_effect`의 7개다. 외부 통합과 비즈니스 규칙은 `gold-review-notes.md` 및 생성 문서 감사에서 별도로 평가하며, evidence work 도중 extractor 기능을 추가해 이 차이를 숨기지 않는다.
 
 ## Mode A 실행 순서
 
@@ -168,17 +172,24 @@ Writer, Auditor, Coverage Sentinel과 Gatekeeper의 actor identity, 입력 diges
 case-manifest.json
 scope-manifest.json
 gold-surfaces.jsonl
+gold-review-notes.md
 gold-digest.txt
 raw-extractor-output.json
+actual-surfaces.jsonl
+extractor-run.json
+extractor-result.json
 generated-documents/
 audit_log.jsonl
 evidence-audit.json
 coverage-audit.json
 draft-digest.txt
 gate-result.json
+publication-record.json
 run-record.json
 result.json
 ```
+
+`raw-extractor-output.json`은 extractor가 반환한 배열을 그대로 보존하고, 같은 배열을 행 단위로 직렬화한 `actual-surfaces.jsonl`을 `evaluate-document-quality.mjs`에 전달한다. 기존 evaluator는 JSONL 입력만 받으므로 raw JSON을 직접 채점하지 않는다. `extractor-result.json`에는 evaluator 원본 결과를 보존하고, 별도의 결정론적 집계가 audit, coverage, gate 및 publication 기록을 결합해 최종 `result.json`을 만든다.
 
 `run-record.json`에는 elapsed time, peak 또는 end-of-run RSS의 측정 방식, source bytes, response bytes, 실행 명령과 도구 버전을 기록한다. provider token, read count 또는 다른 계측값을 환경이 제공하지 않으면 추정값으로 대체하지 않고 `not_exposed` 또는 `not_measured`로 기록한다.
 
@@ -214,3 +225,14 @@ result.json
 4. 세 사례의 Mode A 실행을 완료한 후에만 외부 품질 종합 결과를 작성한다.
 
 첫 사례의 connector 결과나 detector 분류를 나머지 사례의 gold 작성 기준으로 사용해서는 안 된다. 재사용 가능한 것은 manifest와 annotation의 **형식**뿐이다.
+
+## 사례 1 실행 시 확인된 제약
+
+- 재현용 clone은 MCP 서버 root 아래인 `/workspace/legacy-spec-agent/.external-sources/prisma-examples`에 둔다. `/home/user/legacy-spec-agent`처럼 현재 실행 환경에 없는 경로를 고정하지 않는다.
+- `.external-sources/`는 Git에서 제외하며 clone 자체를 평가 결과로 커밋하지 않는다.
+- `source_root`는 clone root로 유지한다. 따라서 gold, actual, coverage와 문서 인용의 경로는 모두 `deployment-platforms/rest-express-docker-aws-ec2/...`로 시작한다.
+- `scope-manifest.json`은 strict gate input이므로 case metadata를 섞지 않는다. URL, 라이선스, 환경과 human-review 상태는 `case-manifest.json`에 기록한다.
+- `file_counts.supported`는 `includedSourceFiles()`가 인식하는 확장자의 파일 수와 정확히 일치시킨다. 각 `included_paths` 값은 `module_extractors`에 정확히 한 번 대응시킨다.
+- 문서 게이트가 인식하는 citation 확장자는 `.py`, `.ts`, `.js`, `.jsx`, `.tsx`, `.md`, `.json`, `.jsonl`, `.sh`, `.mjs`, `.cjs`, `.java`, `.cs`, `.go`다. `.prisma`, `.yml`, `.env`와 Dockerfile의 backtick 위치는 citation으로 집계되지 않으므로 이 파일만으로 뒷받침되는 claim을 검증된 인용으로 가장하지 않는다.
+- 일곱 Markdown 문서의 `analyzed_source_commit`은 detached source HEAD와 일치해야 한다. Writer, Evidence Auditor, Coverage Sentinel, Gatekeeper actor ID는 서로 달라야 하며, 역할 이름만 바꾼 동일 실행을 독립 actor로 간주하지 않는다.
+- `evaluate-document-quality.mjs`는 extractor precision/recall만 계산한다. citation accuracy, unsupported verified claims, unexplained omissions와 rejected-draft publication count는 원시 audit 및 publication 자료에서 결정론적으로 집계한다.
