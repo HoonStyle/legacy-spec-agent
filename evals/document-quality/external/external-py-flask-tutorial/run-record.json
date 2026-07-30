@@ -1,0 +1,59 @@
+{
+  "case": "external-py-flask-tutorial",
+  "analyzed_source_commit": "36e4a824f340fdee7ed50937ba8e7f6bc7d17f81",
+  "profile": "standard",
+  "environment": {
+    "os": "Linux",
+    "kernel": "6.18.5",
+    "arch": "x86_64",
+    "node_version": "v22.22.2",
+    "connector_revision": "d86c2b0e1781a9e2ca669160cce6b5d02dd05a92",
+    "execution_mode": "separate_subagent_actors; deterministic gate invoked via stdio MCP against connector dist build",
+    "source_checkout": ".external-sources/flask (git clone, detached at pinned SHA; not committed)"
+  },
+  "commands_run": [
+    "cd connector && npm ci && npm run build",
+    "git clone https://github.com/... .external-sources/flask && git checkout --detach 36e4a824f340fdee7ed50937ba8e7f6bc7d17f81",
+    "node evals/document-quality/external/run-extractor.mjs external-py-flask-tutorial flask",
+    "node scripts/evaluate-document-quality.mjs <case>/gold-surfaces.jsonl <case>/actual-surfaces.jsonl <case>/extractor-result.json",
+    "node evals/document-quality/external/freeze-draft.mjs external-py-flask-tutorial flask <writer> <extractor>",
+    "node evals/document-quality/external/precheck-draft.mjs external-py-flask-tutorial flask",
+    "node evals/document-quality/external/run-gate.mjs external-py-flask-tutorial flask <gatekeeper> evaluate",
+    "node evals/document-quality/external/run-gate.mjs external-py-flask-tutorial flask <gatekeeper> publish"
+  ],
+  "elapsed": {
+    "extractor_ms": 61.856,
+    "gate_ms": 913.069,
+    "publish_ms": 308.893,
+    "writer_and_audit_wall_clock": "not_measured",
+    "measurement_note": "agent-phase wall clock was not instrumented; only the deterministic extractor and gate calls were timed"
+  },
+  "resource": {
+    "rss_measurement": "process.memoryUsage().rss at end of the extractor run only (end-of-run, not peak)",
+    "extractor_rss_after_bytes": 60452864,
+    "writer_audit_gate_peak_rss": "not_measured"
+  },
+  "bytes": {
+    "in_scope_source_bytes": 24428,
+    "published_document_bytes": 58118,
+    "raw_extractor_output_bytes": 6126,
+    "gate_response_bytes": 102,
+    "publish_response_bytes": 275
+  },
+  "instrumentation_not_available": {
+    "provider_input_tokens": "not_exposed",
+    "provider_cached_input_tokens": "not_exposed",
+    "provider_output_tokens": "not_exposed",
+    "provider_reasoning_tokens": "not_exposed",
+    "provider_tool_tokens": "not_exposed",
+    "pricing_units": "not_exposed",
+    "unique_file_reads": "not_measured",
+    "repeated_file_reads": "not_measured",
+    "note": "per-run provider counters are not exposed in this environment; no estimate was substituted"
+  },
+  "execution_mode": {
+    "extractor": "direct module import of connector/dist/src/coverage-surface.js",
+    "gate_and_publication": "stdio MCP client against connector/dist/src/index.js",
+    "actors": "writer, evidence auditor, coverage sentinel and gatekeeper ran as separate agent processes with distinct actor ids"
+  }
+}

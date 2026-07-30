@@ -1,0 +1,18 @@
+{
+  "tool": "publish_approved_documents",
+  "gatekeeper_actor_id": "gatekeeper-ext2",
+  "execution_mode": "stdio MCP client against connector/dist/src/index.js",
+  "invoked_at_utc": "2026-07-30T08:28:49Z",
+  "elapsed_ms": 308.893,
+  "response_bytes": 275,
+  "result": {
+    "gate": {
+      "verdict": "approved",
+      "citation_count": 125,
+      "audited_citation_count": 125,
+      "reasons": []
+    },
+    "published": true,
+    "destination": "/home/user/legacy-spec-agent/evals/document-quality/external/external-py-flask-tutorial/generated-documents"
+  }
+}
