@@ -31,7 +31,7 @@
 {"action": "verified", "claim_id": "CLM-031", "evidence": "deployment-platforms/rest-express-docker-aws-ec2/src/routes/user.routes.ts:15", "document": "SPEC.md"}
 {"action": "verified", "claim_id": "CLM-032", "evidence": "deployment-platforms/rest-express-docker-aws-ec2/src/routes/user.routes.ts:28", "document": "SPEC.md"}
 {"action": "verified", "claim_id": "CLM-033", "evidence": "deployment-platforms/rest-express-docker-aws-ec2/src/routes/post.routes.ts:25", "document": "SPEC.md"}
-{"action": "flagged", "claim_id": "CLM-034", "evidence": "deployment-platforms/rest-express-docker-aws-ec2/src/routes/post.routes.ts:78-81", "document": "SPEC.md", "claim": "Cited lines post.routes.ts:78-81 show only the prisma.post.update call (where id, data published:true); they do not show the positive-integer-ID guard asserted in the same sentence ('the guard is a valid positive-integer ID') -- that guard is on lines 75-76 (parsePostId call and early return), which are outside the cited range."}
+{"action": "verified", "claim_id": "CLM-034", "evidence": "deployment-platforms/rest-express-docker-aws-ec2/src/routes/post.routes.ts:75-81", "document": "SPEC.md"}
 {"action": "verified", "claim_id": "CLM-035", "evidence": "deployment-platforms/rest-express-docker-aws-ec2/src/routes/post.routes.ts:60-66", "document": "SPEC.md"}
 {"action": "verified", "claim_id": "CLM-036", "evidence": "deployment-platforms/rest-express-docker-aws-ec2/src/index.ts:12", "document": "SPEC.md"}
 {"action": "verified", "claim_id": "CLM-037", "evidence": "deployment-platforms/rest-express-docker-aws-ec2/src/lib/prisma.ts:5-7", "document": "SPEC.md"}

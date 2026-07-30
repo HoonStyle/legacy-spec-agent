@@ -67,7 +67,7 @@ The system is a small REST API for users and posts, packaged for containerized d
 
 ## State transitions
 
-- CLM-034: Post.published transitions to true when PUT /publish/:id succeeds; the guard is a valid positive-integer ID and the side effect is a durable update (`deployment-platforms/rest-express-docker-aws-ec2/src/routes/post.routes.ts:78-81`).
+- CLM-034: Post.published transitions to true when PUT /publish/:id succeeds; the guard is a valid positive-integer ID and the side effect is a durable update (`deployment-platforms/rest-express-docker-aws-ec2/src/routes/post.routes.ts:75-81`).
 - CLM-035: Post creation passes only title, content, and the author connection, so the handler itself never sets published (`deployment-platforms/rest-express-docker-aws-ec2/src/routes/post.routes.ts:60-66`).
 - The initial default value of the published flag is defined at the schema level, which is not citable here; see UV-001.
 - No other code-defined state transitions were found (searched src/** for state or status fields and transition logic). **Not found.**
