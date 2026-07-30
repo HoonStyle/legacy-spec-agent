@@ -41,6 +41,22 @@ If either external evaluation or bounded replay fails because one representative
 
 Before ending the next session, update this queue with pinned case identifiers, commands run, raw result locations, satisfied and unsatisfied gates, and the exact blocker when an external counter or environment is unavailable. Keep implementation and direct regression tests in independently buildable functional commits, then run the commit-policy checks at the end of this file.
 
+**2026-07-30 review record.** Source-only gold drafts supplied for
+`external-py-flask-tutorial` at `36e4a824f340fdee7ed50937ba8e7f6bc7d17f81`
+and `external-mixed-online-boutique` at
+`9a4616e77f0f9cbcbecaf27d711c38890dda1404` were checked against detached source
+trees. The consolidated decisions are preserved in
+`docs/external-gold-review-summary.md`; each case's source-only inventory and detailed
+decisions are preserved in its case-specific `gold-review-notes.md`. Both inputs
+contained a duplicated JSONL copy and require the documented classification
+corrections. No gold digest,
+extractor output, generated document, or Mode A result was produced. The external
+quality gate therefore remains unevaluated; the immediate blocker is independent
+human approval of the corrected positive annotations. The corrected 57-row Flask and
+101-row Online Boutique drafts are preserved as case-specific `gold-surfaces.jsonl`
+files, but remain unfrozen and must not be used for extraction until approval and
+digests exist.
+
 ## Release-blocking priorities
 
 ### 1. Installed-plugin end-to-end smoke
