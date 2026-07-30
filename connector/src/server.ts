@@ -77,7 +77,7 @@ export function createServer(root: string, options: { cacheRoot?: string; fetchI
   const downloads = new ToolchainDownloadManager(cacheRoot, approvals, options.fetchImpl);
   const server = new McpServer({
     name: "legacy-spec-connector",
-    version: "0.2.1",
+    version: "0.3.0",
   });
 
   server.registerTool(
