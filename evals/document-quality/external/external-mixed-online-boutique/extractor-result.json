@@ -1,0 +1,68 @@
+{
+  "counts": {
+    "gold": 101,
+    "actual": 25,
+    "true_positive": 10,
+    "false_positive": 15,
+    "false_negative": 91
+  },
+  "precision": 0.4,
+  "recall": 0.099,
+  "critical_recall": 0,
+  "categories": {
+    "business_rule": {
+      "precision": null,
+      "recall": 0,
+      "gold": 12,
+      "actual": 0
+    },
+    "data_contract": {
+      "precision": 0.375,
+      "recall": 0.3333,
+      "gold": 9,
+      "actual": 8
+    },
+    "entrypoint": {
+      "precision": 0,
+      "recall": 0,
+      "gold": 7,
+      "actual": 2
+    },
+    "environment": {
+      "precision": 0.8571,
+      "recall": 0.2069,
+      "gold": 29,
+      "actual": 7
+    },
+    "external_integration": {
+      "precision": null,
+      "recall": 0,
+      "gold": 17,
+      "actual": 0
+    },
+    "external_side_effect": {
+      "precision": null,
+      "recall": 0,
+      "gold": 12,
+      "actual": 0
+    },
+    "registered_api": {
+      "precision": 0,
+      "recall": 0,
+      "gold": 10,
+      "actual": 7
+    },
+    "status_value": {
+      "precision": null,
+      "recall": 0,
+      "gold": 2,
+      "actual": 0
+    },
+    "test_file": {
+      "precision": 1,
+      "recall": 0.3333,
+      "gold": 3,
+      "actual": 1
+    }
+  }
+}

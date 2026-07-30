@@ -1,0 +1,58 @@
+{
+  "case": "external-py-flask-tutorial",
+  "analyzed_source_commit": "36e4a824f340fdee7ed50937ba8e7f6bc7d17f81",
+  "command": "node evals/document-quality/external/run-extractor.mjs external-py-flask-tutorial flask",
+  "connector_revision": "d86c2b0e1781a9e2ca669160cce6b5d02dd05a92",
+  "node_version": "v22.22.2",
+  "started_at": "2026-07-30T07:42:02.353Z",
+  "elapsed_ms": 61.856,
+  "rss_after_bytes": 60452864,
+  "rss_measurement": "process.memoryUsage().rss immediately after extraction (end-of-run, not peak)",
+  "included_paths": [
+    "examples/tutorial/flaskr",
+    "examples/tutorial/tests",
+    "examples/tutorial/pyproject.toml",
+    "examples/tutorial/README.rst"
+  ],
+  "excluded_paths": [
+    {
+      "path": "src/flask",
+      "reason": "Flask framework implementation is outside the tutorial evaluation scope"
+    },
+    {
+      "path": "tests",
+      "reason": "repository-root tests belong to the Flask framework, not the tutorial"
+    },
+    {
+      "path": "docs",
+      "reason": "framework documentation is not part of the analyzed service"
+    },
+    {
+      "path": "examples/javascript",
+      "reason": "unrelated example project"
+    },
+    {
+      "path": "examples/celery",
+      "reason": "unrelated example project"
+    },
+    {
+      "path": ".git",
+      "reason": "version-control metadata"
+    }
+  ],
+  "supported_file_count": 9,
+  "supported_files": [
+    "examples/tutorial/flaskr/__init__.py",
+    "examples/tutorial/flaskr/auth.py",
+    "examples/tutorial/flaskr/blog.py",
+    "examples/tutorial/flaskr/db.py",
+    "examples/tutorial/tests/conftest.py",
+    "examples/tutorial/tests/test_auth.py",
+    "examples/tutorial/tests/test_blog.py",
+    "examples/tutorial/tests/test_db.py",
+    "examples/tutorial/tests/test_factory.py"
+  ],
+  "surface_count": 19,
+  "raw_output_bytes": 6126,
+  "provider_counters": "not_exposed"
+}
