@@ -9,7 +9,10 @@ Coverage: `src/cartservice/**`, `src/checkoutservice/**` (excluding `genproto/**
 ### Persistent entities
 
 #### DM-CART-ENTITY
-A cart is `{UserId: string, Items: [{ProductId: string, Quantity: int32}]}`, constructed identically by all three store backends from the generated `Hipstershop.Cart`/`Hipstershop.CartItem` types (defined in the excluded/non-citable `Cart.proto`; only the C# construction site is cited). Lifecycle: created on first `AddItem`, updated by subsequent `AddItem` calls (`BR-CART-QUANTITY-MERGE`), replaced by an empty instance on `EmptyCart`. No cardinality/foreign-key claim is made beyond one cart per `userId` key. `CLM-089`: `src/cartservice/src/cartstore/RedisCartStore.cs:43-45`
+A cart is `{UserId: string, Items: [{ProductId: string, Quantity: int32}]}` as constructed by `RedisCartStore`, from the generated `Hipstershop.Cart`/`Hipstershop.CartItem` types (defined in the excluded/non-citable `Cart.proto`; only the C# construction sites are cited). `CLM-089`: `src/cartservice/src/cartstore/RedisCartStore.cs:43-45`
+`SpannerCartStore` constructs the same `{UserId, Items[{ProductId, Quantity}]}` shape when reading a cart back from Spanner. `CLM-142`: `src/cartservice/src/cartstore/SpannerCartStore.cs:125-131`
+`AlloyDBCartStore` constructs the same `CartItem` sub-shape (`ProductId`, `Quantity`) when reading a cart back from AlloyDB/Postgres. `CLM-143`: `src/cartservice/src/cartstore/AlloyDBCartStore.cs:119-125`
+Lifecycle: created on first `AddItem`, updated by subsequent `AddItem` calls (`BR-CART-QUANTITY-MERGE`), replaced by an empty instance on `EmptyCart`. No cardinality/foreign-key claim is made beyond one cart per `userId` key.
 
 #### DM-SPANNER-CARTITEMS-TABLE
 Cloud Spanner persists cart rows in a table named `CartItems` (a compile-time constant, not user input). `CLM-090`: `src/cartservice/src/cartstore/SpannerCartStore.cs:25`
@@ -112,13 +115,15 @@ The overriding assignment of `PORT`'s value into the local `port` variable, imme
 `COLLECTOR_SERVICE_ADDR`, required only when `ENABLE_TRACING=1`, addressing the OpenTelemetry collector. `CLM-108`: `src/checkoutservice/main.go:164`
 
 #### DM-ENV-DISABLE-TRACING
-shippingservice enables a (currently no-op) tracing initializer unless `DISABLE_TRACING` is set to any non-empty value. `CLM-085`: `src/shippingservice/main.go:57`
+shippingservice enables a tracing initializer unless `DISABLE_TRACING` is set to any non-empty value. `CLM-085`: `src/shippingservice/main.go:57`
+That initializer's body is currently a no-op (a `TODO` placeholder). `CLM-141`: `src/shippingservice/main.go:159-161`
 
 #### DM-ENV-DISABLE-PROFILER
 shippingservice enables Stackdriver profiling unless `DISABLE_PROFILER` is set to any non-empty value. `CLM-086`: `src/shippingservice/main.go:65`
 
 #### DM-ENV-DISABLE-STATS
-shippingservice branches its gRPC server construction on `DISABLE_STATS`, though both branches currently construct the server identically. `CLM-087`: `src/shippingservice/main.go:84`
+shippingservice reads `DISABLE_STATS` to decide which branch constructs its gRPC server. `CLM-087`: `src/shippingservice/main.go:84`
+Both branches currently construct the server identically. `CLM-146`: `src/shippingservice/main.go:84-90`
 
 #### DM-ENV-SHIPPING-PORT
 shippingservice reads `PORT` (not `APP_PORT`) to override its default listen port `50051` (see `UV-APP-PORT-MISMATCH` in `SPEC.md`). `CLM-109`: `src/shippingservice/main.go:73`

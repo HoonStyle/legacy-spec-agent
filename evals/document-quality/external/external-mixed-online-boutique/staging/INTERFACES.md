@@ -44,7 +44,8 @@ Signature: `Task<Empty> EmptyCart(EmptyCartRequest request, ServerCallContext co
 ### checkoutservice (Go, gRPC)
 
 #### API-CHECKOUT-PLACEORDER
-Signature: `PlaceOrder(ctx, *PlaceOrderRequest) (*PlaceOrderResponse, error)`. Request: user ID, currency, address, credit card, email. Response: order result (ID, tracking ID, shipping cost/address, items). Side effects and error mapping: see `SPEC.md` Business rules and Validation and error behavior. Not idempotent (each call places a new order, charges a card and ships). `CLM-069`: `src/checkoutservice/main.go:230`
+Signature: `PlaceOrder(ctx, *PlaceOrderRequest) (*PlaceOrderResponse, error)`. Request: user ID, currency, address, credit card, email. Side effects and error mapping: see `SPEC.md` Business rules and Validation and error behavior. Not idempotent (each call places a new order, charges a card and ships). `CLM-069`: `src/checkoutservice/main.go:230`
+Response: an `OrderResult` containing the order ID, the shipping tracking ID, the localized shipping cost, the shipping address, and the priced items. `CLM-139`: `src/checkoutservice/main.go:265-271`
 
 #### API-CHECKOUT-HEALTHCHECK
 `checkoutService.Check`/`Watch` are defined as gRPC Health methods on the service struct, but the server instead registers a separate stock `health.NewServer()` implementation, so these methods are unreachable (`RSK-CHECKOUT-HEALTH-DEADCODE` in `RISKS.md`). `CLM-070`: `src/checkoutservice/main.go:222`
@@ -58,7 +59,8 @@ Signature: `GetQuote(ctx, *GetQuoteRequest) (*GetQuoteResponse, error)`. Request
 Signature: `ShipOrder(ctx, *ShipOrderRequest) (*ShipOrderResponse, error)`. Request: address, cart items. Response: a generated `TrackingId`. Side effects: none durable (see `SPEC.md` Persistence and side effects). Not idempotent in output (a new tracking ID is generated per call) though it has no observable side effect. `CLM-072`: `src/shippingservice/main.go:142`
 
 #### API-SHIPPING-HEALTHCHECK
-The `server` struct's own `Check`/`Watch` methods are likewise defined but never registered as the active Health implementation; a separate stock `health.NewServer()` instance is registered instead (`RSK-SHIPPING-HEALTH-DEADCODE` in `RISKS.md`). `CLM-073`: `src/shippingservice/main.go:110`
+The `server` struct defines its own `Check` method satisfying the gRPC Health interface. `CLM-073`: `src/shippingservice/main.go:110`
+That method is never registered as the active Health implementation; a separate stock `health.NewServer()` instance is registered instead (`RSK-SHIPPING-HEALTH-DEADCODE` in `RISKS.md`). `CLM-140`: `src/shippingservice/main.go:93-94`
 
 ### Unverified external contracts
 

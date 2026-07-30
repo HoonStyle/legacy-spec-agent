@@ -51,7 +51,9 @@ shippingservice's process entrypoint. `CLM-004`: `src/shippingservice/main.go:56
 
 ## Validation and error behavior
 
-- All three cart store implementations translate any storage exception into a gRPC `RpcException` with `StatusCode.FailedPrecondition`. `CLM-025`: `src/cartservice/src/cartstore/RedisCartStore.cs:62-65`
+- RedisCartStore translates any storage exception into a gRPC `RpcException` with `StatusCode.FailedPrecondition`. `CLM-025`: `src/cartservice/src/cartstore/RedisCartStore.cs:62-65`
+- SpannerCartStore's `AddItemAsync` maps a storage exception to the same `RpcException`/`FailedPrecondition` pattern. `CLM-136`: `src/cartservice/src/cartstore/SpannerCartStore.cs:99-100`
+- AlloyDBCartStore's `AddItemAsync` maps a storage exception to the same `RpcException`/`FailedPrecondition` pattern. `CLM-137`: `src/cartservice/src/cartstore/AlloyDBCartStore.cs:98-99`
 - checkoutservice maps a cart/order-preparation failure to `codes.Internal`. `CLM-026`: `src/checkoutservice/main.go:239-241`
 - checkoutservice maps a shipping-quote/ship failure to `codes.Unavailable`. `CLM-027`: `src/checkoutservice/main.go:259-261`
 - `mustMapEnv` panics at startup if a required downstream-address environment variable is empty, so checkoutservice fails fast rather than starting half-configured. `CLM-028`: `src/checkoutservice/main.go:203-206`
@@ -70,7 +72,7 @@ Configuration in this scope is dominated by environment variables read once at p
 ## Persistence and side effects
 
 - Redis: a cart is serialized to protobuf bytes and written to the distributed cache under the user ID key. `CLM-033`: `src/cartservice/src/cartstore/RedisCartStore.cs:60`
-- Spanner: an insert-or-update into the `CartItems` table via a parameterized command inside a retriable transaction. `CLM-034`: `src/cartservice/src/cartstore/SpannerCartStore.cs:80-89`
+- Spanner: an insert-or-update into the `CartItems` table via a parameterized command inside a retriable transaction. `CLM-034`: `src/cartservice/src/cartstore/SpannerCartStore.cs:60-89`
 - AlloyDB: an insert-or-update into a configurable table via a raw, string-interpolated SQL command (see `RSK-ALLOYDB-SQL-INTERPOLATION` in `RISKS.md`). `CLM-035`: `src/cartservice/src/cartstore/AlloyDBCartStore.cs:81-88`
 - checkoutservice: an outbound payment-charge call. `CLM-036`: `src/checkoutservice/main.go:252`
 - checkoutservice: an outbound shipment call. `CLM-037`: `src/checkoutservice/main.go:258`
@@ -83,7 +85,8 @@ Configuration in this scope is dominated by environment variables read once at p
 - checkoutservice toggles OpenTelemetry tracing and Stackdriver profiling independently via `ENABLE_TRACING`/`ENABLE_PROFILER`. `CLM-041`: `src/checkoutservice/main.go:90-103`
 - checkoutservice retries Stackdriver profiler initialization up to three times with growing backoff before giving up. `CLM-042`: `src/checkoutservice/main.go:183-197`
 - shippingservice registers gRPC server reflection unconditionally. `CLM-043`: `src/shippingservice/main.go:98`
-- Both checkoutservice and shippingservice register the stock `health.NewServer()` implementation as their gRPC Health service. `CLM-044`: `src/checkoutservice/main.go:143-144`
+- checkoutservice registers the stock `health.NewServer()` implementation as its gRPC Health service. `CLM-044`: `src/checkoutservice/main.go:143-144`
+- shippingservice also registers the stock `health.NewServer()` implementation as its gRPC Health service. `CLM-138`: `src/shippingservice/main.go:93-94`
 
 ## Known limitations
 
