@@ -5,7 +5,7 @@ Generated at: 2026-07-30
 Scope: same as SPEC.md — examples/tutorial/flaskr/** and examples/tutorial/tests/**; non-citable files (schema.sql, data.sql, *.html, style.css, pyproject.toml, README.rst) are described only where explicitly marked Unverified. Not truncated.
 
 ## System context
-Flaskr is a single-process Flask WSGI application: an HTTP client sends browser requests to the app, the app reads and writes a local SQLite database file, and returns rendered HTML pages (CLM-043: `examples/tutorial/flaskr/blog.py:25`).
+Flaskr is a single-process Flask WSGI application: an HTTP client sends browser requests to the app, the app reads from a local SQLite database file, and returns rendered HTML pages (CLM-043: `examples/tutorial/flaskr/blog.py:19-25`); separate write paths are documented under Persistence and side effects in SPEC.md.
 
 ## Component inventory
 - flaskr package / application factory — builds the app, loads config, registers the CLI command and blueprints (CLM-044: `examples/tutorial/flaskr/__init__.py:6-40`).
@@ -38,7 +38,9 @@ Resolved import edges (all internal, syntax-level, high confidence):
 - flaskr/blog.py imports flaskr/auth.py and flaskr/db.py (CLM-052: `examples/tutorial/flaskr/blog.py:10-11`).
 - tests/conftest.py imports the flaskr package and flaskr/db.py (CLM-053: `examples/tutorial/tests/conftest.py:6-8`).
 
-Unresolved/external edges: flask, werkzeug, click, sqlite3, and pytest are external packages or stdlib modules, not part of the analyzed module set (CLM-054: `examples/tutorial/flaskr/auth.py:1-12`).
+Unresolved/external edges: flask and werkzeug are external packages imported directly in the auth module, not part of the analyzed module set (CLM-054: `examples/tutorial/flaskr/auth.py:1-12`).
+Unresolved/external edges: click and the stdlib sqlite3 module are external dependencies imported in the db module (CLM-134: `examples/tutorial/flaskr/db.py:1-4`).
+Unresolved/external edges: pytest is an external dependency imported by the test suite (CLM-135: `examples/tutorial/tests/test_auth.py:1`).
 
 No call graph is produced or implied by this section: the diagram above shows syntax imports only, not a call graph.
 
@@ -47,9 +49,10 @@ No call graph is produced or implied by this section: the diagram above shows sy
 - No network calls, message queues, caches, or third-party APIs exist in the analyzed .py sources (searched: all files in Coverage) — Not found.
 
 ## Major execution flows
-- Request lifecycle: load_logged_in_user runs before every request, populating g.user from the session (CLM-056: `examples/tutorial/flaskr/auth.py:32-33`).
+- Request lifecycle: load_logged_in_user runs before every request, populating g.user from the session (CLM-056: `examples/tutorial/flaskr/auth.py:32-43`).
 - Request lifecycle: the database connection opened during a request is torn down at the end of the application context (CLM-057: `examples/tutorial/flaskr/db.py:55`).
-- Post mutation flow: blog update/delete first resolve and authorize via get_post, then validate input, then write and commit, then redirect to the index (CLM-058: `examples/tutorial/flaskr/blog.py:86-110`).
+- Post mutation flow (update): blog.update first resolves and authorizes the post via get_post, then validates the submitted title, then writes and commits, then redirects to the index (CLM-058: `examples/tutorial/flaskr/blog.py:86-110`).
+- Post mutation flow (delete): blog.delete first resolves and authorizes the post via get_post, with no input-validation step, then deletes and commits, then redirects to the index (CLM-136: `examples/tutorial/flaskr/blog.py:113-125`).
 
 ## Trust boundaries
 - The HTTP boundary between an untrusted client and the app: all submitted form fields are read via request.form (CLM-059: `examples/tutorial/flaskr/auth.py:54-55`).

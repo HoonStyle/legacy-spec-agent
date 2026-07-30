@@ -33,7 +33,8 @@ Entrypoints: the WSGI application factory create_app() (CLM-004: `examples/tutor
 - **BR-003** Passwords are hashed before being stored; the plaintext password is never persisted (CLM-015: `examples/tutorial/flaskr/auth.py:68`).
 - **BR-004** Login fails unless a user row exists for the username and its stored hash matches the submitted password (CLM-016: `examples/tutorial/flaskr/auth.py:96-99`).
 - **BR-005** Views wrapped by login_required redirect an anonymous visitor to the login page instead of executing (CLM-017: `examples/tutorial/flaskr/auth.py:24-25`).
-- **BR-006** A post's title is required on both create and update; the body has no such check (CLM-018: `examples/tutorial/flaskr/blog.py:69-70`).
+- **BR-006** A post's title is required on create; the body has no such check (CLM-018: `examples/tutorial/flaskr/blog.py:69-70`).
+- The same title requirement applies on update, the same rule as BR-006 (CLM-133: `examples/tutorial/flaskr/blog.py:97-98`).
 - **BR-007** Only the post's author may update or delete it; any other authenticated user gets HTTP 403 (CLM-019: `examples/tutorial/flaskr/blog.py:54-55`).
 - **BR-008** Requesting a post id that does not exist aborts with HTTP 404 before any author check (CLM-020: `examples/tutorial/flaskr/blog.py:51-52`).
 - **BR-009** A successful login clears any prior session before storing the new user_id (CLM-021: `examples/tutorial/flaskr/auth.py:103-104`).
@@ -42,18 +43,18 @@ Entrypoints: the WSGI application factory create_app() (CLM-004: `examples/tutor
 Related: BR-001–BR-004 govern API-AUTH-REGISTER and API-AUTH-LOGIN; BR-005–BR-008 govern API-BLOG-CREATE, API-BLOG-UPDATE, API-BLOG-DELETE.
 
 ## Validation and error behavior
-- Missing username/password on register flashes an error message and re-renders the form without redirecting (CLM-023: `examples/tutorial/flaskr/auth.py:59-62`).
-- A username collision on register is caught from a database integrity error and flashed as an error (CLM-024: `examples/tutorial/flaskr/auth.py:71-74`).
-- An unknown username or a wrong password on login is flashed as a distinct error message for each case (CLM-025: `examples/tutorial/flaskr/auth.py:96-99`).
+- Missing username/password on register flashes an error message and re-renders the form without redirecting (CLM-023: `examples/tutorial/flaskr/auth.py:59-81`).
+- A username collision on register is caught from a database integrity error and flashed as an error (CLM-024: `examples/tutorial/flaskr/auth.py:71-79`).
+- An unknown username or a wrong password on login is flashed as a distinct error message for each case (CLM-025: `examples/tutorial/flaskr/auth.py:96-107`).
 - A missing post title on create/update flashes an error and does not write to the database (CLM-026: `examples/tutorial/flaskr/blog.py:69-73`).
 - get_post raises HTTP 404 for a non-existent post id and HTTP 403 when the current user is not the author (CLM-027: `examples/tutorial/flaskr/blog.py:51-55`).
 
 ## State transitions
 - Session anonymous → authenticated on successful login, guarded by the username/password check, side effect of clearing then repopulating the session (CLM-028: `examples/tutorial/flaskr/auth.py:103-104`).
 - Session authenticated → anonymous on logout, unconditional, side effect of clearing the session (CLM-029: `examples/tutorial/flaskr/auth.py:115`).
-- Post absent → persisted on create, guarded by a non-empty title, side effect of an insert followed by a commit (CLM-030: `examples/tutorial/flaskr/blog.py:76-80`).
-- Post persisted → updated on update, guarded by author match and a non-empty title, side effect of an update followed by a commit (CLM-031: `examples/tutorial/flaskr/blog.py:103-107`).
-- Post persisted → deleted on delete, guarded by author match, side effect of a delete followed by a commit (CLM-032: `examples/tutorial/flaskr/blog.py:122-124`).
+- Post absent → persisted on create, guarded by a non-empty title, side effect of an insert followed by a commit (CLM-030: `examples/tutorial/flaskr/blog.py:69-80`).
+- Post persisted → updated on update, guarded by author match and a non-empty title, side effect of an update followed by a commit (CLM-031: `examples/tutorial/flaskr/blog.py:90-107`).
+- Post persisted → deleted on delete, guarded by author match, side effect of a delete followed by a commit (CLM-032: `examples/tutorial/flaskr/blog.py:121-124`).
 
 ## Configuration
 - SECRET_KEY — default "dev", overridable by instance config or test config; used for session signing (CLM-033: `examples/tutorial/flaskr/__init__.py:9-11`).

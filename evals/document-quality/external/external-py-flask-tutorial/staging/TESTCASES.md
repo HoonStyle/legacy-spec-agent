@@ -31,8 +31,11 @@ Scope: same as SPEC.md. All 5 test modules under examples/tutorial/tests/ were r
 #### TC-FILE-TEST-BLOG
 - Given/When/Then: given a logged-in and an anonymous client, when index/create/update/delete requests are sent, then responses match BR-005 through BR-008 (CLM-112: `examples/tutorial/tests/test_blog.py:1`).
 - Related: BR-005, BR-006, BR-007, BR-008, API-BLOG-INDEX, API-BLOG-CREATE, API-BLOG-UPDATE, API-BLOG-DELETE.
-- Inputs: path parameters identifying a post and form data with title and body (CLM-113: `examples/tutorial/tests/test_blog.py:19`).
-- Expected result: 403 for a non-author, 404 for a non-existent post, redirect to the index on success (CLM-114: `examples/tutorial/tests/test_blog.py:34-35`).
+- Inputs: parametrized path values identifying a post, exercised without form data for the login-required checks (CLM-113: `examples/tutorial/tests/test_blog.py:19`).
+- Inputs also include form data with title and body for the create/update tests (CLM-138: `examples/tutorial/tests/test_blog.py:49`).
+- Expected result: HTTP 403 for a request from a non-author (CLM-114: `examples/tutorial/tests/test_blog.py:34-35`).
+- Expected result: HTTP 404 for a request against a non-existent post id (CLM-139: `examples/tutorial/tests/test_blog.py:43`).
+- Expected result: a redirect to the site root on a successful delete (CLM-140: `examples/tutorial/tests/test_blog.py:78`).
 - Side effects: mutates the post table for the create/update/delete cases.
 - Execution command: pytest against this file (name only; see UV-006).
 - Required environment/configuration: the app/client/auth fixtures from conftest.py.

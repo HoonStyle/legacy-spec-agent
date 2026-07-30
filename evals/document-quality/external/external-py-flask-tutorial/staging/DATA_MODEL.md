@@ -22,7 +22,8 @@ Scope: same as SPEC.md. Persistent entities are grounded in the SQL literals exe
 - id — path parameter and join/lookup key for update and delete (CLM-093: `examples/tutorial/flaskr/blog.py:43-46`).
 - title — required string field, read from the create/update form (CLM-094: `examples/tutorial/flaskr/blog.py:65-66`).
 - body — string field with no non-empty validation applied (CLM-095: `examples/tutorial/flaskr/blog.py:66`).
-- created — read and displayed on the index page; never set from a request field, so it is populated by the database itself (CLM-096: `examples/tutorial/flaskr/blog.py:21-23`); the default-value mechanism is declared only in flaskr/schema.sql, a non-citable extension — see UV-001.
+- created — read and displayed on the index page (CLM-096: `examples/tutorial/flaskr/blog.py:21-23`).
+- created is not among the columns the create-post insert accepts from the request form, so it is not set from a request field and is populated by the database itself (CLM-137: `examples/tutorial/flaskr/blog.py:76-78`); the default-value mechanism is declared only in flaskr/schema.sql, a non-citable extension — see UV-001.
 - author_id — set from the logged-in user's id at create time, never accepted from the request body (CLM-097: `examples/tutorial/flaskr/blog.py:78`).
 - Validation: title required on create/update (BR-006).
 - Relations: Post.author_id references User.id; the foreign-key declaration itself lives only in the non-citable flaskr/schema.sql (see UV-001), while the join usage between the two entities is grounded in DM-001's Relations bullet above.
