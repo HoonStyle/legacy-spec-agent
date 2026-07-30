@@ -1,0 +1,132 @@
+{"action": "verified", "claim_id": "CLM-001", "evidence": "examples/tutorial/flaskr/__init__.py:6-40", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-002", "evidence": "examples/tutorial/flaskr/blog.py:60-125", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-003", "evidence": "examples/tutorial/flaskr/db.py:41-45", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-004", "evidence": "examples/tutorial/flaskr/__init__.py:6", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-005", "evidence": "examples/tutorial/flaskr/blog.py:16-25", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-006", "evidence": "examples/tutorial/flaskr/__init__.py:26-28", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-007", "evidence": "examples/tutorial/flaskr/auth.py:46-81", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-008", "evidence": "examples/tutorial/flaskr/auth.py:84-109", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-009", "evidence": "examples/tutorial/flaskr/auth.py:112-116", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-010", "evidence": "examples/tutorial/flaskr/blog.py:60-83", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-011", "evidence": "examples/tutorial/flaskr/blog.py:86-110", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-012", "evidence": "examples/tutorial/flaskr/blog.py:113-125", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-013", "evidence": "examples/tutorial/flaskr/auth.py:59-62", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-014", "evidence": "examples/tutorial/flaskr/auth.py:71-74", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-015", "evidence": "examples/tutorial/flaskr/auth.py:68", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-016", "evidence": "examples/tutorial/flaskr/auth.py:96-99", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-017", "evidence": "examples/tutorial/flaskr/auth.py:24-25", "document": "SPEC.md"}
+{"action": "flagged", "claim_id": "CLM-018", "evidence": "examples/tutorial/flaskr/blog.py:69-70", "document": "SPEC.md", "claim": "Cited range blog.py:69-70 covers only create()'s title check. The claim asserts the guard applies 'on both create and update,' but update()'s identical check is at blog.py:97-98, which is never cited anywhere in the draft."}
+{"action": "verified", "claim_id": "CLM-019", "evidence": "examples/tutorial/flaskr/blog.py:54-55", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-020", "evidence": "examples/tutorial/flaskr/blog.py:51-52", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-021", "evidence": "examples/tutorial/flaskr/auth.py:103-104", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-022", "evidence": "examples/tutorial/flaskr/__init__.py:46", "document": "SPEC.md"}
+{"action": "flagged", "claim_id": "CLM-023", "evidence": "examples/tutorial/flaskr/auth.py:59-62", "document": "SPEC.md", "claim": "Cited lines (auth.py:59-62) only set the validation-error string. The claim also asserts the view 'flashes an error message and re-renders the form' -- flash(error) is auth.py:79 and the render_template return is auth.py:81, neither in the cited range."}
+{"action": "flagged", "claim_id": "CLM-024", "evidence": "examples/tutorial/flaskr/auth.py:71-74", "document": "SPEC.md", "claim": "Cited except-block (auth.py:71-74) sets the duplicate-username error string but never shows it being flashed. flash(error) is auth.py:79, outside the cited range, yet the claim asserts it is 'flashed as an error.'"}
+{"action": "flagged", "claim_id": "CLM-025", "evidence": "examples/tutorial/flaskr/auth.py:96-99", "document": "SPEC.md", "claim": "Cited lines (auth.py:96-99) only set the two error strings. The claim asserts they are 'flashed as a distinct error message,' but flash(error) is auth.py:107, outside the cited range."}
+{"action": "verified", "claim_id": "CLM-026", "evidence": "examples/tutorial/flaskr/blog.py:69-73", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-027", "evidence": "examples/tutorial/flaskr/blog.py:51-55", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-028", "evidence": "examples/tutorial/flaskr/auth.py:103-104", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-029", "evidence": "examples/tutorial/flaskr/auth.py:115", "document": "SPEC.md"}
+{"action": "flagged", "claim_id": "CLM-030", "evidence": "examples/tutorial/flaskr/blog.py:76-80", "document": "SPEC.md", "claim": "Cited lines (blog.py:76-80) show only the insert+commit. The claim asserts the transition is 'guarded by a non-empty title,' but that guard is blog.py:69-70, not in the cited range."}
+{"action": "flagged", "claim_id": "CLM-031", "evidence": "examples/tutorial/flaskr/blog.py:103-107", "document": "SPEC.md", "claim": "Cited lines (blog.py:103-107) show only the update+commit. The claim asserts the transition is 'guarded by author match and a non-empty title,' but the author-match guard is the get_post(id) call at blog.py:90 and the title guard is blog.py:97-98; neither is in the cited range."}
+{"action": "flagged", "claim_id": "CLM-032", "evidence": "examples/tutorial/flaskr/blog.py:122-124", "document": "SPEC.md", "claim": "Cited lines (blog.py:122-124) show db-open/delete/commit only. The claim asserts the transition is 'guarded by author match,' but that guard is inside get_post(id) at blog.py:121, one line above the cited range and not included."}
+{"action": "verified", "claim_id": "CLM-033", "evidence": "examples/tutorial/flaskr/__init__.py:9-11", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-034", "evidence": "examples/tutorial/flaskr/__init__.py:12-13", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-035", "evidence": "examples/tutorial/flaskr/__init__.py:19-21", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-036", "evidence": "examples/tutorial/flaskr/__init__.py:16-18", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-037", "evidence": "examples/tutorial/flaskr/db.py:14-18", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-038", "evidence": "examples/tutorial/flaskr/db.py:55", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-039", "evidence": "examples/tutorial/flaskr/db.py:37-38", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-040", "evidence": "examples/tutorial/flaskr/auth.py:70", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-041", "evidence": "examples/tutorial/flaskr/__init__.py:24", "document": "SPEC.md"}
+{"action": "verified", "claim_id": "CLM-042", "evidence": "examples/tutorial/flaskr/db.py:41-45", "document": "SPEC.md"}
+{"action": "flagged", "claim_id": "CLM-043", "evidence": "examples/tutorial/flaskr/blog.py:25", "document": "ARCHITECTURE.md", "claim": "Cited line (blog.py:25) is only the render_template return. The claim also asserts 'the app reads and writes a local SQLite database file,' but the SQLite read (db.execute select) is blog.py:20-24, not in the cited range, and no write is shown anywhere in this citation."}
+{"action": "verified", "claim_id": "CLM-044", "evidence": "examples/tutorial/flaskr/__init__.py:6-40", "document": "ARCHITECTURE.md"}
+{"action": "verified", "claim_id": "CLM-045", "evidence": "examples/tutorial/flaskr/auth.py:16", "document": "ARCHITECTURE.md"}
+{"action": "verified", "claim_id": "CLM-046", "evidence": "examples/tutorial/flaskr/blog.py:13", "document": "ARCHITECTURE.md"}
+{"action": "verified", "claim_id": "CLM-047", "evidence": "examples/tutorial/flaskr/db.py:9-56", "document": "ARCHITECTURE.md"}
+{"action": "verified", "claim_id": "CLM-048", "evidence": "examples/tutorial/tests/conftest.py:15-44", "document": "ARCHITECTURE.md"}
+{"action": "verified", "claim_id": "CLM-049", "evidence": "examples/tutorial/flaskr/__init__.py:48", "document": "ARCHITECTURE.md"}
+{"action": "verified", "claim_id": "CLM-050", "evidence": "examples/tutorial/flaskr/__init__.py:31-37", "document": "ARCHITECTURE.md"}
+{"action": "verified", "claim_id": "CLM-051", "evidence": "examples/tutorial/flaskr/auth.py:14", "document": "ARCHITECTURE.md"}
+{"action": "verified", "claim_id": "CLM-052", "evidence": "examples/tutorial/flaskr/blog.py:10-11", "document": "ARCHITECTURE.md"}
+{"action": "verified", "claim_id": "CLM-053", "evidence": "examples/tutorial/tests/conftest.py:6-8", "document": "ARCHITECTURE.md"}
+{"action": "flagged", "claim_id": "CLM-054", "evidence": "examples/tutorial/flaskr/auth.py:1-12", "document": "ARCHITECTURE.md", "claim": "The claim names flask, werkzeug, click, sqlite3, and pytest as unresolved external edges. The cited range (auth.py:1-12) shows only flask and werkzeug imports; click and sqlite3 are imported in db.py:1-4 and pytest in the test files -- none of which are in the cited range."}
+{"action": "verified", "claim_id": "CLM-055", "evidence": "examples/tutorial/flaskr/db.py:15-16", "document": "ARCHITECTURE.md"}
+{"action": "flagged", "claim_id": "CLM-056", "evidence": "examples/tutorial/flaskr/auth.py:32-33", "document": "ARCHITECTURE.md", "claim": "Cited lines (auth.py:32-33) are only the @bp.before_app_request decorator and the function signature. The claim also asserts the function is 'populating g.user from the session,' but that body is auth.py:36-43, not in the cited range."}
+{"action": "verified", "claim_id": "CLM-057", "evidence": "examples/tutorial/flaskr/db.py:55", "document": "ARCHITECTURE.md"}
+{"action": "flagged", "claim_id": "CLM-058", "evidence": "examples/tutorial/flaskr/blog.py:86-110", "document": "ARCHITECTURE.md", "claim": "Cited range (blog.py:86-110) is update() only; delete() (blog.py:113-125) is never included even though the claim explicitly covers 'update/delete.' Additionally, delete() has no 'validate input' step at all (no form fields are read there), so the described flow is factually wrong for delete()."}
+{"action": "verified", "claim_id": "CLM-059", "evidence": "examples/tutorial/flaskr/auth.py:54-55", "document": "ARCHITECTURE.md"}
+{"action": "verified", "claim_id": "CLM-060", "evidence": "examples/tutorial/flaskr/auth.py:104", "document": "ARCHITECTURE.md"}
+{"action": "verified", "claim_id": "CLM-061", "evidence": "examples/tutorial/flaskr/db.py:9-20", "document": "ARCHITECTURE.md"}
+{"action": "verified", "claim_id": "CLM-062", "evidence": "examples/tutorial/flaskr/__init__.py:26", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-063", "evidence": "examples/tutorial/flaskr/__init__.py:28", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-064", "evidence": "examples/tutorial/flaskr/blog.py:16", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-065", "evidence": "examples/tutorial/flaskr/blog.py:20-25", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-066", "evidence": "examples/tutorial/flaskr/auth.py:46", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-067", "evidence": "examples/tutorial/flaskr/auth.py:54-55", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-068", "evidence": "examples/tutorial/flaskr/auth.py:77", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-069", "evidence": "examples/tutorial/flaskr/auth.py:66-70", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-070", "evidence": "examples/tutorial/flaskr/auth.py:84", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-071", "evidence": "examples/tutorial/flaskr/auth.py:88-89", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-072", "evidence": "examples/tutorial/flaskr/auth.py:105", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-073", "evidence": "examples/tutorial/flaskr/auth.py:112", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-074", "evidence": "examples/tutorial/flaskr/auth.py:116", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-075", "evidence": "examples/tutorial/flaskr/auth.py:115", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-076", "evidence": "examples/tutorial/flaskr/blog.py:60", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-077", "evidence": "examples/tutorial/flaskr/blog.py:65-66", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-078", "evidence": "examples/tutorial/flaskr/blog.py:81", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-079", "evidence": "examples/tutorial/flaskr/blog.py:76-80", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-080", "evidence": "examples/tutorial/flaskr/blog.py:86", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-081", "evidence": "examples/tutorial/flaskr/blog.py:93-94", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-082", "evidence": "examples/tutorial/flaskr/blog.py:108", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-083", "evidence": "examples/tutorial/flaskr/blog.py:51-55", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-084", "evidence": "examples/tutorial/flaskr/blog.py:104-107", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-085", "evidence": "examples/tutorial/flaskr/blog.py:113", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-086", "evidence": "examples/tutorial/flaskr/blog.py:125", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-087", "evidence": "examples/tutorial/flaskr/blog.py:51-55", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-088", "evidence": "examples/tutorial/flaskr/blog.py:123-124", "document": "INTERFACES.md"}
+{"action": "verified", "claim_id": "CLM-089", "evidence": "examples/tutorial/flaskr/auth.py:42", "document": "DATA_MODEL.md"}
+{"action": "verified", "claim_id": "CLM-090", "evidence": "examples/tutorial/flaskr/auth.py:93", "document": "DATA_MODEL.md"}
+{"action": "verified", "claim_id": "CLM-091", "evidence": "examples/tutorial/flaskr/auth.py:67-68", "document": "DATA_MODEL.md"}
+{"action": "verified", "claim_id": "CLM-092", "evidence": "examples/tutorial/flaskr/blog.py:21-22", "document": "DATA_MODEL.md"}
+{"action": "verified", "claim_id": "CLM-093", "evidence": "examples/tutorial/flaskr/blog.py:43-46", "document": "DATA_MODEL.md"}
+{"action": "verified", "claim_id": "CLM-094", "evidence": "examples/tutorial/flaskr/blog.py:65-66", "document": "DATA_MODEL.md"}
+{"action": "verified", "claim_id": "CLM-095", "evidence": "examples/tutorial/flaskr/blog.py:66", "document": "DATA_MODEL.md"}
+{"action": "flagged", "claim_id": "CLM-096", "evidence": "examples/tutorial/flaskr/blog.py:21-23", "document": "DATA_MODEL.md", "claim": "Cited lines (blog.py:21-23) are index()'s SELECT statement, which shows 'created' being read/displayed but does not show it is 'never set from a request field' -- that depends on create()'s INSERT statement at blog.py:76-78, which is not in the cited range."}
+{"action": "verified", "claim_id": "CLM-097", "evidence": "examples/tutorial/flaskr/blog.py:78", "document": "DATA_MODEL.md"}
+{"action": "verified", "claim_id": "CLM-098", "evidence": "examples/tutorial/flaskr/__init__.py:11", "document": "DATA_MODEL.md"}
+{"action": "verified", "claim_id": "CLM-099", "evidence": "examples/tutorial/flaskr/__init__.py:13", "document": "DATA_MODEL.md"}
+{"action": "verified", "claim_id": "CLM-100", "evidence": "examples/tutorial/flaskr/__init__.py:21", "document": "DATA_MODEL.md"}
+{"action": "verified", "claim_id": "CLM-101", "evidence": "examples/tutorial/flaskr/__init__.py:3", "document": "ONBOARDING.md"}
+{"action": "verified", "claim_id": "CLM-102", "evidence": "examples/tutorial/flaskr/auth.py:11-12", "document": "ONBOARDING.md"}
+{"action": "verified", "claim_id": "CLM-103", "evidence": "examples/tutorial/flaskr/db.py:1-4", "document": "ONBOARDING.md"}
+{"action": "verified", "claim_id": "CLM-104", "evidence": "examples/tutorial/tests/test_auth.py:1", "document": "ONBOARDING.md"}
+{"action": "verified", "claim_id": "CLM-105", "evidence": "examples/tutorial/flaskr/db.py:41-45", "document": "ONBOARDING.md"}
+{"action": "verified", "claim_id": "CLM-106", "evidence": "examples/tutorial/tests/conftest.py:1", "document": "TESTCASES.md"}
+{"action": "verified", "claim_id": "CLM-107", "evidence": "examples/tutorial/tests/conftest.py:32", "document": "TESTCASES.md"}
+{"action": "verified", "claim_id": "CLM-108", "evidence": "examples/tutorial/tests/conftest.py:21", "document": "TESTCASES.md"}
+{"action": "verified", "claim_id": "CLM-109", "evidence": "examples/tutorial/tests/test_auth.py:1", "document": "TESTCASES.md"}
+{"action": "verified", "claim_id": "CLM-110", "evidence": "examples/tutorial/tests/test_auth.py:13", "document": "TESTCASES.md"}
+{"action": "verified", "claim_id": "CLM-111", "evidence": "examples/tutorial/tests/test_auth.py:44-45", "document": "TESTCASES.md"}
+{"action": "verified", "claim_id": "CLM-112", "evidence": "examples/tutorial/tests/test_blog.py:1", "document": "TESTCASES.md"}
+{"action": "flagged", "claim_id": "CLM-113", "evidence": "examples/tutorial/tests/test_blog.py:19", "document": "TESTCASES.md", "claim": "Cited line (test_blog.py:19) is the @pytest.mark.parametrize decorator for test_login_required, whose body (client.post(path), no data kwarg) sends no form data at all. The claimed 'form data with title and body' actually appears in test_create/test_update (e.g. test_blog.py:49), not the cited line."}
+{"action": "flagged", "claim_id": "CLM-114", "evidence": "examples/tutorial/tests/test_blog.py:34-35", "document": "TESTCASES.md", "claim": "Cited lines (test_blog.py:34-35) show only the two 403 assertions from test_author_required. The claimed 404 case is in test_exists_required (test_blog.py:43) and the claimed 'redirect to the index on success' case is in test_update/test_delete (e.g. test_blog.py:78); neither is in the cited range."}
+{"action": "verified", "claim_id": "CLM-115", "evidence": "examples/tutorial/tests/test_db.py:1", "document": "TESTCASES.md"}
+{"action": "verified", "claim_id": "CLM-116", "evidence": "examples/tutorial/tests/test_db.py:13-16", "document": "TESTCASES.md"}
+{"action": "verified", "claim_id": "CLM-117", "evidence": "examples/tutorial/tests/test_factory.py:1", "document": "TESTCASES.md"}
+{"action": "verified", "claim_id": "CLM-118", "evidence": "examples/tutorial/tests/test_factory.py:6-7", "document": "TESTCASES.md"}
+{"action": "verified", "claim_id": "CLM-119", "evidence": "examples/tutorial/flaskr/__init__.py:24", "document": "TESTCASES.md"}
+{"action": "verified", "claim_id": "CLM-120", "evidence": "examples/tutorial/flaskr/__init__.py:17-18", "document": "TESTCASES.md"}
+{"action": "verified", "claim_id": "CLM-121", "evidence": "examples/tutorial/flaskr/auth.py:70", "document": "RISKS.md"}
+{"action": "verified", "claim_id": "CLM-122", "evidence": "examples/tutorial/flaskr/blog.py:80", "document": "RISKS.md"}
+{"action": "verified", "claim_id": "CLM-123", "evidence": "examples/tutorial/flaskr/blog.py:107", "document": "RISKS.md"}
+{"action": "verified", "claim_id": "CLM-124", "evidence": "examples/tutorial/flaskr/blog.py:124", "document": "RISKS.md"}
+{"action": "verified", "claim_id": "CLM-125", "evidence": "examples/tutorial/tests/conftest.py:32", "document": "RISKS.md"}
+{"action": "verified", "claim_id": "CLM-126", "evidence": "examples/tutorial/tests/conftest.py:19", "document": "RISKS.md"}
+{"action": "verified", "claim_id": "CLM-127", "evidence": "examples/tutorial/tests/test_blog.py:30", "document": "RISKS.md"}
+{"action": "verified", "claim_id": "CLM-128", "evidence": "examples/tutorial/flaskr/db.py:15-16", "document": "RISKS.md"}
+{"action": "verified", "claim_id": "CLM-129", "evidence": "examples/tutorial/flaskr/db.py:29-30", "document": "RISKS.md"}
+{"action": "verified", "claim_id": "CLM-130", "evidence": "examples/tutorial/flaskr/db.py:55", "document": "RISKS.md"}
+{"action": "verified", "claim_id": "CLM-131", "evidence": "examples/tutorial/flaskr/db.py:37-38", "document": "RISKS.md"}
+{"action": "verified", "claim_id": "CLM-132", "evidence": "examples/tutorial/flaskr/auth.py:71-74", "document": "RISKS.md"}
