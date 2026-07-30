@@ -41,6 +41,24 @@ If either external evaluation or bounded replay fails because one representative
 
 Before ending the next session, update this queue with pinned case identifiers, commands run, raw result locations, satisfied and unsatisfied gates, and the exact blocker when an external counter or environment is unavailable. Keep implementation and direct regression tests in independently buildable functional commits, then run the commit-policy checks at the end of this file.
 
+#### Session record — 2026-07-30
+
+**Item A, case 1 of 3 executed.** Case `external-ts-prisma-rest`: `prisma/prisma-examples` at revalidated revision `eb8f4328821c6746680a2ba02e0e5636a085a327`, scope `deployment-platforms/rest-express-docker-aws-ec2`, licenses Apache-2.0 (repository) and MIT (selected package, from its `package.json`), profile `standard`. Cases 2 (`external-py-flask-tutorial`) and 3 (`external-mixed-online-boutique`) are not started, so no combined external summary exists yet.
+
+Raw results: `evals/document-quality/external/external-ts-prisma-rest/`. Commands are listed in that case's `run-record.json`; the reproducible runners are `run-extractor.mjs` and `run-gate.mjs` in the same directory. The pinned clone lives in the ignored `.external-sources/` and is not committed.
+
+Gold was authored from the pinned source only, reviewed by the repository owner, and frozen at 42 rows with digest `1068766fe3cc89f97f04b833dfaf51a0615bbace7a3c2825af8205f599117300` before any extractor or Mode A run. Review removed the two npm-script entrypoint rows; `gold-review-notes.md` records that decision, the absent `test_file` category with its search patterns, and the judgment calls. One reviewer approved it, not the two-reviewer resolution `GOLD_DATASET.md` describes.
+
+The Mode A run used separate agent processes for `writer-ext1`, `auditor-ext1`, `sentinel-ext1` and `gatekeeper-ext1` over `extractor-ext1` output. Round 1 was **rejected**: the evidence auditor flagged CLM-034, whose citation covered only the Prisma update and not the ID guard it asserted. The Writer widened the citation, the digest was re-frozen from `71131fd7…` to `9d288ff7…`, and round 2 verified all 200 claims. `evaluate_document_gate` then returned `approved` with 179/179 audited citations and no reason codes, and `publish_approved_documents` populated `generated-documents/` byte-identically.
+
+**Satisfied:** citation accuracy 100% across all 200 claims, unsupported verified claims 0, unexplained omissions 0, rejected drafts published 0 (the round-1 rejection was corrected, never published).
+
+**Not satisfied — external quality gate remains open.** Critical-surface recall is **0.0833** against frozen gold (overall extractor precision 0.400, recall 0.0476; 5 detected surfaces versus 42 gold rows). The deterministic detector misses routes registered on named routers such as `postRouter.get`, every surface in non-citable files (`.prisma`, `.yml`, `.sql`), Prisma create/update/delete mutations, external integrations and business rules. Per item A this is reported, not papered over: no detector vocabulary was added to improve the number.
+
+**Item B remains blocked.** This environment does not expose per-run provider input, cached-input, output, reasoning or tool counters, and agent-phase elapsed time and peak RSS were not instrumented. Those fields are recorded as `not_exposed` / `not_measured` in `run-record.json` with no estimates substituted, so the counter-enabled replay was not attempted and the item-4 decision stays **Inconclusive**.
+
+**New evidence-triggered finding, not fixed.** `FINDING-gate-citation-undercount.md` records that fenced code blocks desynchronize `citationsIn()` in `connector/src/document-gate.ts`, so the gate validated 179 of the draft's 200 citations; the 21 invisible instances all follow a mermaid fence in `ARCHITECTURE.md`. Citation soundness for this case was established by the independent auditor and a full re-resolution of all 200 ranges rather than by the gate. This is not one of the per-file isolation failures item C permits, so no connector change was made.
+
 ## Release-blocking priorities
 
 ### 1. Installed-plugin end-to-end smoke
