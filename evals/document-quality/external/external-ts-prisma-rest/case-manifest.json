@@ -1,0 +1,49 @@
+{
+  "case_id": "external-ts-prisma-rest",
+  "repository_url": "https://github.com/prisma/prisma-examples",
+  "analyzed_source_commit": "eb8f4328821c6746680a2ba02e0e5636a085a327",
+  "commit_validation": {
+    "validated_on": "2026-07-30",
+    "method": "git ls-remote match against remote HEAD, then git clone + git checkout --detach; .git/HEAD equals the 40-character SHA",
+    "result": "confirmed"
+  },
+  "license": {
+    "repository_spdx_id": "Apache-2.0",
+    "selected_package_spdx_id": "MIT",
+    "validated_at_pinned_sha": true,
+    "license_file": "LICENSE",
+    "selected_package_license_field": "deployment-platforms/rest-express-docker-aws-ec2/package.json"
+  },
+  "profile": "standard",
+  "included_paths": [
+    "deployment-platforms/rest-express-docker-aws-ec2/src/**",
+    "deployment-platforms/rest-express-docker-aws-ec2/prisma/**",
+    "deployment-platforms/rest-express-docker-aws-ec2/package.json",
+    "deployment-platforms/rest-express-docker-aws-ec2/tsconfig.json",
+    "deployment-platforms/rest-express-docker-aws-ec2/.env.example",
+    "deployment-platforms/rest-express-docker-aws-ec2/Dockerfile",
+    "deployment-platforms/rest-express-docker-aws-ec2/docker-compose.yml",
+    "deployment-platforms/rest-express-docker-aws-ec2/README.md"
+  ],
+  "excluded_paths": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.git/**",
+    "deployment-platforms/rest-express-docker-aws-ec2/.github/**"
+  ],
+  "execution_environment": {
+    "os": "Linux",
+    "kernel": "6.18.5",
+    "arch": "x86_64",
+    "node_version": "v22.22.2",
+    "connector_revision": "9e832dd1165fbbceed7b2214f13f55085aabc71f",
+    "execution_mode": "separate_subagent_actors; deterministic gate invoked via stdio MCP against connector dist build",
+    "source_checkout": ".external-sources/prisma-examples (git clone, detached at pinned SHA; not committed)"
+  },
+  "gold_freeze": {
+    "authored_by": "dedicated gold-annotation subagent reading only the pinned source scope; no connector, detector, or generated-document output was available to it",
+    "human_review": "human_review_pending — draft is NOT frozen; per the corrected external evaluation contract, extractor and Mode A runs stay blocked until a human reviews and approves the gold annotations",
+    "digest_file": "gold-digest.txt (to be written only after human review approval)"
+  },
+  "session_started_utc": "2026-07-30T05:06:22Z"
+}
