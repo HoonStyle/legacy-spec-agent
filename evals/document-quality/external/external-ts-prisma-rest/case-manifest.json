@@ -42,8 +42,10 @@
   },
   "gold_freeze": {
     "authored_by": "dedicated gold-annotation subagent reading only the pinned source scope; no connector, detector, or generated-document output was available to it",
-    "human_review": "human_review_pending — draft is NOT frozen; per the corrected external evaluation contract, extractor and Mode A runs stay blocked until a human reviews and approves the gold annotations",
-    "digest_file": "gold-digest.txt (to be written only after human review approval)"
+    "human_review": "approved 2026-07-30 by the repository owner with one change: npm-script entrypoint rows EXT1-021/022 removed; all other rows approved. Decision recorded in gold-review-notes.md",
+    "frozen_row_count": 42,
+    "gold_sha256": "1068766fe3cc89f97f04b833dfaf51a0615bbace7a3c2825af8205f599117300",
+    "digest_file": "gold-digest.txt"
   },
   "session_started_utc": "2026-07-30T05:06:22Z"
 }
