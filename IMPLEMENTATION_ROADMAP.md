@@ -14,6 +14,8 @@ Start the next implementation session here. Do not add another connector feature
 
 ### A. External document-quality evaluation
 
+Candidate repositories, proposed scopes, gold-freeze rules, required artifacts, and the execution sequence are documented in `EXTERNAL_EVALUATION_PLAN.md`. The candidates remain provisional until their immutable revisions and licenses are revalidated and recorded in per-case scope manifests.
+
 1. Select at least three real external repositories: one small TypeScript service, one Python service, and one mixed or non-TypeScript service. Record the repository URL, license, immutable commit SHA, selected profile, included paths, excluded paths, and execution environment before generating results.
 2. Freeze human-reviewed gold annotations independently of connector output. Gold must include registered APIs, data contracts, configuration/environment variables, entrypoints, states, tests, persistence/side effects, external integrations, and business rules when present. Do not promote current detector output into gold.
 3. Run the actual Mode A `standard` workflow for every pinned repository: separate Writer, Independent Evidence Auditor, Coverage Sentinel, and Gatekeeper actors; generated Markdown rather than hand-authored fixture prose; frozen draft digest; and `evaluate_document_gate` before publication.
