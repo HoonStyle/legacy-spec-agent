@@ -1,0 +1,17 @@
+{
+  "expected_count": 5,
+  "documented_count": 5,
+  "covered_items": [
+    {"surface": "registered_api:prisma", "found_at": "deployment-platforms/rest-express-docker-aws-ec2/src/lib/prisma.ts:10", "expected_document_type": "API", "document_id": "API-PRISMA"},
+    {"surface": "registered_api:postRouter", "found_at": "deployment-platforms/rest-express-docker-aws-ec2/src/routes/post.routes.ts:5", "expected_document_type": "API", "document_id": "API-POSTROUTER"},
+    {"surface": "registered_api:userRouter", "found_at": "deployment-platforms/rest-express-docker-aws-ec2/src/routes/user.routes.ts:5", "expected_document_type": "API", "document_id": "API-USERROUTER"},
+    {"surface": "environment:PORT", "found_at": "deployment-platforms/rest-express-docker-aws-ec2/src/index.ts:12", "expected_document_type": "DM", "document_id": "DM-ENV-PORT"},
+    {"surface": "environment:DATABASE_URL", "found_at": "deployment-platforms/rest-express-docker-aws-ec2/src/lib/prisma.ts:4", "expected_document_type": "DM", "document_id": "DM-ENV-DATABASE-URL"}
+  ],
+  "explained_omissions": [],
+  "unexplained_omissions": [],
+  "truncated_inputs": [],
+  "verdict": "passed",
+  "actor_id": "sentinel-ext1",
+  "draft_digest": "9d288ff7b5c6ba41d8e2cad91b959e9025b5cd9b48238c49881c656771c93d32"
+}
