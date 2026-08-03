@@ -96,6 +96,40 @@ test("coverage identity accepts only citations that contain the original surface
   });
 });
 
+test("surface paths the citation grammar cannot parse keep their literal coverage linkage", () => {
+  const temp = mkdtempSync(join(tmpdir(), "document-gate-"));
+  try {
+    cpSync(join(fixtureRoot, "complete-or-explained"), temp, { recursive: true });
+    const relativePath = "src/κώδικας space/서비스.ts";
+    const foundAt = `${relativePath}:1`;
+    mkdirSync(join(temp, "src", "κώδικας space"), { recursive: true });
+    writeFileSync(join(temp, "src", "κώδικας space", "서비스.ts"), "export function lookupKo() {}\n");
+    const params: DocumentGateParams = {
+      root: repositoryRoot, source_root: temp, dir: join(temp, "output"), profile: "core",
+      ...JSON.parse(readFileSync(join(temp, "gate-input.json"), "utf8")),
+    };
+    params.scope_manifest.included_paths.push(relativePath);
+    params.scope_manifest.module_extractors.push({ module: relativePath, actor_id: "extractor-1" });
+    params.scope_manifest.file_counts.supported += 1;
+    params.coverage_audit.expected_count += 1;
+    params.coverage_audit.documented_count += 1;
+    params.coverage_audit.covered_items.push({
+      category: "registered_api", surface: "registered_api:lookupKo", found_at: foundAt,
+      expected_document_type: "API", document_id: "API-002",
+    });
+    const architecture = join(params.dir, "ARCHITECTURE.md");
+    appendFileSync(architecture, `\n## API-002 — lookupKo\n\nExported from \`${foundAt}\`.\n`);
+    refreshDigest(params);
+    assert.deepEqual(evaluateDocumentGate(params), { verdict: "approved", citation_count: 8, audited_citation_count: 8, reasons: [] });
+
+    writeFileSync(architecture, readFileSync(architecture, "utf8").replace(`\`${foundAt}\``, "the unicode service module"));
+    refreshDigest(params);
+    const rejected = evaluateDocumentGate(params);
+    assert.equal(rejected.verdict, "rejected");
+    assert.ok(rejected.reasons.some((reason) => reason.code === "coverage_failed"));
+  } finally { rmSync(temp, { recursive: true, force: true }); }
+});
+
 test("Gatekeeper rejects stale/self audits and undisclosed truncation", () => {
   const params = fixture("complete-or-explained");
   params.evidence_audit.actor_id = params.scope_manifest.writer_actor_id;

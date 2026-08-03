@@ -309,7 +309,10 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
     const escapedId = item.document_id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const section = new RegExp(`^#{1,6}\\s+${escapedId}\\b([\\s\\S]*?)(?=^#{1,6}\\s+|(?![\\s\\S]))`, "m").exec(allMarkdown)?.[1] ?? "";
     const surfaceLocation = parseCitation(item.found_at);
-    return !surfaceLocation || !citationsIn(section).some(({ citation }) =>
+    // The citation grammar cannot parse every real surface path (spaces, non-ASCII);
+    // those keep the pre-containment literal linkage instead of failing unconditionally.
+    if (!surfaceLocation) return !section.includes(`\`${item.found_at}\``);
+    return !citationsIn(section).some(({ citation }) =>
       citation.path === surfaceLocation.path
       && citation.start <= surfaceLocation.start
       && citation.end >= surfaceLocation.end,
