@@ -3,11 +3,25 @@
 ## 상태와 범위
 
 이 문서는 외부 문서 품질 평가의 사례 2와 사례 3에 대해 전달된
-`gold-surfaces.jsonl` 초안과 review notes를 한 곳에 정리한 **검토 기록**이다.
+`gold-surfaces.jsonl` 초안의 판정을 한 곳에 정리한 **통합 검토 기록**이다.
 두 JSONL 초안은 대화 입력에서 각각 두 번 반복되었으므로 첫 번째 완전한
 사본만 검토 대상으로 간주했다. 이 문서는 수정된 gold 자체나 human approval을
 대체하지 않으며, 아래 변경을 원본 gold에 반영하고 별도 사람이 승인하기 전까지
-두 사례의 상태는 `human_review_pending`이다.
+두 사례의 상태는 `human_review_pending`이었다.
+
+> **이후 경과.** 아래 판정은 두 초안에 모두 적용되었고, 저장소 소유자가 수정본을
+> source-only human-reviewed gold로 승인했다. 사례 2는 57행 digest
+> `739d434e…c8a1`, 사례 3은 101행 digest `f6875b3a…b984`로 동결된 뒤에야
+> extractor와 Mode A workflow가 실행되었다. 실행 결과는
+> `evals/document-quality/external/SUMMARY.md`에 있다. 자세한 내용은 이 문서
+> 말미의 "적용 기록"과 "동결 및 실행 결과"를 참고한다.
+
+각 사례의 source-only inventory, searched-but-absent 결과와 상세 판단 근거는
+다음 canonical record에 보존한다. 이 문서는 두 사례를 비교하는 결정 요약만
+유지한다.
+
+- `evals/document-quality/external/external-py-flask-tutorial/gold-review-notes.md`
+- `evals/document-quality/external/external-mixed-online-boutique/gold-review-notes.md`
 
 | 사례 | 저장소 | 검증한 고정 SHA | 최초 행 | 제거 권고 | 수정 후 예상 행 |
 | --- | --- | --- | ---: | ---: | ---: |
@@ -200,7 +214,26 @@ category → `expected_document_type` 매핑, `found_at == source_citation`, 스
 모든 줄이 이미 독립적인 JSON object였다. 따라서 2단계는 제거 작업 없이 확인으로
 완료했다.
 
-**현재 상태는 여전히 `human_review_pending`이다.** 수정된 gold는 저장소 밖
-(`scratchpad`)에 `gold-surfaces.corrected.jsonl`로 보관하며, 승인 전에는 사례
-디렉터리에 `gold-surfaces.jsonl`을 두지 않고 `gold-digest.txt`도 만들지 않는다.
-extractor와 Mode A workflow는 실행하지 않았다.
+적용 시점에는 수정본을 저장소 밖(`scratchpad`)에 보관했고, 승인 전까지 사례
+디렉터리에 `gold-surfaces.jsonl`이나 `gold-digest.txt`를 두지 않았으며 extractor와
+Mode A workflow도 실행하지 않았다.
+
+## 동결 및 실행 결과 (2026-07-30)
+
+위 "동결 전 필수 작업"의 5–7단계가 이후 완료되었다.
+
+| 사례 | 승인 행 수 | 동결 digest |
+| --- | ---: | --- |
+| `external-py-flask-tutorial` | 57 | `739d434e2b61d3b999e7eeff6f8a168d33c324ba499cac8f6d2674a46557c8a1` |
+| `external-mixed-online-boutique` | 101 | `f6875b3afa4729923e821414f0979ab83c1b0d9026491ea961f184b6ae7eb984` |
+
+저장소 소유자가 수정본을 source-only human-reviewed gold로 승인했고, 각 파일의
+SHA-256을 `gold-digest.txt`에 기록해 동결한 **뒤에** extractor와 Mode A
+workflow를 실행했다. 남은 한계는 `GOLD_DATASET.md`가 규정한 2인 검토가 아니라
+1인이 승인했다는 점이며, 각 사례의 `case-manifest.json`에 기록되어 있다.
+
+세 사례의 실행 결과는 `evals/document-quality/external/SUMMARY.md`에 있다. 결론만
+옮기면, 인용 정확도·unsupported claim·unexplained omission·거부 draft 발행의 네
+조건은 세 사례 모두 충족했으나 **critical-surface recall이 75개 중 1개(0.0133)**
+여서 외부 품질 gate는 충족되지 않았다. 이 검토 문서만으로는 물론, 실행 결과로도
+측정된 문서 품질 개선을 주장하지 않는다.

@@ -235,6 +235,15 @@ successfully opened and read in full.
 cartservice의 `Cart.proto` message)만 계산했다. `genproto/**`는 생성 코드로
 제외했다(case-manifest의 `scope_refinement` 참조).
 
-### 상태
+### 동결 상태
 
-`human_review_pending`. 수정본은 저장소 밖에 있으며 승인 전까지 동결하지 않는다.
+**승인·동결 완료 (2026-07-30).** 저장소 소유자가 위 수정본을 source-only
+human-reviewed gold로 승인했고, 101행이 SHA-256
+`f6875b3afa4729923e821414f0979ab83c1b0d9026491ea961f184b6ae7eb984`으로 동결되어
+`gold-digest.txt`에 기록되었다. 추출기와 Mode A workflow는 그 이후에만
+실행했다. 남은 한계는 `GOLD_DATASET.md`가 규정한 2인 검토가 아니라 1인이
+승인했다는 점이며, `case-manifest.json`에 기록되어 있다.
+
+이 문서의 앞부분은 gold 작성 액터가 커넥터·detector 출력을 보지 않고 소스만
+읽어 작성한 원본 per-service inventory와 판단 근거이고, 뒤의 "통합 검토 반영"은
+`docs/external-gold-review-summary.md`의 판정을 적용한 기록이다.

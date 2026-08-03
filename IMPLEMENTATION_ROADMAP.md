@@ -46,11 +46,12 @@ Before ending the next session, update this queue with pinned case identifiers, 
 and `external-mixed-online-boutique` at
 `9a4616e77f0f9cbcbecaf27d711c38890dda1404` were checked against detached source
 trees. The consolidated decisions are preserved in
-`docs/external-gold-review-summary.md`. Both inputs contained a duplicated JSONL
-copy and require the documented classification corrections. No gold digest,
-extractor output, generated document, or Mode A result was produced. The external
-quality gate therefore remains unevaluated; the immediate blocker is independent
-human approval of the corrected positive annotations.
+`docs/external-gold-review-summary.md`; each case's source-only inventory and
+detailed decisions are preserved in its case-specific `gold-review-notes.md`. Both
+inputs contained a duplicated JSONL copy and required the documented classification
+corrections. At the time of that review no gold digest, extractor output, generated
+document or Mode A result had been produced, and the blocker was independent human
+approval of the corrected positive annotations.
 
 The documented removals and reclassifications have since been applied to the
 drafts held outside the repository: case 2 goes from 73 rows to 57 (16 removed,
@@ -60,8 +61,9 @@ both validating clean on ID uniqueness, category/type mapping,
 `gold-review-notes.md` records those decisions. The repository-held draft files
 themselves contained no duplicated copy — each was already unique, sequential
 and one JSON object per line — so that step was a confirmation rather than a
-removal. Independent human approval, the gold digest, and every downstream step
-remain outstanding.
+removal. Independent human approval, the gold digests and every downstream step
+were subsequently completed; the session records below give the frozen digests and
+the executed result.
 
 #### Session record — 2026-07-30
 

@@ -171,6 +171,15 @@ entrypoint는 부재다. SQLite 외의 외부 서비스(HTTP client, queue, emai
 `DATABASE`/`TESTING` 외의 config key도 없다. `static/style.css`와
 `tests/data.sql`은 각각 표현 계층과 fixture 데이터이므로 독립 행을 만들지 않았다.
 
-### 상태
+### 동결 상태
 
-`human_review_pending`. 수정본은 저장소 밖에 있으며 승인 전까지 동결하지 않는다.
+**승인·동결 완료 (2026-07-30).** 저장소 소유자가 위 수정본을 source-only
+human-reviewed gold로 승인했고, 57행이 SHA-256
+`739d434e2b61d3b999e7eeff6f8a168d33c324ba499cac8f6d2674a46557c8a1`으로 동결되어
+`gold-digest.txt`에 기록되었다. 추출기와 Mode A workflow는 그 이후에만
+실행했다. 남은 한계는 `GOLD_DATASET.md`가 규정한 2인 검토가 아니라 1인이
+승인했다는 점이며, 해당 사례의 `case-manifest.json`에 기록되어 있다.
+
+이 문서의 앞부분은 gold 작성 액터가 커넥터·detector 출력을 보지 않고 소스만
+읽어 작성한 원본 inventory와 판단 근거이고, 뒤의 "통합 검토 반영"은
+`docs/external-gold-review-summary.md`의 판정을 적용한 기록이다.
