@@ -35,7 +35,8 @@
         "surface": "registered_api:getUser",
         "found_at": "src/server.ts:1",
         "expected_document_type": "API",
-        "document_id": "API-001"
+        "document_id": "API-001",
+        "category": "registered_api"
       }
     ],
     "explained_omissions": [],
@@ -43,7 +44,8 @@
       {
         "surface": "registered_api:updateUser",
         "found_at": "src/server.ts:2",
-        "expected_document_type": "API"
+        "expected_document_type": "API",
+        "category": "registered_api"
       }
     ],
     "truncated_inputs": [],

@@ -43,6 +43,37 @@ test("complete documentation or a frozen, explained exclusion is approved", () =
   assert.deepEqual(result, { verdict: "approved", citation_count: 8, audited_citation_count: 8, reasons: [] });
 });
 
+test("coverage identity accepts only citations that contain the original surface location", async (t) => {
+  const cases = JSON.parse(readFileSync(join(fixtureRoot, "citation-surface-linkage.json"), "utf8")) as Array<{
+    name: string; found_at: string; claim_citations: string[]; expected_verdict: "approved" | "rejected";
+  }>;
+  for (const item of cases) await t.test(item.name, () => {
+    const { params, cleanup } = isolatedComplete();
+    try {
+      assert.equal(params.coverage_audit.covered_items[0].found_at, item.found_at);
+      const evidence = item.claim_citations[0];
+      const renderedCitations = item.claim_citations.map((citation) => `\`${citation}\``).join(" ");
+      const architecture = join(params.dir, "ARCHITECTURE.md");
+      writeFileSync(architecture, readFileSync(architecture, "utf8").replace(
+        "CLM-007: The lookup operation is exported. `src/server.ts:1`",
+        `CLM-007: The lookup operation is exported as part of the service surface. ${renderedCitations}`,
+      ));
+      const auditPath = join(params.dir, "audit_log.jsonl");
+      writeFileSync(auditPath, `${readFileSync(auditPath, "utf8").trim().split(/\r?\n/).map((line) => {
+        const row = JSON.parse(line);
+        if (row.claim_id === "CLM-007") row.evidence = item.claim_citations.length === 1 ? evidence : item.claim_citations;
+        return JSON.stringify(row);
+      }).join("\n")}\n`);
+      refreshDigest(params);
+      const result = evaluateDocumentGate(params);
+      assert.equal(result.verdict, item.expected_verdict, JSON.stringify(result.reasons));
+      if (item.expected_verdict === "rejected")
+        assert.ok(result.reasons.some((reason) => reason.code === "coverage_failed"));
+      assert.ok(!result.reasons.some((reason) => reason.code === "claim_audit_incomplete"));
+    } finally { cleanup(); }
+  });
+});
+
 test("Gatekeeper rejects stale/self audits and undisclosed truncation", () => {
   const params = fixture("complete-or-explained");
   params.evidence_audit.actor_id = params.scope_manifest.writer_actor_id;
@@ -96,6 +127,7 @@ test("every deterministic publication rejection condition has a focused regressi
     { name: "typed ID mismatch", code: "invalid_id", mutate: (p) => { const path = join(p.dir, "SPEC.md"); writeFileSync(path, `${readFileSync(path, "utf8")}\nRelated API: BR-001\n`); refreshDigest(p); } },
     { name: "coverage count mismatch", code: "coverage_failed", mutate: (p) => { p.coverage_audit.expected_count = 99; } },
     { name: "phantom coverage item", code: "coverage_failed", mutate: (p) => { p.coverage_audit.covered_items[0].surface = "registered_api:invented"; } },
+    { name: "wrong coverage category", code: "coverage_failed", mutate: (p) => { p.coverage_audit.covered_items[0].category = "data_contract"; } },
     { name: "covered ID lacks matching source evidence", code: "coverage_failed", mutate: (p) => { const path = join(p.dir, "ARCHITECTURE.md"); writeFileSync(path, readFileSync(path, "utf8").replace("The lookup operation is exported. `src/server.ts:1`", "The lookup operation is exported. `src/server.ts:2`")); refreshDigest(p); } },
     { name: "duplicate coverage classification", code: "coverage_failed", mutate: (p) => { p.coverage_audit.explained_omissions.push({ ...p.coverage_audit.covered_items[0], reason: "duplicate" }); } },
     { name: "empty omission explanation", code: "coverage_failed", mutate: (p) => { p.coverage_audit.explained_omissions[0].reason = ""; } },
