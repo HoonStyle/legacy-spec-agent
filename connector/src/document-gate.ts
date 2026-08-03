@@ -126,8 +126,33 @@ export function calculateDraftDigest(dir: string, profile: DocumentProfile): str
   return hash.digest("hex");
 }
 
-function citationsIn(markdown: string): CitationRange[] {
-  return Array.from(markdown.matchAll(/`([^`]+)`/g)).map((m) => parseCitation(m[1])).filter((v): v is CitationRange => v !== undefined);
+interface MarkdownCitation {
+  citation: CitationRange;
+  line: string;
+}
+
+function citationsIn(markdown: string): MarkdownCitation[] {
+  const citations: MarkdownCitation[] = [];
+  let fence: { delimiter: "`" | "~"; length: number } | undefined;
+  for (const line of markdown.split(/\r?\n/)) {
+    if (fence) {
+      const closing = /^ {0,3}([`~]+)[ \t]*$/.exec(line);
+      if (closing && closing[1][0] === fence.delimiter && closing[1].length >= fence.length) fence = undefined;
+      continue;
+    }
+
+    const opening = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (opening && (opening[1][0] === "~" || !opening[2].includes("`"))) {
+      fence = { delimiter: opening[1][0] as "`" | "~", length: opening[1].length };
+      continue;
+    }
+
+    for (const match of line.matchAll(/`([^`\r\n]+)`/g)) {
+      const citation = parseCitation(match[1]);
+      if (citation) citations.push({ citation, line });
+    }
+  }
+  return citations;
 }
 
 interface AuditLog {
@@ -197,7 +222,8 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
       reasons.push({ code: "missing_section", detail: `${file}: ${section}` });
   }
 
-  const citations = [...markdown.values()].flatMap(citationsIn);
+  const markdownCitations = [...markdown.values()].flatMap(citationsIn);
+  const citations = markdownCitations.map(({ citation }) => citation);
   const lineCache = new CitationLineCache();
   for (const citation of citations) {
     const check = lineCache.check(params.source_root, citation);
@@ -224,7 +250,7 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
     reasons.push({ code: "unsupported_verified_claim", detail: "audit contains a flagged claim" });
 
   const allMarkdown = [...markdown.values()].join("\n");
-  const citedClaimLines = allMarkdown.split(/\r?\n/).filter((line) => citationsIn(line).length > 0);
+  const citedClaimLines = markdownCitations.map(({ line }) => line).filter((line, index, lines) => lines.indexOf(line) === index);
   const claimDefinitions = citedClaimLines.flatMap((line) => Array.from(line.matchAll(/\b(CLM-[A-Za-z0-9_-]+)\b/g), (match) => match[1]));
   const auditedClaims = audit.rows.filter((row) => row.action === "verified" && row.claim_id).map((row) => row.claim_id!);
   if (citedClaimLines.some((line) => Array.from(line.matchAll(/\bCLM-[A-Za-z0-9_-]+\b/g)).length !== 1)) {
@@ -240,7 +266,7 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
     const mismatchedEvidence = citedClaimLines.some((line) => {
       const claimId = /\b(CLM-[A-Za-z0-9_-]+)\b/.exec(line)?.[1];
       if (!claimId) return false;
-      const expected = citationsIn(line).map(formatCitation).sort();
+      const expected = citationsIn(line).map(({ citation }) => formatCitation(citation)).sort();
       const recorded = audit.rows.filter((row) => row.action === "verified" && row.claim_id === claimId)
         .flatMap((row) => auditCitations(row.evidence).map(formatCitation)).sort();
       return expected.length !== recorded.length || expected.some((value, index) => value !== recorded[index]);
@@ -283,7 +309,7 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
     const escapedId = item.document_id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const section = new RegExp(`^#{1,6}\\s+${escapedId}\\b([\\s\\S]*?)(?=^#{1,6}\\s+|(?![\\s\\S]))`, "m").exec(allMarkdown)?.[1] ?? "";
     const surfaceLocation = parseCitation(item.found_at);
-    return !surfaceLocation || !citationsIn(section).some((citation) =>
+    return !surfaceLocation || !citationsIn(section).some(({ citation }) =>
       citation.path === surfaceLocation.path
       && citation.start <= surfaceLocation.start
       && citation.end >= surfaceLocation.end,
