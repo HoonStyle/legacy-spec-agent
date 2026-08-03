@@ -1,0 +1,127 @@
+{
+  "case": "external-ts-prisma-rest",
+  "analyzed_source_commit": "eb8f4328821c6746680a2ba02e0e5636a085a327",
+  "profile": "standard",
+  "gold": {
+    "rows": 42,
+    "sha256": "1068766fe3cc89f97f04b833dfaf51a0615bbace7a3c2825af8205f599117300",
+    "human_review": "approved 2026-07-30 by the repository owner with one change: npm-script entrypoint rows EXT1-021/022 removed; all other rows approved. Decision recorded in gold-review-notes.md"
+  },
+  "extractor_vs_gold_strict": {
+    "counts": {
+      "gold": 42,
+      "actual": 5,
+      "true_positive": 2,
+      "false_positive": 3,
+      "false_negative": 40
+    },
+    "precision": 0.4,
+    "recall": 0.0476,
+    "critical_recall": 0.0833,
+    "categories": {
+      "business_rule": {
+        "precision": null,
+        "recall": 0,
+        "gold": 9,
+        "actual": 0
+      },
+      "data_contract": {
+        "precision": null,
+        "recall": 0,
+        "gold": 4,
+        "actual": 0
+      },
+      "entrypoint": {
+        "precision": null,
+        "recall": 0,
+        "gold": 3,
+        "actual": 0
+      },
+      "environment": {
+        "precision": 1,
+        "recall": 0.2857,
+        "gold": 7,
+        "actual": 2
+      },
+      "external_integration": {
+        "precision": null,
+        "recall": 0,
+        "gold": 6,
+        "actual": 0
+      },
+      "external_side_effect": {
+        "precision": null,
+        "recall": 0,
+        "gold": 6,
+        "actual": 0
+      },
+      "registered_api": {
+        "precision": 0,
+        "recall": 0,
+        "gold": 6,
+        "actual": 3
+      },
+      "status_value": {
+        "precision": null,
+        "recall": 0,
+        "gold": 1,
+        "actual": 0
+      }
+    }
+  },
+  "naming_diagnostic": {
+    "note": "Location-only agreement ignores the surface string and matches category|found_at|expected_document_type. Diagnostic only — the strict numbers above remain the reported metric and the gate criterion. See ../FINDING-surface-naming-match-key.md.",
+    "strict_true_positive": 2,
+    "location_true_positive": 2,
+    "location_recall": 0.0476,
+    "strict_critical_recall": 0.0833,
+    "location_critical_recall": 0.0833,
+    "critical_gold_rows": 12
+  },
+  "document_quality": {
+    "citation_accuracy": {
+      "value": 1,
+      "basis": "every cited claim independently verified by the evidence auditor and every path/line range re-resolved against the pinned clone",
+      "total_citations_line_by_line": 200,
+      "gate_enforced_subset": 179,
+      "gate_undercount_cause": "fenced code blocks desynchronize the gate citation scan; see ../external-ts-prisma-rest/FINDING-gate-citation-undercount.md"
+    },
+    "unsupported_verified_claims": 0,
+    "unexplained_omissions": 0,
+    "rejected_draft_publications": 0,
+    "audit_rows": 200
+  },
+  "gate": {
+    "verdict": "approved",
+    "citation_count": 179,
+    "audited_citation_count": 179,
+    "reasons": []
+  },
+  "publication": {
+    "published": true,
+    "destination_relative": "generated-documents"
+  },
+  "coverage_audit": {
+    "expected_count": 5,
+    "documented_count": 5,
+    "verdict": "passed",
+    "denominator": "deterministic detector output"
+  },
+  "actors": {
+    "extractor": "extractor-ext1",
+    "writer": "writer-ext1",
+    "evidence_auditor": "auditor-ext1",
+    "coverage_sentinel": "sentinel-ext1",
+    "gatekeeper": "gatekeeper-ext1",
+    "independence": "five distinct actor ids; writer, auditor, sentinel and gatekeeper ran as separate agent processes"
+  },
+  "external_quality_gate": {
+    "critical_surface_recall_100": false,
+    "citation_accuracy_100": true,
+    "unexplained_omissions_zero": true,
+    "unsupported_verified_claims_zero": true,
+    "no_rejected_draft_published": true,
+    "satisfied": false
+  },
+  "separation": "external result; must not be merged with the synthetic summaries in evals/document-quality/results/"
+}

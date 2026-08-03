@@ -1,0 +1,59 @@
+{
+  "case": "external-ts-prisma-rest",
+  "analyzed_source_commit": "eb8f4328821c6746680a2ba02e0e5636a085a327",
+  "profile": "standard",
+  "environment": {
+    "os": "Linux",
+    "kernel": "6.18.5",
+    "arch": "x86_64",
+    "node_version": "v22.22.2",
+    "connector_revision": "9e832dd1165fbbceed7b2214f13f55085aabc71f",
+    "execution_mode": "separate_subagent_actors; deterministic gate invoked via stdio MCP against connector dist build",
+    "source_checkout": ".external-sources/prisma-examples (git clone, detached at pinned SHA; not committed)"
+  },
+  "commands_run": [
+    "cd connector && npm ci && npm run build",
+    "git clone https://github.com/... .external-sources/prisma-examples && git checkout --detach eb8f4328821c6746680a2ba02e0e5636a085a327",
+    "node evals/document-quality/external/run-extractor.mjs external-ts-prisma-rest prisma-examples",
+    "node scripts/evaluate-document-quality.mjs <case>/gold-surfaces.jsonl <case>/actual-surfaces.jsonl <case>/extractor-result.json",
+    "node evals/document-quality/external/freeze-draft.mjs external-ts-prisma-rest prisma-examples <writer> <extractor>",
+    "node evals/document-quality/external/precheck-draft.mjs external-ts-prisma-rest prisma-examples",
+    "node evals/document-quality/external/run-gate.mjs external-ts-prisma-rest prisma-examples <gatekeeper> evaluate",
+    "node evals/document-quality/external/run-gate.mjs external-ts-prisma-rest prisma-examples <gatekeeper> publish"
+  ],
+  "elapsed": {
+    "extractor_ms": 25.613,
+    "gate_ms": 450.075,
+    "publish_ms": 314.162,
+    "writer_and_audit_wall_clock": "not_measured",
+    "measurement_note": "agent-phase wall clock was not instrumented; only the deterministic extractor and gate calls were timed"
+  },
+  "resource": {
+    "rss_measurement": "process.memoryUsage().rss at end of the extractor run only (end-of-run, not peak)",
+    "extractor_rss_after_bytes": 59858944,
+    "writer_audit_gate_peak_rss": "not_measured"
+  },
+  "bytes": {
+    "in_scope_source_bytes": 13692,
+    "published_document_bytes": 80272,
+    "raw_extractor_output_bytes": 1718,
+    "gate_response_bytes": 102,
+    "publish_response_bytes": 272
+  },
+  "instrumentation_not_available": {
+    "provider_input_tokens": "not_exposed",
+    "provider_cached_input_tokens": "not_exposed",
+    "provider_output_tokens": "not_exposed",
+    "provider_reasoning_tokens": "not_exposed",
+    "provider_tool_tokens": "not_exposed",
+    "pricing_units": "not_exposed",
+    "unique_file_reads": "not_measured",
+    "repeated_file_reads": "not_measured",
+    "note": "per-run provider counters are not exposed in this environment; no estimate was substituted"
+  },
+  "execution_mode": {
+    "extractor": "direct module import of connector/dist/src/coverage-surface.js",
+    "gate_and_publication": "stdio MCP client against connector/dist/src/index.js",
+    "actors": "writer, evidence auditor, coverage sentinel and gatekeeper ran as separate agent processes with distinct actor ids"
+  }
+}

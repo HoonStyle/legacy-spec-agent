@@ -1,0 +1,31 @@
+{
+  "expected_count": 19,
+  "documented_count": 19,
+  "covered_items": [
+    {"surface": "registered_api:/hello", "found_at": "examples/tutorial/flaskr/__init__.py:26", "expected_document_type": "API", "document_id": "API-HELLO"},
+    {"surface": "registered_api:/logout", "found_at": "examples/tutorial/flaskr/auth.py:112", "expected_document_type": "API", "document_id": "API-AUTH-LOGOUT"},
+    {"surface": "registered_api:/register", "found_at": "examples/tutorial/flaskr/auth.py:46", "expected_document_type": "API", "document_id": "API-AUTH-REGISTER"},
+    {"surface": "external_side_effect:db.commit()", "found_at": "examples/tutorial/flaskr/auth.py:70", "expected_document_type": "RSK", "document_id": "RSK-COMMIT-AUTH-REGISTER"},
+    {"surface": "registered_api:/login", "found_at": "examples/tutorial/flaskr/auth.py:84", "expected_document_type": "API", "document_id": "API-AUTH-LOGIN"},
+    {"surface": "external_side_effect:db.commit()", "found_at": "examples/tutorial/flaskr/blog.py:107", "expected_document_type": "RSK", "document_id": "RSK-COMMIT-BLOG-UPDATE"},
+    {"surface": "registered_api:/<int:id>/delete", "found_at": "examples/tutorial/flaskr/blog.py:113", "expected_document_type": "API", "document_id": "API-BLOG-DELETE"},
+    {"surface": "external_side_effect:db.commit()", "found_at": "examples/tutorial/flaskr/blog.py:124", "expected_document_type": "RSK", "document_id": "RSK-COMMIT-BLOG-DELETE"},
+    {"surface": "registered_api:/", "found_at": "examples/tutorial/flaskr/blog.py:16", "expected_document_type": "API", "document_id": "API-BLOG-INDEX"},
+    {"surface": "registered_api:/create", "found_at": "examples/tutorial/flaskr/blog.py:60", "expected_document_type": "API", "document_id": "API-BLOG-CREATE"},
+    {"surface": "external_side_effect:db.commit()", "found_at": "examples/tutorial/flaskr/blog.py:80", "expected_document_type": "RSK", "document_id": "RSK-COMMIT-BLOG-CREATE"},
+    {"surface": "registered_api:/<int:id>/update", "found_at": "examples/tutorial/flaskr/blog.py:86", "expected_document_type": "API", "document_id": "API-BLOG-UPDATE"},
+    {"surface": "test_file:examples/tutorial/tests/conftest.py", "found_at": "examples/tutorial/tests/conftest.py:1", "expected_document_type": "TC", "document_id": "TC-FILE-CONFTEST"},
+    {"surface": "external_side_effect:os.unlink(db_path)", "found_at": "examples/tutorial/tests/conftest.py:32", "expected_document_type": "RSK", "document_id": "RSK-TEST-DB-UNLINK"},
+    {"surface": "test_file:examples/tutorial/tests/test_auth.py", "found_at": "examples/tutorial/tests/test_auth.py:1", "expected_document_type": "TC", "document_id": "TC-FILE-TEST-AUTH"},
+    {"surface": "test_file:examples/tutorial/tests/test_blog.py", "found_at": "examples/tutorial/tests/test_blog.py:1", "expected_document_type": "TC", "document_id": "TC-FILE-TEST-BLOG"},
+    {"surface": "external_side_effect:db.commit()", "found_at": "examples/tutorial/tests/test_blog.py:30", "expected_document_type": "RSK", "document_id": "RSK-TEST-COMMIT-AUTHOR"},
+    {"surface": "test_file:examples/tutorial/tests/test_db.py", "found_at": "examples/tutorial/tests/test_db.py:1", "expected_document_type": "TC", "document_id": "TC-FILE-TEST-DB"},
+    {"surface": "test_file:examples/tutorial/tests/test_factory.py", "found_at": "examples/tutorial/tests/test_factory.py:1", "expected_document_type": "TC", "document_id": "TC-FILE-TEST-FACTORY"}
+  ],
+  "explained_omissions": [],
+  "unexplained_omissions": [],
+  "truncated_inputs": [],
+  "verdict": "passed",
+  "actor_id": "sentinel-ext2",
+  "draft_digest": "12fb130a864069a0ca1619f44464db03160c7e542cdc0f7b380ea62234aa7da4"
+}

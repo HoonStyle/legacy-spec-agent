@@ -1,0 +1,18 @@
+{
+  "tool": "publish_approved_documents",
+  "gatekeeper_actor_id": "gatekeeper-ext3",
+  "execution_mode": "stdio MCP client against connector/dist/src/index.js",
+  "invoked_at_utc": "2026-07-30T09:01:36Z",
+  "elapsed_ms": 288.423,
+  "response_bytes": 279,
+  "result": {
+    "gate": {
+      "verdict": "approved",
+      "citation_count": 131,
+      "audited_citation_count": 131,
+      "reasons": []
+    },
+    "published": true,
+    "destination": "/home/user/legacy-spec-agent/evals/document-quality/external/external-mixed-online-boutique/generated-documents"
+  }
+}

@@ -46,16 +46,56 @@ Before ending the next session, update this queue with pinned case identifiers, 
 and `external-mixed-online-boutique` at
 `9a4616e77f0f9cbcbecaf27d711c38890dda1404` were checked against detached source
 trees. The consolidated decisions are preserved in
-`docs/external-gold-review-summary.md`; each case's source-only inventory and detailed
-decisions are preserved in its case-specific `gold-review-notes.md`. Both inputs
-contained a duplicated JSONL copy and require the documented classification
-corrections. No gold digest,
-extractor output, generated document, or Mode A result was produced. The external
-quality gate therefore remains unevaluated; the immediate blocker is independent
-human approval of the corrected positive annotations. The corrected 57-row Flask and
-101-row Online Boutique drafts are preserved as case-specific `gold-surfaces.jsonl`
-files, but remain unfrozen and must not be used for extraction until approval and
-digests exist.
+`docs/external-gold-review-summary.md`; each case's source-only inventory and
+detailed decisions are preserved in its case-specific `gold-review-notes.md`. Both
+inputs contained a duplicated JSONL copy and required the documented classification
+corrections. At the time of that review no gold digest, extractor output, generated
+document or Mode A result had been produced, and the blocker was independent human
+approval of the corrected positive annotations.
+
+The documented removals and reclassifications have since been applied to the
+drafts held outside the repository: case 2 goes from 73 rows to 57 (16 removed,
+12 reclassified) and case 3 from 111 rows to 101 (10 removed, 3 reclassified),
+both validating clean on ID uniqueness, category/type mapping,
+`found_at == source_citation`, and source path/line ranges. Per-case
+`gold-review-notes.md` records those decisions. The repository-held draft files
+themselves contained no duplicated copy — each was already unique, sequential
+and one JSON object per line — so that step was a confirmation rather than a
+removal. Independent human approval, the gold digests and every downstream step
+were subsequently completed; the session records below give the frozen digests and
+the executed result.
+
+#### Session record — 2026-07-30
+
+**Item A, case 1 of 3 executed.** Case `external-ts-prisma-rest`: `prisma/prisma-examples` at revalidated revision `eb8f4328821c6746680a2ba02e0e5636a085a327`, scope `deployment-platforms/rest-express-docker-aws-ec2`, licenses Apache-2.0 (repository) and MIT (selected package, from its `package.json`), profile `standard`. Cases 2 (`external-py-flask-tutorial`) and 3 (`external-mixed-online-boutique`) are not started, so no combined external summary exists yet.
+
+Raw results: `evals/document-quality/external/external-ts-prisma-rest/`. Commands are listed in that case's `run-record.json`; the reproducible runners are `run-extractor.mjs` and `run-gate.mjs` in the same directory. The pinned clone lives in the ignored `.external-sources/` and is not committed.
+
+Gold was authored from the pinned source only, reviewed by the repository owner, and frozen at 42 rows with digest `1068766fe3cc89f97f04b833dfaf51a0615bbace7a3c2825af8205f599117300` before any extractor or Mode A run. Review removed the two npm-script entrypoint rows; `gold-review-notes.md` records that decision, the absent `test_file` category with its search patterns, and the judgment calls. One reviewer approved it, not the two-reviewer resolution `GOLD_DATASET.md` describes.
+
+The Mode A run used separate agent processes for `writer-ext1`, `auditor-ext1`, `sentinel-ext1` and `gatekeeper-ext1` over `extractor-ext1` output. Round 1 was **rejected**: the evidence auditor flagged CLM-034, whose citation covered only the Prisma update and not the ID guard it asserted. The Writer widened the citation, the digest was re-frozen from `71131fd7…` to `9d288ff7…`, and round 2 verified all 200 claims. `evaluate_document_gate` then returned `approved` with 179/179 audited citations and no reason codes, and `publish_approved_documents` populated `generated-documents/` byte-identically.
+
+**Satisfied:** citation accuracy 100% across all 200 claims, unsupported verified claims 0, unexplained omissions 0, rejected drafts published 0 (the round-1 rejection was corrected, never published).
+
+**Not satisfied — external quality gate remains open.** Critical-surface recall is **0.0833** against frozen gold (overall extractor precision 0.400, recall 0.0476; 5 detected surfaces versus 42 gold rows). The deterministic detector misses routes registered on named routers such as `postRouter.get`, every surface in non-citable files (`.prisma`, `.yml`, `.sql`), Prisma create/update/delete mutations, external integrations and business rules. Per item A this is reported, not papered over: no detector vocabulary was added to improve the number.
+
+**Item B remains blocked.** This environment does not expose per-run provider input, cached-input, output, reasoning or tool counters, and agent-phase elapsed time and peak RSS were not instrumented. Those fields are recorded as `not_exposed` / `not_measured` in `run-record.json` with no estimates substituted, so the counter-enabled replay was not attempted and the item-4 decision stays **Inconclusive**.
+
+#### Session record — all three item-A cases executed
+
+Cases 2 and 3 are now complete and the combined external summary is `evals/document-quality/external/SUMMARY.md`. Pinned identifiers: `external-py-flask-tutorial` at `pallets/flask` `36e4a824f340fdee7ed50937ba8e7f6bc7d17f81`, scope `examples/tutorial`, BSD-3-Clause, gold frozen at 57 rows digest `739d434e2b61d3b999e7eeff6f8a168d33c324ba499cac8f6d2674a46557c8a1`; `external-mixed-online-boutique` at `GoogleCloudPlatform/microservices-demo` `9a4616e77f0f9cbcbecaf27d711c38890dda1404`, scope `src/{cartservice,checkoutservice,shippingservice}`, Apache-2.0, gold frozen at 101 rows digest `f6875b3afa4729923e821414f0979ab83c1b0d9026491ea961f184b6ae7eb984`. Case 3 additionally excludes both `genproto/` trees as machine-generated protobuf bindings; that decision and its effect on the denominator are recorded in its `case-manifest.json` under `scope_refinement`.
+
+Commands are the manifest-driven runners in `evals/document-quality/external/`: `run-extractor.mjs`, `freeze-draft.mjs`, `precheck-draft.mjs`, `run-gate.mjs` and `write-results.mjs`, plus the existing `scripts/evaluate-document-quality.mjs`. Raw results are in each case directory.
+
+**Satisfied on all three cases:** citation accuracy 100% across 486 claims, unsupported verified claims 0, unexplained omissions 0, rejected drafts published 0. All three drafts were approved by `evaluate_document_gate` with empty reason arrays and published byte-identically.
+
+**External quality gate NOT satisfied.** Combined strict critical-surface recall is **1 of 75 critical gold rows (0.0133)**; combined precision 0.2449 and recall 0.0600 over 200 gold rows against 49 detected surfaces. Under a location-only diagnostic that ignores the surface string, critical recall is still only 9/75, so the gate fails on either measure. No measured document-quality improvement is claimed.
+
+**Every draft was rejected before approval:** case 1 flagged 1 of 200 claims, case 2 flagged 14 of 132, case 3 flagged 10 of 135 and then a further new defect in round 2, needing three rounds. The recurring defect is a compound claim whose citation proves only one part. The flag rate tracked Writer prompt wording rather than the connector, so document quality is not a function of tooling alone.
+
+**Two further findings recorded, not fixed.** `FINDING-surface-naming-match-key.md`: the evaluator's exact 4-tuple key scores a gold/detector naming disagreement identically to a missed detection, and no surface-naming convention is published, which is why Flask scores strict 0 while locating 14 gold surfaces at exact positions. Second, two gate rules can contradict each other — widening a citation to satisfy the evidence auditor removed the literal `found_at` that the coverage rule requires inside a typed heading. The citation-undercount finding reproduced on all three cases (gate saw 179/200, 125/140, 131/146).
+
+**New evidence-triggered finding, not fixed.** `FINDING-gate-citation-undercount.md` records that fenced code blocks desynchronize `citationsIn()` in `connector/src/document-gate.ts`, so the gate validated 179 of the draft's 200 citations; the 21 invisible instances all follow a mermaid fence in `ARCHITECTURE.md`. Citation soundness for this case was established by the independent auditor and a full re-resolution of all 200 ranges rather than by the gate. This is not one of the per-file isolation failures item C permits, so no connector change was made.
 
 ## Release-blocking priorities
 

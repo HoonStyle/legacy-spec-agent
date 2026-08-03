@@ -1,0 +1,63 @@
+{
+  "analyzed_source_commit": "36e4a824f340fdee7ed50937ba8e7f6bc7d17f81",
+  "included_paths": [
+    "examples/tutorial/flaskr",
+    "examples/tutorial/tests",
+    "examples/tutorial/pyproject.toml",
+    "examples/tutorial/README.rst"
+  ],
+  "excluded_paths": [
+    {
+      "path": "src/flask",
+      "reason": "Flask framework implementation is outside the tutorial evaluation scope"
+    },
+    {
+      "path": "tests",
+      "reason": "repository-root tests belong to the Flask framework, not the tutorial"
+    },
+    {
+      "path": "docs",
+      "reason": "framework documentation is not part of the analyzed service"
+    },
+    {
+      "path": "examples/javascript",
+      "reason": "unrelated example project"
+    },
+    {
+      "path": "examples/celery",
+      "reason": "unrelated example project"
+    },
+    {
+      "path": ".git",
+      "reason": "version-control metadata"
+    }
+  ],
+  "file_counts": {
+    "supported": 9,
+    "unsupported": 11,
+    "failed": 0,
+    "skipped": 0
+  },
+  "truncated": false,
+  "truncated_inputs": [],
+  "module_extractors": [
+    {
+      "module": "examples/tutorial/flaskr",
+      "actor_id": "extractor-ext2"
+    },
+    {
+      "module": "examples/tutorial/tests",
+      "actor_id": "extractor-ext2"
+    },
+    {
+      "module": "examples/tutorial/pyproject.toml",
+      "actor_id": "extractor-ext2"
+    },
+    {
+      "module": "examples/tutorial/README.rst",
+      "actor_id": "extractor-ext2"
+    }
+  ],
+  "writer_actor_id": "writer-ext2",
+  "draft_digest": "12fb130a864069a0ca1619f44464db03160c7e542cdc0f7b380ea62234aa7da4"
+}

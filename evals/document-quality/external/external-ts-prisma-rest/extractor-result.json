@@ -1,0 +1,62 @@
+{
+  "counts": {
+    "gold": 42,
+    "actual": 5,
+    "true_positive": 2,
+    "false_positive": 3,
+    "false_negative": 40
+  },
+  "precision": 0.4,
+  "recall": 0.0476,
+  "critical_recall": 0.0833,
+  "categories": {
+    "business_rule": {
+      "precision": null,
+      "recall": 0,
+      "gold": 9,
+      "actual": 0
+    },
+    "data_contract": {
+      "precision": null,
+      "recall": 0,
+      "gold": 4,
+      "actual": 0
+    },
+    "entrypoint": {
+      "precision": null,
+      "recall": 0,
+      "gold": 3,
+      "actual": 0
+    },
+    "environment": {
+      "precision": 1,
+      "recall": 0.2857,
+      "gold": 7,
+      "actual": 2
+    },
+    "external_integration": {
+      "precision": null,
+      "recall": 0,
+      "gold": 6,
+      "actual": 0
+    },
+    "external_side_effect": {
+      "precision": null,
+      "recall": 0,
+      "gold": 6,
+      "actual": 0
+    },
+    "registered_api": {
+      "precision": 0,
+      "recall": 0,
+      "gold": 6,
+      "actual": 3
+    },
+    "status_value": {
+      "precision": null,
+      "recall": 0,
+      "gold": 1,
+      "actual": 0
+    }
+  }
+}

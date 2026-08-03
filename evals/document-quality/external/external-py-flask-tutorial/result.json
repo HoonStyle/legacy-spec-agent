@@ -1,0 +1,133 @@
+{
+  "case": "external-py-flask-tutorial",
+  "analyzed_source_commit": "36e4a824f340fdee7ed50937ba8e7f6bc7d17f81",
+  "profile": "standard",
+  "gold": {
+    "rows": 57,
+    "sha256": "739d434e2b61d3b999e7eeff6f8a168d33c324ba499cac8f6d2674a46557c8a1",
+    "human_review": "approved 2026-07-30 by the repository owner as source-only human-reviewed gold, after the corrections in docs/external-gold-review-summary.md were applied and verified"
+  },
+  "extractor_vs_gold_strict": {
+    "counts": {
+      "gold": 57,
+      "actual": 19,
+      "true_positive": 0,
+      "false_positive": 19,
+      "false_negative": 57
+    },
+    "precision": 0,
+    "recall": 0,
+    "critical_recall": 0,
+    "categories": {
+      "business_rule": {
+        "precision": null,
+        "recall": 0,
+        "gold": 13,
+        "actual": 0
+      },
+      "data_contract": {
+        "precision": null,
+        "recall": 0,
+        "gold": 3,
+        "actual": 0
+      },
+      "entrypoint": {
+        "precision": null,
+        "recall": 0,
+        "gold": 2,
+        "actual": 0
+      },
+      "environment": {
+        "precision": null,
+        "recall": 0,
+        "gold": 4,
+        "actual": 0
+      },
+      "external_integration": {
+        "precision": null,
+        "recall": 0,
+        "gold": 7,
+        "actual": 0
+      },
+      "external_side_effect": {
+        "precision": 0,
+        "recall": 0,
+        "gold": 13,
+        "actual": 6
+      },
+      "registered_api": {
+        "precision": 0,
+        "recall": 0,
+        "gold": 8,
+        "actual": 8
+      },
+      "status_value": {
+        "precision": null,
+        "recall": 0,
+        "gold": 2,
+        "actual": 0
+      },
+      "test_file": {
+        "precision": 0,
+        "recall": 0,
+        "gold": 5,
+        "actual": 5
+      }
+    }
+  },
+  "naming_diagnostic": {
+    "note": "Location-only agreement ignores the surface string and matches category|found_at|expected_document_type. Diagnostic only — the strict numbers above remain the reported metric and the gate criterion. See ../FINDING-surface-naming-match-key.md.",
+    "strict_true_positive": 0,
+    "location_true_positive": 14,
+    "location_recall": 0.2456,
+    "strict_critical_recall": 0,
+    "location_critical_recall": 0.1935,
+    "critical_gold_rows": 31
+  },
+  "document_quality": {
+    "citation_accuracy": {
+      "value": 1,
+      "basis": "every cited claim independently verified by the evidence auditor and every path/line range re-resolved against the pinned clone",
+      "total_citations_line_by_line": 140,
+      "gate_enforced_subset": 125,
+      "gate_undercount_cause": "fenced code blocks desynchronize the gate citation scan; see ../external-ts-prisma-rest/FINDING-gate-citation-undercount.md"
+    },
+    "unsupported_verified_claims": 0,
+    "unexplained_omissions": 0,
+    "rejected_draft_publications": 0,
+    "audit_rows": 140
+  },
+  "gate": {
+    "verdict": "approved",
+    "citation_count": 125,
+    "audited_citation_count": 125,
+    "reasons": []
+  },
+  "publication": {
+    "published": true,
+    "destination_relative": "generated-documents"
+  },
+  "coverage_audit": {
+    "expected_count": 19,
+    "documented_count": 19,
+    "verdict": "passed",
+    "denominator": "deterministic detector output"
+  },
+  "actors": {
+    "extractor": "extractor-ext2",
+    "writer": "writer-ext2",
+    "evidence_auditor": "auditor-ext2",
+    "coverage_sentinel": "sentinel-ext2",
+    "gatekeeper": "gatekeeper-ext2",
+    "independence": "five distinct actor ids; writer, auditor, sentinel and gatekeeper ran as separate agent processes"
+  },
+  "external_quality_gate": {
+    "critical_surface_recall_100": false,
+    "citation_accuracy_100": true,
+    "unexplained_omissions_zero": true,
+    "unsupported_verified_claims_zero": true,
+    "no_rejected_draft_published": true,
+    "satisfied": false
+  },
+  "separation": "external result; must not be merged with the synthetic summaries in evals/document-quality/results/"
+}

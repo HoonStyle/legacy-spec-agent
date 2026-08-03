@@ -1,0 +1,59 @@
+{
+  "case": "external-mixed-online-boutique",
+  "analyzed_source_commit": "9a4616e77f0f9cbcbecaf27d711c38890dda1404",
+  "profile": "standard",
+  "environment": {
+    "os": "Linux",
+    "kernel": "6.18.5",
+    "arch": "x86_64",
+    "node_version": "v22.22.2",
+    "connector_revision": "d86c2b0e1781a9e2ca669160cce6b5d02dd05a92",
+    "execution_mode": "separate_subagent_actors; deterministic gate invoked via stdio MCP against connector dist build",
+    "source_checkout": ".external-sources/microservices-demo (git clone, detached at pinned SHA; not committed)"
+  },
+  "commands_run": [
+    "cd connector && npm ci && npm run build",
+    "git clone https://github.com/... .external-sources/microservices-demo && git checkout --detach 9a4616e77f0f9cbcbecaf27d711c38890dda1404",
+    "node evals/document-quality/external/run-extractor.mjs external-mixed-online-boutique microservices-demo",
+    "node scripts/evaluate-document-quality.mjs <case>/gold-surfaces.jsonl <case>/actual-surfaces.jsonl <case>/extractor-result.json",
+    "node evals/document-quality/external/freeze-draft.mjs external-mixed-online-boutique microservices-demo <writer> <extractor>",
+    "node evals/document-quality/external/precheck-draft.mjs external-mixed-online-boutique microservices-demo",
+    "node evals/document-quality/external/run-gate.mjs external-mixed-online-boutique microservices-demo <gatekeeper> evaluate",
+    "node evals/document-quality/external/run-gate.mjs external-mixed-online-boutique microservices-demo <gatekeeper> publish"
+  ],
+  "elapsed": {
+    "extractor_ms": 34.241,
+    "gate_ms": 371.613,
+    "publish_ms": 288.423,
+    "writer_and_audit_wall_clock": "not_measured",
+    "measurement_note": "agent-phase wall clock was not instrumented; only the deterministic extractor and gate calls were timed"
+  },
+  "resource": {
+    "rss_measurement": "process.memoryUsage().rss at end of the extractor run only (end-of-run, not peak)",
+    "extractor_rss_after_bytes": 60551168,
+    "writer_audit_gate_peak_rss": "not_measured"
+  },
+  "bytes": {
+    "in_scope_source_bytes": 125810,
+    "published_document_bytes": 71398,
+    "raw_extractor_output_bytes": 7872,
+    "gate_response_bytes": 102,
+    "publish_response_bytes": 279
+  },
+  "instrumentation_not_available": {
+    "provider_input_tokens": "not_exposed",
+    "provider_cached_input_tokens": "not_exposed",
+    "provider_output_tokens": "not_exposed",
+    "provider_reasoning_tokens": "not_exposed",
+    "provider_tool_tokens": "not_exposed",
+    "pricing_units": "not_exposed",
+    "unique_file_reads": "not_measured",
+    "repeated_file_reads": "not_measured",
+    "note": "per-run provider counters are not exposed in this environment; no estimate was substituted"
+  },
+  "execution_mode": {
+    "extractor": "direct module import of connector/dist/src/coverage-surface.js",
+    "gate_and_publication": "stdio MCP client against connector/dist/src/index.js",
+    "actors": "writer, evidence auditor, coverage sentinel and gatekeeper ran as separate agent processes with distinct actor ids"
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "case": "external-mixed-online-boutique",
+  "analyzed_source_commit": "9a4616e77f0f9cbcbecaf27d711c38890dda1404",
+  "profile": "standard",
+  "gold": {
+    "rows": 101,
+    "sha256": "f6875b3afa4729923e821414f0979ab83c1b0d9026491ea961f184b6ae7eb984",
+    "human_review": "approved 2026-07-30 by the repository owner as source-only human-reviewed gold, after the corrections in docs/external-gold-review-summary.md were applied and verified"
+  },
+  "extractor_vs_gold_strict": {
+    "counts": {
+      "gold": 101,
+      "actual": 25,
+      "true_positive": 10,
+      "false_positive": 15,
+      "false_negative": 91
+    },
+    "precision": 0.4,
+    "recall": 0.099,
+    "critical_recall": 0,
+    "categories": {
+      "business_rule": {
+        "precision": null,
+        "recall": 0,
+        "gold": 12,
+        "actual": 0
+      },
+      "data_contract": {
+        "precision": 0.375,
+        "recall": 0.3333,
+        "gold": 9,
+        "actual": 8
+      },
+      "entrypoint": {
+        "precision": 0,
+        "recall": 0,
+        "gold": 7,
+        "actual": 2
+      },
+      "environment": {
+        "precision": 0.8571,
+        "recall": 0.2069,
+        "gold": 29,
+        "actual": 7
+      },
+      "external_integration": {
+        "precision": null,
+        "recall": 0,
+        "gold": 17,
+        "actual": 0
+      },
+      "external_side_effect": {
+        "precision": null,
+        "recall": 0,
+        "gold": 12,
+        "actual": 0
+      },
+      "registered_api": {
+        "precision": 0,
+        "recall": 0,
+        "gold": 10,
+        "actual": 7
+      },
+      "status_value": {
+        "precision": null,
+        "recall": 0,
+        "gold": 2,
+        "actual": 0
+      },
+      "test_file": {
+        "precision": 1,
+        "recall": 0.3333,
+        "gold": 3,
+        "actual": 1
+      }
+    }
+  },
+  "naming_diagnostic": {
+    "note": "Location-only agreement ignores the surface string and matches category|found_at|expected_document_type. Diagnostic only — the strict numbers above remain the reported metric and the gate criterion. See ../FINDING-surface-naming-match-key.md.",
+    "strict_true_positive": 10,
+    "location_true_positive": 12,
+    "location_recall": 0.12,
+    "strict_critical_recall": 0,
+    "location_critical_recall": 0.0625,
+    "critical_gold_rows": 32
+  },
+  "document_quality": {
+    "citation_accuracy": {
+      "value": 1,
+      "basis": "every cited claim independently verified by the evidence auditor and every path/line range re-resolved against the pinned clone",
+      "total_citations_line_by_line": 146,
+      "gate_enforced_subset": 131,
+      "gate_undercount_cause": "fenced code blocks desynchronize the gate citation scan; see ../external-ts-prisma-rest/FINDING-gate-citation-undercount.md"
+    },
+    "unsupported_verified_claims": 0,
+    "unexplained_omissions": 0,
+    "rejected_draft_publications": 0,
+    "audit_rows": 146
+  },
+  "gate": {
+    "verdict": "approved",
+    "citation_count": 131,
+    "audited_citation_count": 131,
+    "reasons": []
+  },
+  "publication": {
+    "published": true,
+    "destination_relative": "generated-documents"
+  },
+  "coverage_audit": {
+    "expected_count": 25,
+    "documented_count": 25,
+    "verdict": "passed",
+    "denominator": "deterministic detector output"
+  },
+  "actors": {
+    "extractor": "extractor-ext3",
+    "writer": "writer-ext3",
+    "evidence_auditor": "auditor-ext3",
+    "coverage_sentinel": "sentinel-ext3",
+    "gatekeeper": "gatekeeper-ext3",
+    "independence": "five distinct actor ids; writer, auditor, sentinel and gatekeeper ran as separate agent processes"
+  },
+  "external_quality_gate": {
+    "critical_surface_recall_100": false,
+    "citation_accuracy_100": true,
+    "unexplained_omissions_zero": true,
+    "unsupported_verified_claims_zero": true,
+    "no_rejected_draft_published": true,
+    "satisfied": false
+  },
+  "separation": "external result; must not be merged with the synthetic summaries in evals/document-quality/results/"
+}
