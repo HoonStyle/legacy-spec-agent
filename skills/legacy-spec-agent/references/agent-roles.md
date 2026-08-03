@@ -77,15 +77,17 @@ Bias toward flagging ambiguity. A smaller grounded specification is better than 
 {
   "expected_count": 0,
   "documented_count": 0,
-  "covered_items": [{"surface": "<item>", "found_at": "path:line", "document_id": "API-*|DM-*|BR-*|TC-*|RSK-*"}],
-  "explained_omissions": [{"surface": "<item>", "found_at": "path:line", "expected_document_type": "API|DM|BR|TC|RSK", "reason": "<scope/exclusion reason>"}],
-  "unexplained_omissions": [{"surface": "<item>", "found_at": "path:line", "expected_document_type": "API|DM|BR|TC|RSK"}],
+  "covered_items": [{"category": "registered_api|data_contract|environment|entrypoint|status_value|test_file|external_side_effect", "surface": "<item>", "found_at": "path:line", "expected_document_type": "API|DM|BR|TC|RSK", "document_id": "API-*|DM-*|BR-*|TC-*|RSK-*"}],
+  "explained_omissions": [{"category": "<same category contract>", "surface": "<item>", "found_at": "path:line", "expected_document_type": "API|DM|BR|TC|RSK", "reason": "<scope/exclusion reason>"}],
+  "unexplained_omissions": [{"category": "<same category contract>", "surface": "<item>", "found_at": "path:line", "expected_document_type": "API|DM|BR|TC|RSK"}],
   "truncated_inputs": [{"source": "<tool/scope>", "returned": 0, "total": 0, "omitted": 0}],
   "verdict": "passed|failed",
   "actor_id": "<opaque auditor identity>",
   "draft_digest": "<frozen draft digest>"
 }
 ```
+
+Coverage identity is the tuple of the typed `document_id`, surface `category`, source path, and original `found_at` line or range. A covered item remains linked when at least one citation under that ID is in the same file and contains the complete `found_at` range; merely citing the same file is insufficient. For compatibility, `category` may be omitted by older callers and is then derived from the prefix of `surface`, but an explicitly supplied category must match the extractor output. Evidence soundness is separate: every factual line has one verified claim row, and that row records the full citation set on the claim (a string for one citation or a string array for multiple citations). For a claim with multiple citations, at least one must establish any claimed surface identity while the independent Evidence Auditor must attest that the complete set supports the whole claim.
 
 `expected_count` counts every enumerated surface item; `documented_count` counts items mapped to a correctly typed document ID. `verdict` is `failed` when any omission is unexplained or any truncation is absent from the manifest and deliverable coverage disclosures.
 

@@ -118,3 +118,30 @@ test("renderReport: Quality validates citation ranges and normalized audit evide
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("renderReport: Quality accepts verified rows whose evidence is a citation array", () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-report-array-"));
+  try {
+    mkdirSync(join(root, "core"));
+    writeFileSync(join(root, "core", "loader.py"), ["one", "two", "three", "four", "five"].join("\n") + "\n");
+    writeFileSync(
+      join(root, "SPEC.md"),
+      [
+        "# spec",
+        "",
+        "- compound claim `core/loader.py:2` `core/loader.py:4`",
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(root, "audit_log.jsonl"),
+      `{"id":"a","action":"verified","claim":"compound","evidence":["core/loader.py:2","core/loader.py:4"],"note":""}\n`,
+    );
+
+    renderReport(root);
+    const html = readFileSync(join(root, "REPORT.html"), "utf8");
+    assert.match(html, /<div class="n">100%<\/div><div class="l">audit coverage<\/div>/);
+    assert.match(html, /<code class="cite">core\/loader\.py:2 core\/loader\.py:4<\/code>/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

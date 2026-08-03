@@ -26,13 +26,15 @@ export interface ScopeManifest {
 }
 
 export interface CoverageItem {
+  category?: "registered_api" | "data_contract" | "environment" | "entrypoint" | "status_value" | "test_file" | "external_side_effect";
   surface: string;
   found_at: string;
   expected_document_type: "API" | "DM" | "BR" | "TC" | "RSK";
 }
 
 function coverageKey(item: CoverageItem): string {
-  return `${item.surface}|${item.found_at}|${item.expected_document_type}`;
+  const category = item.category ?? item.surface.slice(0, item.surface.indexOf(":"));
+  return `${category}|${item.surface}|${item.found_at}|${item.expected_document_type}`;
 }
 
 export interface CoverageAudit {
@@ -90,7 +92,8 @@ export const scopeManifestSchema = z.object({
   for (const module of includedModules) if (!modules.includes(module)) ctx.addIssue({ code: "custom", message: `included module lacks Extractor assignment: ${module}` });
   for (const module of modules) if (!includedModules.has(module)) ctx.addIssue({ code: "custom", message: `Extractor assignment does not match a frozen included path: ${module}` });
 });
-const coverageItemSchema = z.object({ surface: z.string().min(1), found_at: z.string().min(1), expected_document_type: z.enum(["API", "DM", "BR", "TC", "RSK"]) }).strict();
+const coverageCategorySchema = z.enum(["registered_api", "data_contract", "environment", "entrypoint", "status_value", "test_file", "external_side_effect"]);
+const coverageItemSchema = z.object({ category: coverageCategorySchema.optional(), surface: z.string().min(1), found_at: z.string().min(1), expected_document_type: z.enum(["API", "DM", "BR", "TC", "RSK"]) }).strict();
 export const coverageAuditSchema = z.object({
   expected_count: z.number().int().nonnegative(), documented_count: z.number().int().nonnegative(),
   covered_items: z.array(coverageItemSchema.extend({ document_id: z.string().min(1) })),
@@ -153,7 +156,7 @@ function citationsIn(markdown: string): MarkdownCitation[] {
 }
 
 interface AuditLog {
-  rows: Array<{ evidence?: string; action?: string; claim?: string; claim_id?: string; document?: string }>;
+  rows: Array<{ evidence?: string | string[]; action?: string; claim?: string; claim_id?: string; document?: string }>;
   malformed_lines: number[];
 }
 
@@ -164,7 +167,9 @@ function readJsonLines(path: string): AuditLog {
     if (!line.trim()) return;
     try {
       const row = JSON.parse(line);
-      if (!row || typeof row !== "object" || typeof row.action !== "string" || ((row.action === "verified" || row.action === "flagged") && typeof row.evidence !== "string"))
+      const validEvidence = row && typeof row === "object" && (typeof row.evidence === "string"
+        || (Array.isArray(row.evidence) && row.evidence.length > 0 && row.evidence.every((item: unknown) => typeof item === "string")));
+      if (!row || typeof row !== "object" || typeof row.action !== "string" || ((row.action === "verified" || row.action === "flagged") && !validEvidence))
         throw new Error("invalid audit row schema");
       log.rows.push(row);
     } catch {
@@ -172,6 +177,11 @@ function readJsonLines(path: string): AuditLog {
     }
   });
   return log;
+}
+
+function auditCitations(evidence: string | string[] | undefined): CitationRange[] {
+  return (Array.isArray(evidence) ? evidence : evidence ? [evidence] : [])
+    .map(parseCitation).filter((value): value is CitationRange => value !== undefined);
 }
 
 function resolveGitHead(sourceRoot: string): string | undefined {
@@ -225,8 +235,8 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
   const remainingAudit = new Map<string, number>();
   for (const row of audit.rows) {
     if (row.action !== "verified") continue;
-    const parsed = row.evidence && parseCitation(row.evidence);
-    if (parsed) remainingAudit.set(formatCitation(parsed), (remainingAudit.get(formatCitation(parsed)) ?? 0) + 1);
+    for (const parsed of auditCitations(row.evidence))
+      remainingAudit.set(formatCitation(parsed), (remainingAudit.get(formatCitation(parsed)) ?? 0) + 1);
   }
   let audited = 0;
   for (const citation of citations) {
@@ -258,7 +268,7 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
       if (!claimId) return false;
       const expected = citationsIn(line).map(({ citation }) => formatCitation(citation)).sort();
       const recorded = audit.rows.filter((row) => row.action === "verified" && row.claim_id === claimId)
-        .flatMap((row) => row.evidence && parseCitation(row.evidence) ? [formatCitation(parseCitation(row.evidence)!)] : []).sort();
+        .flatMap((row) => auditCitations(row.evidence).map(formatCitation)).sort();
       return expected.length !== recorded.length || expected.some((value, index) => value !== recorded[index]);
     });
     if (mismatchedEvidence) reasons.push({ code: "claim_audit_incomplete", detail: "claim audit evidence must match the citations on that claim line" });
@@ -298,7 +308,15 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
   const mismatchedCoverageEvidence = coverage.covered_items.filter((item) => {
     const escapedId = item.document_id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const section = new RegExp(`^#{1,6}\\s+${escapedId}\\b([\\s\\S]*?)(?=^#{1,6}\\s+|(?![\\s\\S]))`, "m").exec(allMarkdown)?.[1] ?? "";
-    return !section.includes(`\`${item.found_at}\``);
+    const surfaceLocation = parseCitation(item.found_at);
+    // The citation grammar cannot parse every real surface path (spaces, non-ASCII);
+    // those keep the pre-containment literal linkage instead of failing unconditionally.
+    if (!surfaceLocation) return !section.includes(`\`${item.found_at}\``);
+    return !citationsIn(section).some(({ citation }) =>
+      citation.path === surfaceLocation.path
+      && citation.start <= surfaceLocation.start
+      && citation.end >= surfaceLocation.end,
+    );
   });
   if (mismatchedCoverageEvidence.length > 0)
     reasons.push({ code: "coverage_failed", detail: `covered surface lacks matching evidence at its document ID: ${mismatchedCoverageEvidence.map((item) => item.document_id).join(", ")}` });

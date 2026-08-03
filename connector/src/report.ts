@@ -173,7 +173,7 @@ interface AuditEntry {
   id?: string;
   action?: string;
   claim?: string;
-  evidence?: string;
+  evidence?: string | string[];
   note?: string;
 }
 
@@ -206,8 +206,8 @@ function qualityTab(root: string, docs: DocTab[], audit: AuditEntry[]): string {
     citationsIn(doc.markdown).map((parsed) => ({ doc: doc.file, parsed })),
   );
   const auditEvidence = audit
-    .map((e) => e.evidence)
-    .filter((e): e is string => !!e)
+    .flatMap((e) => (Array.isArray(e.evidence) ? e.evidence : e.evidence ? [e.evidence] : []))
+    .filter((e): e is string => typeof e === "string" && e.length > 0)
     .map(parseCitation)
     .filter((e): e is CitationRange => e !== undefined);
   const lineCache = new CitationLineCache();
@@ -338,7 +338,7 @@ export function renderReport(root: string, params: ReportParams = {}): ReportRes
       .map(
         (e) =>
           `<tr><td><code>${esc(e.id ?? "")}</code></td><td><span class="badge ${esc(e.action ?? "")}">${esc(e.action ?? "")}</span></td>` +
-          `<td>${esc(e.claim ?? "")}</td><td><code class="cite">${esc(e.evidence ?? "")}</code></td><td>${esc(e.note || "—")}</td></tr>`,
+          `<td>${esc(e.claim ?? "")}</td><td><code class="cite">${esc(Array.isArray(e.evidence) ? e.evidence.join(" ") : e.evidence ?? "")}</code></td><td>${esc(e.note || "—")}</td></tr>`,
       )
       .join("");
     tabs.push({

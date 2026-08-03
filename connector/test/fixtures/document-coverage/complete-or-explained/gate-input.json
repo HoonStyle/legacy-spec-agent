@@ -40,7 +40,8 @@
         "surface": "registered_api:getUser",
         "found_at": "src/server.ts:1",
         "expected_document_type": "API",
-        "document_id": "API-001"
+        "document_id": "API-001",
+        "category": "registered_api"
       }
     ],
     "explained_omissions": [
@@ -48,7 +49,8 @@
         "surface": "registered_api:updateUser",
         "found_at": "src/server.ts:2",
         "expected_document_type": "API",
-        "reason": "excluded by frozen scope at src/server.ts:2"
+        "reason": "excluded by frozen scope at src/server.ts:2",
+        "category": "registered_api"
       }
     ],
     "unexplained_omissions": [],
