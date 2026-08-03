@@ -43,6 +43,28 @@ test("complete documentation or a frozen, explained exclusion is approved", () =
   assert.deepEqual(result, { verdict: "approved", citation_count: 8, audited_citation_count: 8, reasons: [] });
 });
 
+test("fenced code citations are ignored and parsing resumes for LF and CRLF documents", () => {
+  const fixtureMarkdown = readFileSync(join(fixtureRoot, "fenced-citations.md"), "utf8");
+  const expected = { verdict: "approved", citation_count: 13, audited_citation_count: 13, reasons: [] };
+  for (const lineEnding of ["\n", "\r\n"]) {
+    const { params, cleanup } = isolatedComplete();
+    try {
+      const architecture = join(params.dir, "ARCHITECTURE.md");
+      const normalized = fixtureMarkdown.replace(/\r?\n/g, lineEnding);
+      appendFileSync(architecture, `${lineEnding}${normalized}`);
+      appendFileSync(join(params.dir, "audit_log.jsonl"), [
+        { action: "verified", claim_id: "CLM-101", evidence: "src/server.ts:1", document: "ARCHITECTURE.md" },
+        { action: "verified", claim_id: "CLM-102", evidence: "src/server.ts:2", document: "ARCHITECTURE.md" },
+        { action: "verified", claim_id: "CLM-103", evidence: "src/server.ts:1-2", document: "ARCHITECTURE.md" },
+        { action: "verified", claim_id: "CLM-104", evidence: "src/server.ts:2", document: "ARCHITECTURE.md" },
+        { action: "verified", claim_id: "CLM-105", evidence: "src/server.ts:1", document: "ARCHITECTURE.md" },
+      ].map((row) => JSON.stringify(row)).join(lineEnding) + lineEnding);
+      refreshDigest(params);
+      assert.deepEqual(evaluateDocumentGate(params), expected);
+    } finally { cleanup(); }
+  }
+});
+
 test("Gatekeeper rejects stale/self audits and undisclosed truncation", () => {
   const params = fixture("complete-or-explained");
   params.evidence_audit.actor_id = params.scope_manifest.writer_actor_id;
