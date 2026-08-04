@@ -4,7 +4,9 @@ This is the operating checklist for the bounded replay in roadmap item 4. Its pu
 
 ## Pilot status
 
-The first five-pair pilot is preserved in `evals/end-to-end-replay/fermass-pilot/`. Its decision is **Inconclusive** because the provider did not expose per-run token counters and elapsed time was not measured. Direct source-read counts improved in four pairs, but those counts cannot establish savings when connector response overhead is unmetered. Any repeat or expansion must run in an environment that exposes provider usage; feature work must not be used to make the replay pass.
+The first five-pair pilot is preserved in `evals/end-to-end-replay/fermass-pilot/`. Its decision is **Inconclusive** because the provider did not expose per-run token counters and elapsed time was not measured. Direct source-read counts improved in four pairs, but those counts cannot establish savings when connector response overhead is unmetered.
+
+The counter-enabled repeat is preserved in `evals/end-to-end-replay/fermass-counter-replay/` and its recorded decision is **Stop** (2026-08-04). With provider counters exposed and treatment compliance enforced, the connector improved the primary input-token measure in 1/5 pairs, worsened the paired median by +42,303 input tokens, and increased aggregate input tokens by 31.3%, with no task-quality or citation-accuracy regression; every connector run re-emitted the repository-wide symbol index. That outcome satisfies this protocol's narrow-or-stop conditions, so no further replay is planned as roadmap expansion, and any future efficiency experiment must be separately approved and narrowly scoped. Feature work must never be used to make a replay pass.
 
 ## Scope
 
