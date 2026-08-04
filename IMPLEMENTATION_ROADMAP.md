@@ -97,6 +97,29 @@ Commands are the manifest-driven runners in `evals/document-quality/external/`: 
 
 **New evidence-triggered finding, not fixed.** `FINDING-gate-citation-undercount.md` records that fenced code blocks desynchronize `citationsIn()` in `connector/src/document-gate.ts`, so the gate validated 179 of the draft's 200 citations; the 21 invisible instances all follow a mermaid fence in `ARCHITECTURE.md`. Citation soundness for this case was established by the independent auditor and a full re-resolution of all 200 ranges rather than by the gate. This is not one of the per-file isolation failures item C permits, so no connector change was made.
 
+#### 2026-08-03 update — both gate defects above are fixed on main
+
+PR #64 (`f00bd78`) replaced the document-wide citation regex in
+`connector/src/document-gate.ts` with a line-based, fence-aware scanner, so
+parsing resumes after fenced blocks and the undercount recorded in
+`FINDING-gate-citation-undercount.md` no longer occurs. PR #65 (merged as
+`dd314ae`) resolved the rule contradiction by separating evidence soundness
+from coverage identity: coverage linkage now accepts any same-file citation
+under the item's document ID whose range contains the original `found_at`,
+verified audit rows may carry a citation array for compound claims, and
+`category` joined the coverage identity key. Merging #65 required adapting its
+containment check to the #64 `citationsIn()` return type; review during the PR
+added two further fixes with regressions, `render_report` handling evidence
+arrays without crashing and surfaces whose paths the citation grammar cannot
+parse (spaces, non-ASCII) keeping the previous literal linkage instead of
+failing coverage unconditionally.
+
+Still open after these merges: `FINDING-surface-naming-match-key.md` (a
+gold/detector naming disagreement still scores as a missed detection) is
+unchanged, and `connector/src/report.ts` retains its own pre-fix regex
+`citationsIn`, so the Quality tab still miscounts citations after fenced
+blocks. Both remain recorded, not fixed.
+
 ## Release-blocking priorities
 
 ### 1. Installed-plugin end-to-end smoke
