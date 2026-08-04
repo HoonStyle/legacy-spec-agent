@@ -3,7 +3,7 @@
 **Prompt**: Modbus(FFU) CRC16 규격 — 초기값·다항식·바이트 순서 — 정의 위치와 값.
 
 ## 답변 (동일 결론)
-- `ModbusCrc`: 초기값 **0xFFFF**(`:278`), 다항식 **0xA001**(`:283`), low-byte-first(`AppendCrc :271`)  `Source/FerMass/FerMass.Devices/Drivers/FfuModbusTransport.cs`
+- `ModbusCrc`: 초기값 **0xFFFF**(`:278`), 다항식 **0xA001**(`:283`), low-byte-first(`AppendCrc :271`)  `Source/InternalRepo/InternalRepo.Devices/Drivers/FfuModbusTransport.cs`
 
 ## 도구 트레이스 (실측)
 - `verify_citation` 1회 — `context_lines:10`으로 메서드 전체 소스를 결정적으로 반환, `suggested_line:278` 제시

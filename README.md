@@ -108,7 +108,7 @@ Reports on big codebases would get unwieldy without limits, so:
 
 Multi-language responses also report source bytes, serialized response bytes, and WASM parse-cache hits/misses. A deterministic synthetic benchmark currently measures 43.0% fewer tokens for file-level symbols and 95.3% fewer for package summaries than concatenated raw source. These are fixture results, not end-to-end session or billing-token claims; see [`TOKEN_USAGE.md`](TOKEN_USAGE.md) for the method and limitations.
 
-The end-to-end question has since been measured directly. A counter-enabled paired replay (five task pairs, per-run provider token counters, 2026-08-04) found that connector runs **increased** aggregate provider input tokens by 31.3% and improved only one of five pairs — with no task-quality or citation-accuracy regression — because every run re-emitted the repository-wide symbol index. The recorded decision is **Stop** for efficiency-motivated expansion; see [`evals/end-to-end-replay/fermass-counter-replay/DECISION.md`](evals/end-to-end-replay/fermass-counter-replay/DECISION.md). Treat the connector as a verification and grounding engine, not a context-cost optimization.
+The end-to-end question has since been measured directly. A counter-enabled paired replay (five task pairs, per-run provider token counters, 2026-08-04) found that connector runs **increased** aggregate provider input tokens by 31.3% and improved only one of five pairs — with no task-quality or citation-accuracy regression — because every run re-emitted the repository-wide symbol index. The recorded decision is **Stop** for efficiency-motivated expansion; see [`evals/end-to-end-replay/counter-replay/DECISION.md`](evals/end-to-end-replay/counter-replay/DECISION.md). Treat the connector as a verification and grounding engine, not a context-cost optimization.
 
 Release blockers, resolver work, semantic backends, and the deliberately last SDK-installer phase are ordered in [`IMPLEMENTATION_ROADMAP.md`](IMPLEMENTATION_ROADMAP.md).
 
@@ -146,7 +146,7 @@ showcase.html        Tabbed viewer for demo artifacts
 - `demo-hookify/` is an unedited run against a third-party package. It produced the full artifact set and caught a stale comment that described an already-implemented feature as future work.
 - `evals/BENCHMARK.md` compares runs with and without the skill on the same prompts: 86-87% citation coverage with the skill against 0% without, and 6 of 6 sampled citations accurate.
 - The connector test suite replays all 12 citations from the demo audit log against the pinned commit and verifies them mechanically, plus regression tests for plugin packaging and issues found in review.
-- `evals/end-to-end-replay/` preserves two bounded replays against a pinned FerMass revision. The 2026-08-04 counter-enabled replay measured provider tokens directly: quality and citations held in all ten runs, but connector runs cost 31.3% more input tokens, and the recorded decision is **Stop** — kept here because negative measurements are evidence too.
+- `evals/end-to-end-replay/` preserves two bounded replays against a pinned InternalRepo revision. The 2026-08-04 counter-enabled replay measured provider tokens directly: quality and citations held in all ten runs, but connector runs cost 31.3% more input tokens, and the recorded decision is **Stop** — kept here because negative measurements are evidence too.
 
 ## Wiki
 

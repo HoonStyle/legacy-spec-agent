@@ -6,7 +6,7 @@
 동일 결론(정의 `MachineConfig.cs:168` · 로더 `AppConfigMachineConfigLoader.cs:95` · 설정 `machineConfig.config:145` · 계산 `MlcHandler.cs:155`+전파 · 부력 `BuoyancyCalculator.cs:27` · 계약 `ModuleServices.cs:35` · 테스트 2파일). 8파일 15occurrence.
 
 ## 도구 트레이스 (실측)
-- `index_symbols`(subdir=`FerMass.Data/Config`) 1회 — **C# 완전 파싱**: 3파일·20심볼·`unsupported_files:0`. `MachineConfig` 클래스(63–200)·`AppConfigMachineConfigLoader.Load`(20–114) 등 컨테이닝 심볼 정확 특정. **단, 필드(`MassOffset`) 참조는 심볼 인덱스에 없음**(클래스/메서드만).
+- `index_symbols`(subdir=`InternalRepo.Data/Config`) 1회 — **C# 완전 파싱**: 3파일·20심볼·`unsupported_files:0`. `MachineConfig` 클래스(63–200)·`AppConfigMachineConfigLoader.Load`(20–114) 등 컨테이닝 심볼 정확 특정. **단, 필드(`MassOffset`) 참조는 심볼 인덱스에 없음**(클래스/메서드만).
 - `build_call_graph`(package) 1회 — **토큰 초과**(103,681자/1,489줄)로 오버플로, 파일로 저장됨. package 단위인데도 과대 → 이 리포엔 부적합(커넥터 러프 엣지).
 - Grep 1회 — 필드 참조 실제 열거(8파일 15건). **커넥터엔 C# 참조검색 도구가 없어 grep 필수.**
 - 고유 소스 읽기: **1**(grep) · 중복 읽기: 0

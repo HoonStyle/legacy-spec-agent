@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$ReplayRoot = 'C:\Users\Lenovo\Documents\FerMass_Replay_1984b4e',
+    [string]$ReplayRoot = 'C:\Users\Lenovo\Documents\InternalRepo_Replay_1984b4e',
     [string]$NodeCommand = 'C:\Program Files\nodejs\node.exe',
     [string]$CodexEntrypoint = 'C:\Users\Lenovo\AppData\Roaming\npm\node_modules\@openai\codex\bin\codex.js',
     [string]$ConnectorBootstrap = 'C:\Users\Lenovo\.codex\plugins\local\legacy-spec-agent\connector\bootstrap.mjs',
@@ -157,7 +157,7 @@ if ($SmokeConnector) {
     $smokeArgs += $rawMcpConfig
     $smokeArgs += @(
         '-C', $ConnectorRoot,
-        'You must call the verify_citation tool from MCP server replay_connector exactly once for README.md line 1 with expected snippet # FerMass. Return the tool verdict and actual_source. If that tool is unavailable, reply exactly UNAVAILABLE. Do not answer from memory and do not call any other tool.'
+        'You must call the verify_citation tool from MCP server replay_connector exactly once for README.md line 1 with expected snippet # InternalRepo. Return the tool verdict and actual_source. If that tool is unavailable, reply exactly UNAVAILABLE. Do not answer from memory and do not call any other tool.'
     )
     & $NodeCommand $CodexEntrypoint @smokeArgs
     if ($LASTEXITCODE -ne 0) { throw "Connector smoke failed with exit code $LASTEXITCODE" }

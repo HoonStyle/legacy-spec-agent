@@ -3,8 +3,8 @@
 **Prompt**: `AlarmCodes` 대역 체계와 기동 시 등록되는 알람 정의 개수.
 
 ## 답변 (동일 결론)
-- 대역: 디바이스 1xxx(5)·모듈 2xxx(4)·시스템 3xxx(2)  `Source/FerMass/FerMass.Data/Alarm/AlarmCodes.cs:9`
-- 등록: `alarms.Register(new AlarmDefinition(...))` **11회**  `Source/FerMass/FerMass/Program.cs`(grep count=11)
+- 대역: 디바이스 1xxx(5)·모듈 2xxx(4)·시스템 3xxx(2)  `Source/InternalRepo/InternalRepo.Data/Alarm/AlarmCodes.cs:9`
+- 등록: `alarms.Register(new AlarmDefinition(...))` **11회**  `Source/InternalRepo/InternalRepo/Program.cs`(grep count=11)
 
 ## 도구 트레이스 (실측)
 - Read 1회 (AlarmCodes.cs 전체) + Grep count 1회 (Program.cs 등록 패턴 → 11)
