@@ -33,6 +33,8 @@ The skill proposes spec updates in drift mode, but it does not silently rewrite 
 
 The connector makes the evidence layer reproducible. Instead of asking the model to guess whether a line exists or whether a chart is correct, the connector returns structured, deterministic results that the model can summarize and cite.
 
+Its measured value is verifiability, not token savings. A counter-enabled paired replay (2026-08-04) found that connector runs cost 31.3% more provider input tokens than control runs, with unchanged task quality and citation accuracy, and the recorded decision was to stop efficiency-motivated expansion. Use the connector because the evidence layer is reproducible and auditable, not to reduce context cost.
+
 ## Quality expectations
 
 - Every emitted Markdown citation should have a matching audit entry.

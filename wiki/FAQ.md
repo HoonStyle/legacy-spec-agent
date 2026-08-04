@@ -20,6 +20,10 @@ Those documents describe intent, product decisions, or user-facing expectations.
 
 The connector supports limits and package-level granularity. If output is truncated or scoped down, the generated documentation should state what was covered and what was omitted.
 
+## Does the connector reduce token usage or cost?
+
+No end-to-end saving has been measured, and the most recent measurement points the other way. A synthetic fixture benchmark shows the structural symbol index is smaller than concatenated raw source (43.0% fewer tokens at file granularity, 95.3% at package granularity), but a counter-enabled paired replay with per-run provider token counters (2026-08-04) measured connector runs at +31.3% aggregate input tokens across five task pairs, with only one pair improving and no quality or citation regression. The recorded decision is **Stop** for efficiency-motivated expansion. Use the connector for verifiable grounding — deterministic citation checks, drift classification, and publication gating — not to save tokens.
+
 ## What happens when code changes after the spec is generated?
 
 Run drift-check mode. Existing citations are classified as intact, moved, drifted, orphaned, or unresolved, and the tool emits a drift report instead of silently rewriting the spec.

@@ -19,6 +19,13 @@ Legacy Spec Agent reconstructs a grounded specification from source code that do
 4. **Human-owned intent** — the tool reconstructs what the code does, not why past design decisions were made.
 5. **Validated document set** — Mode A defaults to the full `standard` profile, citations are audit-covered, stable IDs resolve across artifacts, and missing concepts are reported as **Not found** with their search scope.
 
+## Current evaluation status
+
+As of 2026-08-04:
+
+- **Grounding quality.** Three pinned external repositories were run through the full Mode A gate pipeline; citation accuracy was 100% across 486 claims, with zero unsupported verified claims and no rejected draft published. The deterministic extractor's critical-surface recall gate remains open — the detector misses most gold surfaces — so no measured document-quality improvement is claimed.
+- **Token efficiency.** A counter-enabled paired replay measured connector runs at +31.3% provider input tokens (one of five pairs improved) with no task-quality or citation regression, and the recorded decision is **Stop** for efficiency-motivated expansion (`evals/end-to-end-replay/fermass-counter-replay/DECISION.md` in the main repository). The connector earns its place as a verification engine, not as a context-cost optimization.
+
 ## Main use cases
 
 - Onboard onto a legacy or inherited codebase.

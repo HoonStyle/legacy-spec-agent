@@ -1,0 +1,49 @@
+{
+  "protocol": "END_TO_END_REPLAY.md",
+  "repository": "FerMass",
+  "revision": "1984b4e324b9e4bec7fa2c7f48fc1b105737fbee",
+  "runner": {
+    "model": "gpt-5.6-sol",
+    "model_reasoning_effort": "medium",
+    "provider_change_from_preserved_pilot": "claude-opus-4-8[1m] -> gpt-5.6-sol",
+    "primary_metered_measure": "provider_input_tokens",
+    "tool_tokens": "not_separately_exposed_by_codex_cli_0.146.0"
+  },
+  "runs": [
+    {
+      "task_id": "task01-navigation",
+      "task_type": "navigation",
+      "condition_order": ["control", "connector"],
+      "prompt": "Modbus(FFU) CRC16 규격 — 초기값·다항식·바이트 순서 — 정의 위치와 값을 file:line으로.",
+      "completion_criteria": "FfuModbusTransport.cs의 ModbusCrc를 초기 0xFFFF·다항식 0xA001·low-byte-first로 정확 인용."
+    },
+    {
+      "task_id": "task02-navigation",
+      "task_type": "navigation",
+      "condition_order": ["connector", "control"],
+      "prompt": "MeasurementResult의 Mass/LoadCell/Offset이 채워지는 계산 위치와 공식.",
+      "completion_criteria": "MlcHandler.cs의 loadCell=mass+MassOffset·Mass=Round(loadCell+Buoyancy,7)·Offset=Round(Mass−LoadCell,7) 정확 인용."
+    },
+    {
+      "task_id": "task03-impact",
+      "task_type": "impact",
+      "condition_order": ["control", "connector"],
+      "prompt": "MassOffset(machineConfig) 값을 바꾸면 영향받는 코드/설정 경로 열거.",
+      "completion_criteria": "MachineConfig.MassOffset, MlcHandler loadCell 계산, BuildRecord, 설정 소스(App.config) 식별 + 인용."
+    },
+    {
+      "task_id": "task04-impact",
+      "task_type": "impact",
+      "condition_order": ["connector", "control"],
+      "prompt": "AlarmCodes 대역 체계와 기동 시 등록되는 알람 정의 개수.",
+      "completion_criteria": "AlarmCodes.cs 1xxx/2xxx/3xxx 대역 + Program.cs 알람정의 11종 정확 인용."
+    },
+    {
+      "task_id": "task05-change",
+      "task_type": "change",
+      "condition_order": ["control", "connector"],
+      "prompt": "SPEC.md System Purpose에 gRPC 기본 h2c·RemoteTlsEnabled 시 TLS 조건을 한 구절 보강(인용 포함).",
+      "completion_criteria": "최소 1줄 정정 diff가 정확·인용 동반, 기존 서술과 모순 없음."
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-This roadmap separates release blockers from optional semantic enhancements. The five-pair pilot in item 4 is complete but inconclusive because the provider did not expose per-run token counters. Feature expansion remains paused until the same bounded comparison can be run in an environment that exposes the primary metered measure. Each implementation item should remain an independently buildable, tested commit or short commit series.
+This roadmap separates release blockers from optional semantic enhancements. The item-4 question is now answered: the 2026-08-04 counter-enabled five-pair replay exposed the primary metered measure and its recorded decision is **Stop** (`evals/end-to-end-replay/fermass-counter-replay/DECISION.md`). Efficiency-motivated expansion — language resolvers, cache/concurrency growth, semantic backends, SDK installation — is therefore stopped rather than paused; any future reconsideration must be a separately approved, narrowly scoped experiment based on compact or persistent index results. Each implementation item should remain an independently buildable, tested commit or short commit series.
 
 ## Current usable scope
 
@@ -31,7 +31,7 @@ Candidate repositories, proposed scopes, gold-freeze rules, required artifacts, 
 3. Preserve raw provider counters, pricing/billing units when known, connector calls and response bytes, unique/repeated reads, elapsed time, task result, citation coverage, and citation accuracy. Do not double-count overlapping provider categories.
 4. Write the paired differences and decision record. Continue only if at least four of five pairs improve the primary metered token or cost measure, its median improves, and task quality and citation accuracy do not regress.
 
-**Replay gate:** select Continue, Narrow, Stop, or Inconclusive from metered evidence. Do not resume items 6, 8, 9, 10, 11, or SDK installation while the decision remains Inconclusive.
+**Replay gate: evaluated — Stop (2026-08-04).** The counter-enabled replay completed all five pairs with provider counters and treatment compliance enforced: the connector improved the primary input-token measure in 1/5 pairs, worsened the paired median by +42,303 input tokens, and increased aggregate input tokens by 31.3%, with no task-quality or citation-accuracy regression. Items 6, 8, 9, 10, 11, and SDK installation are not resumed; the roadmap consequence in `evals/end-to-end-replay/fermass-counter-replay/DECISION.md` governs any future reconsideration.
 
 ### C. Only evidence-triggered reliability fixes
 
@@ -121,6 +121,44 @@ has now been replaced by the gate's shared line-based, fence-aware scanner, with
 LF and CRLF regressions proving that the Quality tab ignores citations in
 backtick and tilde fences and resumes counting after each fence.
 
+#### Session record — 2026-08-04 counter-enabled bounded replay (item B executed)
+
+**Item B is complete and the decision is Stop.** The five preserved FerMass
+pairs were repeated at revision `1984b4e324b9e4bec7fa2c7f48fc1b105737fbee` in an
+environment exposing per-run provider counters: Codex CLI `0.146.0` emits
+`input_tokens`, `cached_input_tokens`, `cache_write_input_tokens`,
+`output_tokens`, and `reasoning_output_tokens`; tool tokens are not separately
+exposed, so connector response bytes were recorded separately and never added to
+input tokens. The runner model `gpt-5.6-sol` (reasoning effort `medium`) is an
+explicit, recorded deviation from the preserved pilot's `claude-opus-4-8[1m]`;
+conditions inside every new pair were identical, the original prompts,
+completion criteria, and alternating order were preserved, and connector runs
+carried a documented compliance instruction with zero-call runs rejected.
+
+Commands and raw result locations: the manifest-driven harness `run-replay.ps1`
+(preflight, `-SmokeConnector`, `-Execute`, `-Resume`) and `manifest.json` are
+preserved together with the harness README and `DECISION.md` in
+`evals/end-to-end-replay/fermass-counter-replay/`. Full transcripts, stderr
+logs, run records, and the task05 diffs remain on the execution machine at the
+results root recorded in `DECISION.md`. Exact unique/repeated file reads for
+control runs are recorded as unavailable — broad `rg` commands hide exact file
+opens — and command counts were not relabelled as read counts.
+
+**Gate evaluation:** at least 4/5 pairs improve — fail (1/5); paired median
+improves — fail (+42,303 input tokens; aggregate +31.3%); task quality — pass
+(10/10 against the fixed criteria); citation accuracy — pass; treatment
+integrity — pass (23 connector calls, every connector run used it); connector
+overhead included — pass. Observed failure mode: every connector run re-emitted
+the repository-wide `index_symbols` result (192 supported files, 1,509 symbols,
+about 398 KB per call), which matches the protocol's narrow-or-stop conditions.
+
+**Consequence:** items 6, 8, 9, 10, and 11 and SDK installation move from
+"paused pending item 4" to stopped. The replay showed no evidence that missing
+language resolution caused wasted reads or failed tasks, so no resolver,
+cache/concurrency, or semantic-backend work may cite this pilot as
+justification. Any future efficiency experiment must be separately approved and
+narrowly scoped to compact or persistent index results.
+
 ## Release-blocking priorities
 
 ### 1. Installed-plugin end-to-end smoke
@@ -156,13 +194,13 @@ Label current graph output as `module_dependency` with `resolution: "syntax"`, r
 
 ### 4. Bounded end-to-end token replay
 
-**Status: pilot complete; decision inconclusive pending provider counters.** The first pilot ran five paired tasks (10 runs) against FerMass at pinned revision `1984b4e324b9e4bec7fa2c7f48fc1b105737fbee`. Both conditions passed all five tasks with no citation errors. Connector runs reduced direct source reads in four pairs with a median paired change of -1, but the provider did not expose per-run token counters and the apparent improvement mostly replaced one direct read with one connector call. The decision record therefore does not establish a metered token or cost reduction. Raw results are preserved in `evals/end-to-end-replay/fermass-pilot/`.
+**Status: complete — the counter-enabled replay decision is Stop (2026-08-04).** The first pilot ran five paired tasks (10 runs) against FerMass at pinned revision `1984b4e324b9e4bec7fa2c7f48fc1b105737fbee`. Both conditions passed all five tasks with no citation errors, but the provider exposed no per-run token counters, so that decision record selected Inconclusive; its raw results are preserved in `evals/end-to-end-replay/fermass-pilot/`. The counter-enabled repeat of the same five pairs, preserved in `evals/end-to-end-replay/fermass-counter-replay/`, did expose provider counters, and its recorded decision is **Stop**.
 
-Keep the current syntax connector, including the implemented TypeScript resolver, as the MVP. The next permitted replay step is to repeat or extend the bounded comparison only in an environment that exposes the provider's per-run input, cached-input, output, reasoning, and separately reported tool counters. Preserve the same paired controls and include connector response bytes; do not substitute read counts for a metered token or cost measure.
+Keep the current syntax connector, including the implemented TypeScript resolver, as the MVP. The counter-enabled comparison has now been executed with the same paired controls, provider counters recorded exactly as reported, and connector response bytes preserved separately; read counts were never substituted for the metered measure. No further replay is planned as roadmap expansion.
 
 Record the provider's non-overlapping token counters exactly as reported, their pricing or billing units when known, connector calls and response bytes, unique and repeated file reads, elapsed time, task success, citation coverage, and citation accuracy. Do not add tool-response tokens to input tokens when the provider already includes them there. Report both raw counters and the paired difference; do not present structural-index size as billing-token savings.
 
-**Decision gate:** not yet satisfied. The required decision record exists and selects **Inconclusive**, specifically because provider counters and elapsed time were unavailable and connector overhead could not be included in a metered comparison. Continue only if a counter-enabled replay shows that the connector reduces the primary metered token or cost measure in at least four pairs, improves its median, and causes no task-quality or citation-accuracy regression. Narrow or stop if it increases the median, agents routinely reopen most indexed source, or benefits depend on excluding connector overhead. Do not build more connector features to make the pilot pass.
+**Decision gate: evaluated — Stop.** The counter-enabled decision record (`evals/end-to-end-replay/fermass-counter-replay/DECISION.md`) reports that the connector improved the primary input-token measure in only 1/5 pairs, worsened the paired median by +42,303 tokens, and increased aggregate input tokens by 31.3%, while task quality and citation accuracy did not regress. The continue condition (at least 4/5 pairs improving with an improving median) failed, and the narrow-or-stop conditions matched: the median worsened and all five connector runs re-emitted the repository-wide symbol index. Do not build more connector features to revisit this result; any reconsideration is a separately approved, narrowly scoped compact/persistent-index experiment.
 
 Use `END_TO_END_REPLAY.md` for the task manifest, paired-run controls, run-record fields, comparison, and decision template.
 
@@ -182,7 +220,7 @@ Use `END_TO_END_REPLAY.md` for the task manifest, paired-run controls, run-recor
 
 ### 6. Language-specific module resolution
 
-**Status: paused pending item 4.** TypeScript `baseUrl`, `paths`, project references, package exports, and missing-extension support is implemented. Validate or add another language only when replay evidence identifies module resolution as a material source of wasted reads or failed tasks.
+**Status: stopped by the item-4 Stop decision (2026-08-04).** TypeScript `baseUrl`, `paths`, project references, package exports, and missing-extension support is implemented and stays. The counter-enabled replay found no evidence that missing module resolution caused wasted reads or failed tasks, so no further resolver may be started on efficiency grounds.
 
 Implement separately:
 
@@ -194,7 +232,7 @@ Uncertain imports must remain external/unresolved instead of being guessed from 
 
 ### 7. Per-file failure isolation
 
-**Status: minimum reliability fixes only pending item 4.** Fix failures that prevent representative replay tasks from completing; defer exhaustive edge-case hardening until the effect gate justifies continued investment.
+**Status: minimum reliability fixes only.** The item-4 decision is Stop, so exhaustive edge-case hardening stays unjustified; fix only failures demonstrated by the evidence work in the queue above (item C).
 
 Continue after unreadable, changing, oversized, invalid-encoding, grammar-load, or parse-error files. Return structured `failed_files` diagnostics separately from `unsupported_files`.
 
@@ -202,7 +240,7 @@ Continue after unreadable, changing, oversized, invalid-encoding, grammar-load, 
 
 ### 8. Cache lifecycle and concurrency
 
-**Status: paused pending item 4.** Address demonstrated correctness or resource failures first; do not expand concurrency infrastructure speculatively.
+**Status: stopped by the item-4 Stop decision (2026-08-04).** Address demonstrated correctness or resource failures only; do not expand concurrency infrastructure speculatively.
 
 Cover simultaneous access, mutation during analysis, eviction beyond 512 entries, repository deletion, explicit cleanup, and server shutdown. Prevent duplicate parsing and tree use-after-delete.
 
@@ -212,25 +250,25 @@ Cover simultaneous access, mutation during analysis, eviction beyond 512 entries
 
 ### 9. TypeScript semantic backend
 
-**Status: paused pending item 4 and a demonstrated semantic gap.**
+**Status: stopped by the item-4 Stop decision (2026-08-04); reconsideration additionally requires a demonstrated semantic gap.**
 
 Discover projects, load the compiler API, resolve types/symbols/calls, and emit cited semantic edges. This is first because it can run inside the existing Node connector without an external SDK installer.
 
 ### 10. C# Roslyn backend
 
-**Status: paused pending item 4 and a demonstrated semantic gap.**
+**Status: stopped by the item-4 Stop decision (2026-08-04); reconsideration additionally requires a demonstrated semantic gap.**
 
 Discover solutions/projects, launch an isolated analyzer, resolve symbols and calls, and map every result back to source citations.
 
 ### 11. Go, Java, and Python semantic backends
 
-**Status: paused pending item 4 and a demonstrated semantic gap.**
+**Status: stopped by the item-4 Stop decision (2026-08-04); reconsideration additionally requires a demonstrated semantic gap.**
 
 Implement and gate each language independently. Set `semantic_backend_available: true` only when that backend is actually usable.
 
 ## Last: SDK installation
 
-Only implement installation for a completed semantic backend that genuinely needs it. Keep download approval separate from archive extraction, installation, dependency restore, build, and execution approval. A safe installer must constrain traversal, links, expanded size/file count, permissions, platform/architecture selection, manifests, and cleanup.
+With the item-4 decision recorded as Stop, no semantic backend is in progress and no installation work is authorized. Only implement installation for a completed semantic backend that genuinely needs it. Keep download approval separate from archive extraction, installation, dependency restore, build, and execution approval. A safe installer must constrain traversal, links, expanded size/file count, permissions, platform/architecture selection, manifests, and cleanup.
 
 ## Commit policy
 
