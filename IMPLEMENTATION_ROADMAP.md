@@ -116,9 +116,10 @@ failing coverage unconditionally.
 
 Still open after these merges: `FINDING-surface-naming-match-key.md` (a
 gold/detector naming disagreement still scores as a missed detection) is
-unchanged, and `connector/src/report.ts` retains its own pre-fix regex
-`citationsIn`, so the Quality tab still miscounts citations after fenced
-blocks. Both remain recorded, not fixed.
+unchanged. The separate pre-fix `citationsIn` regex in `connector/src/report.ts`
+has now been replaced by the gate's shared line-based, fence-aware scanner, with
+LF and CRLF regressions proving that the Quality tab ignores citations in
+backtick and tilde fences and resumes counting after each fence.
 
 ## Release-blocking priorities
 

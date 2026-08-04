@@ -9,6 +9,11 @@ export interface CitationRange {
   end: number;
 }
 
+export interface MarkdownCitation {
+  citation: CitationRange;
+  line: string;
+}
+
 export type CitationCheck =
   | { verdict: "valid"; line_count: number }
   | { verdict: "file_missing" }
@@ -25,6 +30,31 @@ export function parseCitation(input: string): CitationRange | undefined {
 
 export function isCitation(input: string): boolean {
   return parseCitation(input) !== undefined;
+}
+
+/** Extract inline source citations while ignoring Markdown fenced code blocks. */
+export function citationsInMarkdown(markdown: string): MarkdownCitation[] {
+  const citations: MarkdownCitation[] = [];
+  let fence: { delimiter: "`" | "~"; length: number } | undefined;
+  for (const line of markdown.split(/\r?\n/)) {
+    if (fence) {
+      const closing = /^ {0,3}([`~]+)[ \t]*$/.exec(line);
+      if (closing && closing[1][0] === fence.delimiter && closing[1].length >= fence.length) fence = undefined;
+      continue;
+    }
+
+    const opening = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (opening && (opening[1][0] === "~" || !opening[2].includes("`"))) {
+      fence = { delimiter: opening[1][0] as "`" | "~", length: opening[1].length };
+      continue;
+    }
+
+    for (const match of line.matchAll(/`([^`\r\n]+)`/g)) {
+      const citation = parseCitation(match[1]);
+      if (citation) citations.push({ citation, line });
+    }
+  }
+  return citations;
 }
 
 export function formatCitation(citation: CitationRange): string {
