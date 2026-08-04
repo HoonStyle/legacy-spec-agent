@@ -13,7 +13,7 @@
  */
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { CitationLineCache, type CitationRange, citationsOverlap, isCitation, parseCitation } from "./citations.js";
+import { CitationLineCache, type CitationRange, citationsInMarkdown, citationsOverlap, isCitation, parseCitation } from "./citations.js";
 import { resolveWithinRoot } from "./matching.js";
 
 const DOCS: Array<{ file: string; label: string }> = [
@@ -196,9 +196,7 @@ interface DocCitation {
 }
 
 function citationsIn(markdown: string): CitationRange[] {
-  return Array.from(markdown.matchAll(/`([^`]+)`/g))
-    .map((m) => parseCitation(m[1]))
-    .filter((c): c is CitationRange => c !== undefined);
+  return citationsInMarkdown(markdown).map(({ citation }) => citation);
 }
 
 function qualityTab(root: string, docs: DocTab[], audit: AuditEntry[]): string {

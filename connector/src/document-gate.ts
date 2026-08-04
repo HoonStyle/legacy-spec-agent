@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { z } from "zod";
-import { CitationLineCache, formatCitation, parseCitation, type CitationRange } from "./citations.js";
+import { CitationLineCache, citationsInMarkdown, formatCitation, parseCitation, type CitationRange } from "./citations.js";
 import { extractCoverageSurface, includedSourceFiles } from "./coverage-surface.js";
 
 export type DocumentProfile = "core" | "standard";
@@ -126,35 +126,6 @@ export function calculateDraftDigest(dir: string, profile: DocumentProfile): str
   return hash.digest("hex");
 }
 
-interface MarkdownCitation {
-  citation: CitationRange;
-  line: string;
-}
-
-function citationsIn(markdown: string): MarkdownCitation[] {
-  const citations: MarkdownCitation[] = [];
-  let fence: { delimiter: "`" | "~"; length: number } | undefined;
-  for (const line of markdown.split(/\r?\n/)) {
-    if (fence) {
-      const closing = /^ {0,3}([`~]+)[ \t]*$/.exec(line);
-      if (closing && closing[1][0] === fence.delimiter && closing[1].length >= fence.length) fence = undefined;
-      continue;
-    }
-
-    const opening = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
-    if (opening && (opening[1][0] === "~" || !opening[2].includes("`"))) {
-      fence = { delimiter: opening[1][0] as "`" | "~", length: opening[1].length };
-      continue;
-    }
-
-    for (const match of line.matchAll(/`([^`\r\n]+)`/g)) {
-      const citation = parseCitation(match[1]);
-      if (citation) citations.push({ citation, line });
-    }
-  }
-  return citations;
-}
-
 interface AuditLog {
   rows: Array<{ evidence?: string | string[]; action?: string; claim?: string; claim_id?: string; document?: string }>;
   malformed_lines: number[];
@@ -222,7 +193,7 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
       reasons.push({ code: "missing_section", detail: `${file}: ${section}` });
   }
 
-  const markdownCitations = [...markdown.values()].flatMap(citationsIn);
+  const markdownCitations = [...markdown.values()].flatMap(citationsInMarkdown);
   const citations = markdownCitations.map(({ citation }) => citation);
   const lineCache = new CitationLineCache();
   for (const citation of citations) {
@@ -266,7 +237,7 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
     const mismatchedEvidence = citedClaimLines.some((line) => {
       const claimId = /\b(CLM-[A-Za-z0-9_-]+)\b/.exec(line)?.[1];
       if (!claimId) return false;
-      const expected = citationsIn(line).map(({ citation }) => formatCitation(citation)).sort();
+      const expected = citationsInMarkdown(line).map(({ citation }) => formatCitation(citation)).sort();
       const recorded = audit.rows.filter((row) => row.action === "verified" && row.claim_id === claimId)
         .flatMap((row) => auditCitations(row.evidence).map(formatCitation)).sort();
       return expected.length !== recorded.length || expected.some((value, index) => value !== recorded[index]);
@@ -312,7 +283,7 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
     // The citation grammar cannot parse every real surface path (spaces, non-ASCII);
     // those keep the pre-containment literal linkage instead of failing unconditionally.
     if (!surfaceLocation) return !section.includes(`\`${item.found_at}\``);
-    return !citationsIn(section).some(({ citation }) =>
+    return !citationsInMarkdown(section).some(({ citation }) =>
       citation.path === surfaceLocation.path
       && citation.start <= surfaceLocation.start
       && citation.end >= surfaceLocation.end,

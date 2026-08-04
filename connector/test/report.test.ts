@@ -145,3 +145,45 @@ test("renderReport: Quality accepts verified rows whose evidence is a citation a
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("renderReport: Quality ignores fenced citations and resumes scanning after fences", () => {
+  for (const newline of ["\n", "\r\n"]) {
+    const root = mkdtempSync(join(tmpdir(), "lsc-report-fences-"));
+    try {
+      mkdirSync(join(root, "src"));
+      writeFileSync(join(root, "src", "server.ts"), "one\ntwo\n");
+      writeFileSync(
+        join(root, "SPEC.md"),
+        [
+          "# spec",
+          "before `src/server.ts:1`",
+          "```mermaid",
+          "A[\"fake `missing/fenced.ts:999`\"] --> B",
+          "```",
+          "after backticks `src/server.ts:2`",
+          "~~~text",
+          "fake `missing/tilde.ts:999`",
+          "~~~",
+          "after tildes `src/server.ts:1-2`",
+        ].join(newline),
+      );
+      writeFileSync(
+        join(root, "audit_log.jsonl"),
+        [1, 2, 3].map((id) => JSON.stringify({
+          id: String(id),
+          action: "verified",
+          evidence: id === 1 ? "src/server.ts:1" : id === 2 ? "src/server.ts:2" : "src/server.ts:1-2",
+        })).join("\n") + "\n",
+      );
+
+      renderReport(root);
+      const html = readFileSync(join(root, "REPORT.html"), "utf8");
+      assert.match(html, /<div class="n">3<\/div><div class="l">citations<\/div>/);
+      assert.match(html, /<div class="n ok">100%<\/div><div class="l">line-valid citations<\/div>/);
+      assert.match(html, /<div class="n">100%<\/div><div class="l">audit coverage<\/div>/);
+      assert.match(html, /<td><code>SPEC\.md<\/code><\/td><td>3<\/td><td>3<\/td><td>0<\/td><td>0<\/td>/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }
+});
