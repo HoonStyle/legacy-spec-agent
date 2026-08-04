@@ -24,7 +24,7 @@ Legacy Spec Agent reconstructs a grounded specification from source code that do
 As of 2026-08-04:
 
 - **Grounding quality.** Three pinned external repositories were run through the full Mode A gate pipeline; citation accuracy was 100% across 486 claims, with zero unsupported verified claims and no rejected draft published. The deterministic extractor's critical-surface recall gate remains open — the detector misses most gold surfaces — so no measured document-quality improvement is claimed.
-- **Token efficiency.** A counter-enabled paired replay measured connector runs at +31.3% provider input tokens (one of five pairs improved) with no task-quality or citation regression, and the recorded decision is **Stop** for efficiency-motivated expansion (`evals/end-to-end-replay/fermass-counter-replay/DECISION.md` in the main repository). The connector earns its place as a verification engine, not as a context-cost optimization.
+- **Token efficiency.** A counter-enabled paired replay measured connector runs at +31.3% provider input tokens (one of five pairs improved) with no task-quality or citation regression, and the recorded decision is **Stop** for efficiency-motivated expansion (`evals/end-to-end-replay/counter-replay/DECISION.md` in the main repository). The connector earns its place as a verification engine, not as a context-cost optimization.
 
 ## Main use cases
 

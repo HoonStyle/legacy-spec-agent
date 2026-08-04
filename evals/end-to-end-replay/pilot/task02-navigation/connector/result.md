@@ -3,7 +3,7 @@
 **Prompt**: `MeasurementResult`의 Mass/LoadCell/Offset이 채워지는 계산 위치와 공식.
 
 ## 답변
-- `MlcHandler`가 산출: `massOffset = cfg.MassOffset`(`:155`), `loadCell = mass + massOffset`(`:156`), `buoyancy = BuoyancyCalculator.Buoyancy(P,T,H,loadCell)`(`:157`), `finalMass = Round(loadCell + buoyancy, 7)`(`:158`), `offset = OffsetCalculator.Offset(finalMass, loadCell)`(`:159`)  `Source/FerMass/FerMass.Modules/Handlers/MlcHandler.cs`
+- `MlcHandler`가 산출: `massOffset = cfg.MassOffset`(`:155`), `loadCell = mass + massOffset`(`:156`), `buoyancy = BuoyancyCalculator.Buoyancy(P,T,H,loadCell)`(`:157`), `finalMass = Round(loadCell + buoyancy, 7)`(`:158`), `offset = OffsetCalculator.Offset(finalMass, loadCell)`(`:159`)  `Source/InternalRepo/InternalRepo.Modules/Handlers/MlcHandler.cs`
 - `MeasurementResult`에 `Mass/LoadCell/Offset`로 대입(`:164`~)
 
 ## 도구 트레이스 (실측)

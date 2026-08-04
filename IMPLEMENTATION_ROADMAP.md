@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-This roadmap separates release blockers from optional semantic enhancements. The item-4 question is now answered: the 2026-08-04 counter-enabled five-pair replay exposed the primary metered measure and its recorded decision is **Stop** (`evals/end-to-end-replay/fermass-counter-replay/DECISION.md`). Efficiency-motivated expansion — language resolvers, cache/concurrency growth, semantic backends, SDK installation — is therefore stopped rather than paused; any future reconsideration must be a separately approved, narrowly scoped experiment based on compact or persistent index results. Each implementation item should remain an independently buildable, tested commit or short commit series.
+This roadmap separates release blockers from optional semantic enhancements. The item-4 question is now answered: the 2026-08-04 counter-enabled five-pair replay exposed the primary metered measure and its recorded decision is **Stop** (`evals/end-to-end-replay/counter-replay/DECISION.md`). Efficiency-motivated expansion — language resolvers, cache/concurrency growth, semantic backends, SDK installation — is therefore stopped rather than paused; any future reconsideration must be a separately approved, narrowly scoped experiment based on compact or persistent index results. Each implementation item should remain an independently buildable, tested commit or short commit series.
 
 ## Current usable scope
 
@@ -27,11 +27,11 @@ Candidate repositories, proposed scopes, gold-freeze rules, required artifacts, 
 ### B. Counter-enabled bounded replay
 
 1. Obtain an environment that exposes per-run provider input, cached-input, output, reasoning, and separately reported tool counters together with elapsed time. If those counters are unavailable, record the block and do not substitute source reads or bytes.
-2. Repeat the existing five FerMass pairs at revision `1984b4e324b9e4bec7fa2c7f48fc1b105737fbee` using the unchanged prompts, completion criteria, model/settings, alternating order, and connector/control tool policy in `END_TO_END_REPLAY.md`.
+2. Repeat the existing five InternalRepo pairs at revision `1984b4e324b9e4bec7fa2c7f48fc1b105737fbee` using the unchanged prompts, completion criteria, model/settings, alternating order, and connector/control tool policy in `END_TO_END_REPLAY.md`.
 3. Preserve raw provider counters, pricing/billing units when known, connector calls and response bytes, unique/repeated reads, elapsed time, task result, citation coverage, and citation accuracy. Do not double-count overlapping provider categories.
 4. Write the paired differences and decision record. Continue only if at least four of five pairs improve the primary metered token or cost measure, its median improves, and task quality and citation accuracy do not regress.
 
-**Replay gate: evaluated — Stop (2026-08-04).** The counter-enabled replay completed all five pairs with provider counters and treatment compliance enforced: the connector improved the primary input-token measure in 1/5 pairs, worsened the paired median by +42,303 input tokens, and increased aggregate input tokens by 31.3%, with no task-quality or citation-accuracy regression. Items 6, 8, 9, 10, 11, and SDK installation are not resumed; the roadmap consequence in `evals/end-to-end-replay/fermass-counter-replay/DECISION.md` governs any future reconsideration.
+**Replay gate: evaluated — Stop (2026-08-04).** The counter-enabled replay completed all five pairs with provider counters and treatment compliance enforced: the connector improved the primary input-token measure in 1/5 pairs, worsened the paired median by +42,303 input tokens, and increased aggregate input tokens by 31.3%, with no task-quality or citation-accuracy regression. Items 6, 8, 9, 10, 11, and SDK installation are not resumed; the roadmap consequence in `evals/end-to-end-replay/counter-replay/DECISION.md` governs any future reconsideration.
 
 ### C. Only evidence-triggered reliability fixes
 
@@ -123,7 +123,7 @@ backtick and tilde fences and resumes counting after each fence.
 
 #### Session record — 2026-08-04 counter-enabled bounded replay (item B executed)
 
-**Item B is complete and the decision is Stop.** The five preserved FerMass
+**Item B is complete and the decision is Stop.** The five preserved InternalRepo
 pairs were repeated at revision `1984b4e324b9e4bec7fa2c7f48fc1b105737fbee` in an
 environment exposing per-run provider counters: Codex CLI `0.146.0` emits
 `input_tokens`, `cached_input_tokens`, `cache_write_input_tokens`,
@@ -138,7 +138,7 @@ carried a documented compliance instruction with zero-call runs rejected.
 Commands and raw result locations: the manifest-driven harness `run-replay.ps1`
 (preflight, `-SmokeConnector`, `-Execute`, `-Resume`) and `manifest.json` are
 preserved together with the harness README and `DECISION.md` in
-`evals/end-to-end-replay/fermass-counter-replay/`. Full transcripts, stderr
+`evals/end-to-end-replay/counter-replay/`. Full transcripts, stderr
 logs, run records, and the task05 diffs remain on the execution machine at the
 results root recorded in `DECISION.md`. Exact unique/repeated file reads for
 control runs are recorded as unavailable — broad `rg` commands hide exact file
@@ -194,13 +194,13 @@ Label current graph output as `module_dependency` with `resolution: "syntax"`, r
 
 ### 4. Bounded end-to-end token replay
 
-**Status: complete — the counter-enabled replay decision is Stop (2026-08-04).** The first pilot ran five paired tasks (10 runs) against FerMass at pinned revision `1984b4e324b9e4bec7fa2c7f48fc1b105737fbee`. Both conditions passed all five tasks with no citation errors, but the provider exposed no per-run token counters, so that decision record selected Inconclusive; its raw results are preserved in `evals/end-to-end-replay/fermass-pilot/`. The counter-enabled repeat of the same five pairs, preserved in `evals/end-to-end-replay/fermass-counter-replay/`, did expose provider counters, and its recorded decision is **Stop**.
+**Status: complete — the counter-enabled replay decision is Stop (2026-08-04).** The first pilot ran five paired tasks (10 runs) against InternalRepo at pinned revision `1984b4e324b9e4bec7fa2c7f48fc1b105737fbee`. Both conditions passed all five tasks with no citation errors, but the provider exposed no per-run token counters, so that decision record selected Inconclusive; its raw results are preserved in `evals/end-to-end-replay/pilot/`. The counter-enabled repeat of the same five pairs, preserved in `evals/end-to-end-replay/counter-replay/`, did expose provider counters, and its recorded decision is **Stop**.
 
 Keep the current syntax connector, including the implemented TypeScript resolver, as the MVP. The counter-enabled comparison has now been executed with the same paired controls, provider counters recorded exactly as reported, and connector response bytes preserved separately; read counts were never substituted for the metered measure. No further replay is planned as roadmap expansion.
 
 Record the provider's non-overlapping token counters exactly as reported, their pricing or billing units when known, connector calls and response bytes, unique and repeated file reads, elapsed time, task success, citation coverage, and citation accuracy. Do not add tool-response tokens to input tokens when the provider already includes them there. Report both raw counters and the paired difference; do not present structural-index size as billing-token savings.
 
-**Decision gate: evaluated — Stop.** The counter-enabled decision record (`evals/end-to-end-replay/fermass-counter-replay/DECISION.md`) reports that the connector improved the primary input-token measure in only 1/5 pairs, worsened the paired median by +42,303 tokens, and increased aggregate input tokens by 31.3%, while task quality and citation accuracy did not regress. The continue condition (at least 4/5 pairs improving with an improving median) failed, and the narrow-or-stop conditions matched: the median worsened and all five connector runs re-emitted the repository-wide symbol index. Do not build more connector features to revisit this result; any reconsideration is a separately approved, narrowly scoped compact/persistent-index experiment.
+**Decision gate: evaluated — Stop.** The counter-enabled decision record (`evals/end-to-end-replay/counter-replay/DECISION.md`) reports that the connector improved the primary input-token measure in only 1/5 pairs, worsened the paired median by +42,303 tokens, and increased aggregate input tokens by 31.3%, while task quality and citation accuracy did not regress. The continue condition (at least 4/5 pairs improving with an improving median) failed, and the narrow-or-stop conditions matched: the median worsened and all five connector runs re-emitted the repository-wide symbol index. Do not build more connector features to revisit this result; any reconsideration is a separately approved, narrowly scoped compact/persistent-index experiment.
 
 Use `END_TO_END_REPLAY.md` for the task manifest, paired-run controls, run-record fields, comparison, and decision template.
 

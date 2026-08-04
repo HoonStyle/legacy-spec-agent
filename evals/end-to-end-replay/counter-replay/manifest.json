@@ -1,6 +1,6 @@
 {
   "protocol": "END_TO_END_REPLAY.md",
-  "repository": "FerMass",
+  "repository": "InternalRepo",
   "revision": "1984b4e324b9e4bec7fa2c7f48fc1b105737fbee",
   "runner": {
     "model": "gpt-5.6-sol",

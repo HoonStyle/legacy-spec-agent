@@ -4,11 +4,11 @@
 
 ## 제안 diff (control이 독립 도출)
 System Purpose의 gRPC 문장에 다음 절 추가:
-> "기본 h2c 평문이며 `RemoteTlsEnabled`면 PFX로 TLS(HTTP/2), 인증서 로드 실패 시 평문 폴백 없이 원격을 열지 않는다(fail-closed)  `Source/FerMass/FerMass/Program.cs:141`"
+> "기본 h2c 평문이며 `RemoteTlsEnabled`면 PFX로 TLS(HTTP/2), 인증서 로드 실패 시 평문 폴백 없이 원격을 열지 않는다(fail-closed)  `Source/InternalRepo/InternalRepo/Program.cs:141`"
 
 ## 근거 (grep 1회)
-- `기본 h2c, RemoteTlsEnabled=true면 PFX로 TLS`  `Source/FerMass/FerMass/Program.cs:86`
-- fail-closed 서술(평문 폴백 금지)  `Source/FerMass/FerMass/Program.cs:133`–135, 분기 `:141`
+- `기본 h2c, RemoteTlsEnabled=true면 PFX로 TLS`  `Source/InternalRepo/InternalRepo/Program.cs:86`
+- fail-closed 서술(평문 폴백 금지)  `Source/InternalRepo/InternalRepo/Program.cs:133`–135, 분기 `:141`
 
 ## 도구 트레이스 (실측)
 - Grep 1회 (Program.cs)

@@ -108,7 +108,7 @@ SDK 사용 가능 여부와 semantic backend 사용 가능 여부는 따로 보�
 
 다중 언어 응답에는 원본 소스 바이트, 직렬화된 응답 바이트, WASM parse cache hit/miss도 포함됩니다. 현재 결정적 합성 벤치마크에서는 원본 소스 전문 대비 file-level 심볼 응답이 43.0%, package 요약이 95.3% 적은 토큰을 사용했습니다. 이는 fixture 측정값이며 전체 에이전트 세션이나 과금 토큰 절감률은 아닙니다. 측정 방법과 한계는 [`TOKEN_USAGE.md`](TOKEN_USAGE.md)에 기록했습니다.
 
-end-to-end 질문은 이후 직접 측정되었습니다. per-run provider 토큰 카운터가 노출되는 환경에서 실행한 5쌍 페어드 리플레이(2026-08-04)에서 커넥터 실행은 총 provider 입력 토큰을 31.3% **증가**시켰고 5쌍 중 1쌍만 개선했으며, 과제 품질과 인용 정확도의 회귀는 없었습니다. 모든 커넥터 런이 저장소 전체 심볼 인덱스를 매번 다시 전송한 것이 주된 원인입니다. 기록된 결정은 효율 목적 확장에 대한 **Stop**입니다([`evals/end-to-end-replay/fermass-counter-replay/DECISION.md`](evals/end-to-end-replay/fermass-counter-replay/DECISION.md)). 커넥터는 컨텍스트 비용 최적화가 아니라 검증·근거 엔진으로 취급해야 합니다.
+end-to-end 질문은 이후 직접 측정되었습니다. per-run provider 토큰 카운터가 노출되는 환경에서 실행한 5쌍 페어드 리플레이(2026-08-04)에서 커넥터 실행은 총 provider 입력 토큰을 31.3% **증가**시켰고 5쌍 중 1쌍만 개선했으며, 과제 품질과 인용 정확도의 회귀는 없었습니다. 모든 커넥터 런이 저장소 전체 심볼 인덱스를 매번 다시 전송한 것이 주된 원인입니다. 기록된 결정은 효율 목적 확장에 대한 **Stop**입니다([`evals/end-to-end-replay/counter-replay/DECISION.md`](evals/end-to-end-replay/counter-replay/DECISION.md)). 커넥터는 컨텍스트 비용 최적화가 아니라 검증·근거 엔진으로 취급해야 합니다.
 
 출시 차단 항목, 언어별 resolver, semantic backend, 마지막 SDK installer 단계의 작업 순서는 [`IMPLEMENTATION_ROADMAP.md`](IMPLEMENTATION_ROADMAP.md)에 정리했습니다.
 
@@ -146,7 +146,7 @@ showcase.html        데모 산출물용 탭형 뷰어
 - `demo-hookify/`는 처음 보는 서드파티 패키지에 손대지 않고 Mode A를 돌린 결과물입니다. 전체 산출물이 만들어졌고, 이미 구현된 기능을 미래 계획처럼 설명하던 낡은 소스 주석도 하나 잡아냈습니다.
 - `evals/BENCHMARK.md`는 같은 프롬프트로 스킬을 쓴 경우와 안 쓴 경우를 비교합니다. 인용 커버리지는 86-87% 대 0%였고, 표본으로 확인한 인용 6개는 전부 정확했습니다.
 - 커넥터 테스트는 데모 감사 로그의 인용 12개를 고정된 커밋에 대해 재검증합니다. 플러그인 패키징과 리뷰에서 지적된 문제에 대한 회귀 테스트도 함께 들어 있습니다.
-- `evals/end-to-end-replay/`에는 고정된 FerMass 리비전에 대한 bounded replay 두 건이 보존되어 있습니다. 2026-08-04 카운터 지원 리플레이는 provider 토큰을 직접 측정했습니다. 10개 런 전부에서 품질과 인용은 유지됐지만 커넥터 조건의 입력 토큰이 31.3% 더 들었고, 기록된 결정은 **Stop**입니다. 부정적 측정도 근거이므로 그대로 남겨 두었습니다.
+- `evals/end-to-end-replay/`에는 고정된 InternalRepo 리비전에 대한 bounded replay 두 건이 보존되어 있습니다. 2026-08-04 카운터 지원 리플레이는 provider 토큰을 직접 측정했습니다. 10개 런 전부에서 품질과 인용은 유지됐지만 커넥터 조건의 입력 토큰이 31.3% 더 들었고, 기록된 결정은 **Stop**입니다. 부정적 측정도 근거이므로 그대로 남겨 두었습니다.
 
 ## Wiki
 

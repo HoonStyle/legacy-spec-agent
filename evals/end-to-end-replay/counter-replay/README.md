@@ -1,4 +1,10 @@
-# Counter-enabled FerMass replay
+# Counter-enabled InternalRepo replay
+
+> **Anonymization note.** The replay target is a private company repository. Its
+> real name is replaced with the placeholder `InternalRepo` throughout these
+> records — prose, source paths, namespaces, harness defaults, and the smoke
+> snippet. The pinned revision SHA, line numbers, and all measurements are
+> unchanged.
 
 The treatment-compliant 2026-08-04 run is evaluated in [DECISION.md](DECISION.md). Its final result is **Stop**: only one of five input-token pairs improved, the paired median worsened, and every connector run reopened the full symbol index.
 
@@ -12,7 +18,7 @@ If an execution is interrupted before task05 mutates a worktree, pass `-Resume`
 to retain completed, treatment-compliant run records and continue at the first
 incomplete condition.
 
-This harness repeats the preserved five FerMass task pairs with exact Codex CLI
+This harness repeats the preserved five InternalRepo task pairs with exact Codex CLI
 provider counters and wall-clock timing. It does not estimate missing counters.
 
 ## Preflight findings
@@ -27,7 +33,7 @@ provider counters and wall-clock timing. It does not estimate missing counters.
   Windows `codex.cmd` shim. The shim strips the nested quotes required by TOML
   array overrides such as the raw MCP server's `args` value.
 - The installed plugin's default MCP working directory resolves to the plugin
-  checkout, not the target FerMass worktree. Connector runs therefore disable
+  checkout, not the target InternalRepo worktree. Connector runs therefore disable
   the plugin instance and launch the same `connector/bootstrap.mjs` as a raw MCP
   server with the connector worktree as `cwd`.
 - The preserved pilot used `claude-opus-4-8[1m]`. The counter-enabled runner
@@ -43,14 +49,14 @@ provider counters and wall-clock timing. It does not estimate missing counters.
 The setup created two detached, clean worktrees at the pinned revision:
 
 ```text
-C:\Users\Lenovo\Documents\FerMass_Replay_1984b4e\control
-C:\Users\Lenovo\Documents\FerMass_Replay_1984b4e\connector
+C:\Users\Lenovo\Documents\InternalRepo_Replay_1984b4e\control
+C:\Users\Lenovo\Documents\InternalRepo_Replay_1984b4e\connector
 ```
 
 Raw results are written outside both worktrees:
 
 ```text
-C:\Users\Lenovo\Documents\FerMass_Replay_1984b4e\results
+C:\Users\Lenovo\Documents\InternalRepo_Replay_1984b4e\results
 ```
 
 ## Run
@@ -61,20 +67,20 @@ TOML array override used to launch the raw connector.
 First perform the non-mutating preflight from an ordinary terminal:
 
 ```powershell
-pwsh -NoProfile -File "C:\Users\Lenovo\Documents\FerMass_Project\Doc\ReplayPilot\CounterReplay\run-replay.ps1"
+pwsh -NoProfile -File "C:\Users\Lenovo\Documents\InternalRepo_Project\Doc\ReplayPilot\CounterReplay\run-replay.ps1"
 ```
 
-Optionally verify that the raw connector resolves `README.md` from the FerMass
+Optionally verify that the raw connector resolves `README.md` from the InternalRepo
 connector worktree rather than from the plugin checkout:
 
 ```powershell
-pwsh -NoProfile -File "C:\Users\Lenovo\Documents\FerMass_Project\Doc\ReplayPilot\CounterReplay\run-replay.ps1" -SmokeConnector
+pwsh -NoProfile -File "C:\Users\Lenovo\Documents\InternalRepo_Project\Doc\ReplayPilot\CounterReplay\run-replay.ps1" -SmokeConnector
 ```
 
 Then run all ten executions from the same ordinary PowerShell session:
 
 ```powershell
-pwsh -NoProfile -File "C:\Users\Lenovo\Documents\FerMass_Project\Doc\ReplayPilot\CounterReplay\run-replay.ps1" -Execute
+pwsh -NoProfile -File "C:\Users\Lenovo\Documents\InternalRepo_Project\Doc\ReplayPilot\CounterReplay\run-replay.ps1" -Execute
 ```
 
 The harness refuses to start if either worktree is dirty or not pinned to

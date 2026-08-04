@@ -5,7 +5,8 @@
 
 ## Scope
 
-- **Repository**: FerMass (단일 리포)
+- **Repository**: InternalRepo (단일 리포)
+- **익명화**: 대상은 사내 비공개 저장소로, 실명은 이 기록 전체에서 `InternalRepo` 플레이스홀더로 치환됨(경로·네임스페이스 포함). 리비전 SHA·라인 번호·측정값은 원본 그대로.
 - **Revision (pinned)**: `1984b4e324b9e4bec7fa2c7f48fc1b105737fbee`
 - **Language**: C# / .NET 8 (`net8.0-windows`)
 - **Tasks**: 스펙 중심 5개 (navigation 2 · impact 2 · change 1)

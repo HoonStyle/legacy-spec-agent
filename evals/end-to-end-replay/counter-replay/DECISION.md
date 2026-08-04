@@ -9,7 +9,7 @@ The treatment-compliant replay completed all 10 runs with provider counters. Con
 - Evaluation revision: `1984b4e324b9e4bec7fa2c7f48fc1b105737fbee`
 - Runner: `codex-cli 0.146.0`, `gpt-5.6-sol`, reasoning effort `medium`
 - Execution date: 2026-08-04
-- Results root: `C:\Users\Lenovo\Documents\FerMass_Replay_Compliant_1984b4e\results`
+- Results root: `C:\Users\Lenovo\Documents\InternalRepo_Replay_Compliant_1984b4e\results`
 
 The five original task prompts, pinned revision, model, reasoning effort, and alternating condition order were preserved. The connector condition also received a documented compliance instruction requiring at least one relevant `replay_connector` call; zero-call runs were rejected.
 
