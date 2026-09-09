@@ -90,6 +90,9 @@ test("scope manifest and Coverage Sentinel schema are explicit", async () => {
     for (const field of ["analyzed source commit", "included", "excluded", "supported", "unsupported", "failed", "skipped", "truncat", "Extractor assigned"]) {
       assert.ok(document.includes(field), `scope manifest is missing ${field}`);
     }
+    for (const field of ["provenance_version", "source_snapshot", "raw byte", "SHA-256", "git_worktree", "non_git"]) {
+      assert.ok(document.includes(field), `source provenance contract is missing ${field}`);
+    }
   }
   for (const field of [
     "expected_count", "documented_count", "covered_items", "explained_omissions",

@@ -1,6 +1,6 @@
 import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve, sep } from "node:path";
-import { calculateDraftDigest, evaluateDocumentGate, type DocumentGateParams, type DocumentGateResult } from "./document-gate.js";
+import { calculateDraftDigest, evaluateDocumentGate, sourceSnapshotMatches, type DocumentGateParams, type DocumentGateResult } from "./document-gate.js";
 
 export interface PublishResult { gate: DocumentGateResult; published: boolean; destination?: string }
 const STALE_LOCK_MS = 10 * 60_000;
@@ -66,6 +66,8 @@ export function gateAndPublish(params: DocumentGateParams, destination: string):
     if (gate.verdict !== "approved") return { gate, published: false };
     if (calculateDraftDigest(candidate, params.profile) !== params.scope_manifest.draft_digest)
       return rejected("published snapshot differs from the frozen draft digest");
+    if (!sourceSnapshotMatches(params.source_root, params.scope_manifest))
+      return rejected("source bytes differ from the frozen source snapshot immediately before publication");
     if (existsSync(paths.destination)) renameSync(paths.destination, previous);
     try { renameSync(candidate, paths.destination); }
     catch (error) { if (existsSync(previous)) renameSync(previous, paths.destination); throw error; }

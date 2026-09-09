@@ -8,10 +8,11 @@ import { renderReport } from "./report.js";
 import { assessLanguageToolchains } from "./toolchains.js";
 import { ToolchainApprovalStore, ToolchainDownloadManager } from "./toolchain-downloads.js";
 import { indexSymbolsMulti, buildCallGraphMulti, extractDataModelMulti } from "./multilang.js";
-import { coverageAuditSchema, evaluateDocumentGate, evidenceAuditSchema, scopeManifestSchema } from "./document-gate.js";
+import { calculateSourceSnapshot, coverageAuditSchema, evaluateDocumentGate, evidenceAuditSchema, resolveSourceGitHead, scopeManifestSchema } from "./document-gate.js";
 import { gateAndPublish } from "./document-emission.js";
 import { resolveWithinRoot } from "./matching.js";
 import { homedir } from "node:os";
+import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const count = z.number().int().min(0);
@@ -300,6 +301,26 @@ export function createServer(root: string, options: { cacheRoot?: string; fetchI
       inputSchema: emitChartsSchema,
     },
     async (params) => json(emitChart(params)),
+  );
+
+  server.registerTool(
+    "snapshot_source_scope",
+    {
+      description:
+        "Create the provenance-version-2 byte snapshot for a frozen source scope. Hashes the sorted supported-file inventory as raw bytes, resolves normal or linked-worktree Git HEAD metadata when present, and returns source_snapshot only; it never edits the repository.",
+      inputSchema: {
+        source_dir: z.string().optional().describe("Frozen source directory relative to connector root (default '.')"),
+        included_paths: z.array(z.string().min(1)).min(1),
+        excluded_paths: z.array(z.object({ path: z.string().min(1), reason: z.string().trim().min(1) }).strict()).default([]),
+      },
+    },
+    async (params) => {
+      const sourceRoot = resolveWithinRoot(root, params.source_dir ?? ".");
+      const head = resolveSourceGitHead(sourceRoot);
+      if (!head && existsSync(join(sourceRoot, ".git"))) throw new Error("Git metadata exists but HEAD could not be resolved");
+      return json(calculateSourceSnapshot(sourceRoot, params.included_paths, params.excluded_paths,
+        head ? { source_kind: "git_worktree", base_commit: head } : { source_kind: "non_git" }));
+    },
   );
 
   server.registerTool(

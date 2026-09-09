@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { basename, join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
-import { calculateDraftDigest, evaluateDocumentGate } from "../connector/dist/src/document-gate.js";
+import { calculateDraftDigest, calculateSourceSnapshot, evaluateDocumentGate } from "../connector/dist/src/document-gate.js";
 import { extractCoverageSurface, includedSourceFiles } from "../connector/dist/src/coverage-surface.js";
 
 const casesRoot = resolve(process.argv[2] ?? "evals/document-quality/cases");
@@ -58,10 +58,12 @@ for (const name of caseNames) {
   writeFileSync(join(output, "audit_log.jsonl"), claimRows.map((row) => JSON.stringify(row)).join("\n") + "\n");
   const digest = calculateDraftDigest(output, "standard");
   const manifest = {
+    provenance_version: "2",
     analyzed_source_commit: commit, included_paths: ["."], excluded_paths: [],
     file_counts: { supported: files.length, unsupported: 0, failed: 0, skipped: 0 },
     truncated: false, truncated_inputs: [], module_extractors: [{ module: ".", actor_id: `extractor-${name}` }],
     writer_actor_id: `writer-${name}`, draft_digest: digest,
+    source_snapshot: calculateSourceSnapshot(root, ["."], [], { source_kind: "non_git" }),
   };
   const result = evaluateDocumentGate({
     root, source_root: root, dir: output, profile: "standard", scope_manifest: manifest,

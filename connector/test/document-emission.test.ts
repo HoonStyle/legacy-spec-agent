@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { gateAndPublish } from "../src/document-emission.js";
+import { calculateSourceSnapshot } from "../src/document-gate.js";
 import type { DocumentGateParams } from "../src/document-gate.js";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -102,5 +103,23 @@ test("post-freeze staging mutations are rejected before replacement", () => {
     const result = gateAndPublish(item.params, item.destination);
     assert.equal(result.published, false);
     assert.equal(result.gate.verdict, "rejected");
+  } finally { rmSync(item.root, { recursive: true, force: true }); }
+});
+
+test("post-freeze source mutations never replace a prior publication", () => {
+  const item = setup();
+  try {
+    item.params.scope_manifest.provenance_version = "2";
+    item.params.scope_manifest.source_snapshot = calculateSourceSnapshot(
+      item.params.source_root, item.params.scope_manifest.included_paths, item.params.scope_manifest.excluded_paths,
+      { source_kind: "non_git" },
+    );
+    cpSync(item.params.dir, item.destination, { recursive: true });
+    writeFileSync(join(item.destination, "marker"), "old");
+    writeFileSync(join(item.params.source_root, "src", "server.ts"), "export const changed = true;\n");
+    const result = gateAndPublish(item.params, item.destination);
+    assert.equal(result.published, false);
+    assert.equal(result.gate.verdict, "rejected");
+    assert.equal(readFileSync(join(item.destination, "marker"), "utf8"), "old");
   } finally { rmSync(item.root, { recursive: true, force: true }); }
 });

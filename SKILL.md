@@ -54,6 +54,16 @@ The mandatory sequence is **Extract → Architect/Writer → draft freeze → in
 ### Phase 1 — Extract (fan-out)
 If the `index_symbols` connector tool is available, call it first and hand each subagent its module's symbol list (names, line ranges, signatures) so subagents don't re-read files from scratch. Likewise, prefer `build_call_graph` over manual import-tracing in Phase 2.
 
+Before extraction, freeze `provenance_version: "2"`. Record a `source_snapshot`
+over every supported included file using sorted POSIX-relative paths, raw byte
+counts, per-file SHA-256 values, and their canonical aggregate digest. For a Git
+checkout—including a linked worktree—record `source_kind: "git_worktree"` and
+the resolved HEAD as `base_commit`; otherwise use `source_kind: "non_git"`
+without pretending that a commit was verified. Dirty Git input is bound by both
+HEAD and the byte snapshot. Any included byte change requires a new snapshot and
+fresh audits. Existing version-1 manifests retain their legacy guarantee and are
+not silently upgraded.
+
 For each module, extract what it *actually does*: entry points, business rules, inputs/outputs, side effects, external calls, and constraints. **Every extracted item carries a `path:line` citation.**
 
 - For a repo with more than a handful of modules, spawn one `general-purpose` subagent per module (or per cluster) via the Task tool and run them in parallel. Give each subagent the module path, the extraction contract from `references/agent-roles.md`, and the output schema.
@@ -83,7 +93,7 @@ The Writer may correct audit findings but cannot generate the final audit verdic
 
 A separate **Gatekeeper** does not write or modify documents. It combines the Evidence Auditor, Coverage Sentinel, and deterministic contract-check results and returns only `approved` or `rejected`. Only its `approved` verdict authorizes emission. It must reject unsupported verified claims, citation audit coverage below 100%, unexplained code-surface omissions, duplicate/dangling/type-mismatched IDs, undisclosed truncation, missing required documents or sections, stale draft digests, Writer/auditor/Gatekeeper identity collisions, and syntax module dependencies represented as a call graph.
 
-If `evaluate_document_gate` is available, the Gatekeeper must call it with the completed frozen manifest and both independent audit records; do not substitute the report Quality tab or the Writer's judgment. Its independently extracted code surface and SHA-256 comparison are the deterministic publication result. A `rejected` result returns the draft to correction and independent recheck; only `approved` proceeds to Emit. When `publish_approved_documents` is available, keep the frozen draft in a staging directory and use that tool for the final transactional publish; never copy a rejected staging draft into the destination.
+If `evaluate_document_gate` is available, the Gatekeeper must call it with the completed frozen manifest and both independent audit records; do not substitute the report Quality tab or the Writer's judgment. Its independently extracted code surface, draft SHA-256 comparison, and version-2 source byte snapshot check are the deterministic publication result. A `rejected` result returns the draft to correction and independent recheck; only `approved` proceeds to Emit. When `publish_approved_documents` is available, keep the frozen draft in a staging directory and use that tool for the final transactional publish; it rechecks source bytes immediately before replacement, and must never copy a rejected staging draft into the destination.
 
 ### Phase 5 — Emit
 Emit the selected profile and report a one-paragraph summary to the user: module count, verified-claim count, unverified count, and the top 3 risks/unknowns.

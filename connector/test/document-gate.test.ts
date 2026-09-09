@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { calculateDraftDigest, evaluateDocumentGate, type DocumentGateParams } from "../src/document-gate.js";
+import { calculateDraftDigest, calculateSourceSnapshot, evaluateDocumentGate, resolveSourceGitHead, type DocumentGateParams } from "../src/document-gate.js";
 import { extractCoverageSurface, includedSourceFiles } from "../src/coverage-surface.js";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -43,6 +43,21 @@ function isolatedIndependentAddition(): { params: DocumentGateParams; cleanup: (
   appendFileSync(join(params.dir, "ARCHITECTURE.md"), "\n### API-002 GET /posts\nCLM-009: A named router registers the posts route. `src/server.ts:3`\n");
   appendFileSync(join(params.dir, "audit_log.jsonl"), '{"action":"verified","claim_id":"CLM-009","evidence":"src/server.ts:3","document":"ARCHITECTURE.md"}\n');
   refreshDigest(params);
+  return { params, cleanup: () => rmSync(temp, { recursive: true, force: true }) };
+}
+
+function isolatedSourceSnapshot(): { params: DocumentGateParams; cleanup: () => void } {
+  const temp = mkdtempSync(join(tmpdir(), "document-gate-source-"));
+  cpSync(join(fixtureRoot, "complete-or-explained"), temp, { recursive: true });
+  const params: DocumentGateParams = {
+    root: repositoryRoot, source_root: temp, dir: join(temp, "output"), profile: "core",
+    ...JSON.parse(readFileSync(join(temp, "gate-input.json"), "utf8")),
+  };
+  params.scope_manifest.provenance_version = "2";
+  params.scope_manifest.source_snapshot = calculateSourceSnapshot(
+    params.source_root, params.scope_manifest.included_paths, params.scope_manifest.excluded_paths,
+    { source_kind: "non_git" },
+  );
   return { params, cleanup: () => rmSync(temp, { recursive: true, force: true }) };
 }
 
@@ -97,6 +112,79 @@ test("independent-audit additions must preserve their v2 attribution and source 
       assert.ok(result.reasons.some((reason) => reason.code === "coverage_failed"), JSON.stringify(result.reasons));
     } finally { cleanup(); }
   });
+});
+
+test("source provenance v2 binds the gate to included raw bytes", () => {
+  const { params, cleanup } = isolatedSourceSnapshot();
+  try {
+    assert.equal(evaluateDocumentGate(params).verdict, "approved");
+    writeFileSync(join(params.source_root, "ignored.txt"), "outside the supported source inventory");
+    assert.equal(evaluateDocumentGate(params).verdict, "approved");
+    appendFileSync(join(params.source_root, "src", "server.ts"), "// dirty mutation\n");
+    const rejected = evaluateDocumentGate(params);
+    assert.equal(rejected.verdict, "rejected");
+    assert.ok(rejected.reasons.some((reason) => reason.code === "invalid_provenance"));
+  } finally { cleanup(); }
+});
+
+test("source provenance v2 fails closed on a dishonest or unreadable Git declaration", () => {
+  const { params, cleanup } = isolatedSourceSnapshot();
+  try {
+    writeFileSync(join(params.source_root, ".git"), "not valid git metadata\n");
+    const rejectedNonGit = evaluateDocumentGate(params);
+    assert.equal(rejectedNonGit.verdict, "rejected");
+    assert.ok(rejectedNonGit.reasons.some((reason) => reason.code === "invalid_provenance"));
+
+    params.scope_manifest.source_snapshot = calculateSourceSnapshot(
+      params.source_root, params.scope_manifest.included_paths, params.scope_manifest.excluded_paths,
+      { source_kind: "git_worktree", base_commit: "a".repeat(40) },
+    );
+    params.scope_manifest.analyzed_source_commit = "a".repeat(40);
+    const rejectedGit = evaluateDocumentGate(params);
+    assert.equal(rejectedGit.verdict, "rejected");
+    assert.ok(rejectedGit.reasons.some((reason) => reason.code === "invalid_provenance"));
+  } finally { cleanup(); }
+});
+
+test("source snapshots detect included file additions and deletions and hash raw bytes", () => {
+  const root = mkdtempSync(join(tmpdir(), "source-snapshot-한글-"));
+  try {
+    mkdirSync(join(root, "src"));
+    writeFileSync(join(root, "src", "a.ts"), Buffer.from("export const café = 1;\r\n", "utf8"));
+    writeFileSync(join(root, "src", "excluded.ts"), "export const ignored = 0;\n");
+    const exclusions = [{ path: "src/excluded.ts", reason: "outside the frozen analysis scope" }];
+    const first = calculateSourceSnapshot(root, ["src"], exclusions, { source_kind: "non_git" });
+    assert.equal(first.files.length, 1);
+    assert.equal(first.files[0].bytes, Buffer.byteLength("export const café = 1;\r\n", "utf8"));
+    writeFileSync(join(root, "src", "excluded.ts"), "export const ignored = 999;\n");
+    assert.equal(calculateSourceSnapshot(root, ["src"], exclusions, { source_kind: "non_git" }).digest, first.digest);
+    writeFileSync(join(root, "src", "b.ts"), "export const added = 2;\n");
+    const added = calculateSourceSnapshot(root, ["src"], exclusions, { source_kind: "non_git" });
+    assert.notEqual(added.digest, first.digest);
+    unlinkSync(join(root, "src", "a.ts"));
+    const deleted = calculateSourceSnapshot(root, ["src"], exclusions, { source_kind: "non_git" });
+    assert.notEqual(deleted.digest, added.digest);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("Git HEAD resolution supports normal checkouts and linked worktree metadata", () => {
+  const root = mkdtempSync(join(tmpdir(), "git-provenance-"));
+  const commit = "a".repeat(40);
+  const topic = "b".repeat(40);
+  try {
+    mkdirSync(join(root, "main", ".git", "refs", "heads"), { recursive: true });
+    writeFileSync(join(root, "main", ".git", "HEAD"), "ref: refs/heads/main\n");
+    writeFileSync(join(root, "main", ".git", "refs", "heads", "main"), `${commit}\n`);
+    assert.equal(resolveSourceGitHead(join(root, "main")), commit);
+
+    mkdirSync(join(root, "main", ".git", "worktrees", "linked"), { recursive: true });
+    mkdirSync(join(root, "linked"));
+    writeFileSync(join(root, "linked", ".git"), "gitdir: ../main/.git/worktrees/linked\n");
+    writeFileSync(join(root, "main", ".git", "worktrees", "linked", "HEAD"), "ref: refs/heads/topic\n");
+    writeFileSync(join(root, "main", ".git", "worktrees", "linked", "commondir"), "../..\n");
+    writeFileSync(join(root, "main", ".git", "refs", "heads", "topic"), `${topic}\n`);
+    assert.equal(resolveSourceGitHead(join(root, "linked")), topic);
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
 test("fenced code citations are ignored and parsing resumes for LF and CRLF documents", () => {

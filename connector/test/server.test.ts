@@ -26,6 +26,7 @@ const EXPECTED_TOOLS = [
   "extract_project_meta",
   "extract_changelog",
   "emit_charts",
+  "snapshot_source_scope",
   "evaluate_document_gate",
   "publish_approved_documents",
   "render_report",
@@ -57,6 +58,12 @@ test("stdio smoke: lists all tools and answers verify_citation", async () => {
       { graph_type: graphParsed.graph_type, resolution: graphParsed.resolution, resolved: graphParsed.resolved, unresolved: graphParsed.unresolved },
       { graph_type: "module_dependency", resolution: "syntax", resolved: 0, unresolved: 0 },
     );
+
+    const snapshot = await client.callTool({ name: "snapshot_source_scope", arguments: { included_paths: ["app.py"] } });
+    const snapshotParsed = JSON.parse((snapshot.content as Array<{ text: string }>)[0].text);
+    assert.equal(snapshotParsed.source_kind, "non_git");
+    assert.equal(snapshotParsed.files[0].path, "app.py");
+    assert.match(snapshotParsed.digest, /^[a-f0-9]{64}$/);
 
     const result = await client.callTool({
       name: "verify_citation",

@@ -1,6 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { join, relative } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { z } from "zod";
 import { CitationLineCache, citationsInMarkdown, formatCitation, parseCitation, type CitationRange } from "./citations.js";
 import { extractCoverageSurface, includedSourceFiles } from "./coverage-surface.js";
@@ -14,6 +14,7 @@ export type DocumentGateReasonCode =
   | "claim_audit_incomplete";
 
 export interface ScopeManifest {
+  provenance_version?: "1" | "2";
   analyzed_source_commit: string;
   included_paths: string[];
   excluded_paths: Array<{ path: string; reason: string }>;
@@ -23,6 +24,15 @@ export interface ScopeManifest {
   module_extractors: Array<{ module: string; actor_id: string }>;
   writer_actor_id: string;
   draft_digest: string;
+  source_snapshot?: SourceSnapshot;
+}
+
+export interface SourceSnapshot {
+  algorithm: "sha256";
+  source_kind: "git_worktree" | "non_git";
+  base_commit?: string;
+  digest: string;
+  files: Array<{ path: string; bytes: number; sha256: string }>;
 }
 
 export interface CoverageItem {
@@ -81,13 +91,27 @@ const truncationSchema = z.object({ source: z.string().min(1), returned: z.numbe
   .strict()
   .refine((item) => item.returned + item.omitted === item.total, "returned + omitted must equal total");
 export const scopeManifestSchema = z.object({
+  provenance_version: z.enum(["1", "2"]).optional(),
   analyzed_source_commit: z.string().min(1), included_paths: z.array(z.string().min(1)).min(1),
   excluded_paths: z.array(z.object({ path: z.string().min(1), reason: z.string().trim().min(1) }).strict()),
   file_counts: z.object({ supported: z.number().int().nonnegative(), unsupported: z.number().int().nonnegative(), failed: z.number().int().nonnegative(), skipped: z.number().int().nonnegative() }).strict(),
   truncated: z.boolean(), truncated_inputs: z.array(truncationSchema),
   module_extractors: z.array(z.object({ module: z.string().min(1), actor_id: z.string().min(1) }).strict()).min(1),
   writer_actor_id: z.string().min(1), draft_digest: z.string().regex(/^[a-f0-9]{64}$/),
+  source_snapshot: z.object({
+    algorithm: z.literal("sha256"), source_kind: z.enum(["git_worktree", "non_git"]),
+    base_commit: z.string().regex(/^[0-9a-f]{40,64}$/).optional(), digest: z.string().regex(/^[a-f0-9]{64}$/),
+    files: z.array(z.object({ path: z.string().min(1), bytes: z.number().int().nonnegative(), sha256: z.string().regex(/^[a-f0-9]{64}$/) }).strict()),
+  }).strict().optional(),
 }).strict().superRefine((value, ctx) => {
+  if (value.provenance_version === "2" && !value.source_snapshot)
+    ctx.addIssue({ code: "custom", message: "provenance version 2 requires source_snapshot" });
+  if (value.source_snapshot && value.provenance_version !== "2")
+    ctx.addIssue({ code: "custom", message: "source_snapshot requires provenance version 2" });
+  if (value.source_snapshot?.source_kind === "git_worktree" && !value.source_snapshot.base_commit)
+    ctx.addIssue({ code: "custom", message: "git_worktree source snapshot requires base_commit" });
+  if (value.source_snapshot?.source_kind === "non_git" && value.source_snapshot.base_commit)
+    ctx.addIssue({ code: "custom", message: "non_git source snapshot cannot declare base_commit" });
   if (value.truncated !== (value.truncated_inputs.length > 0)) ctx.addIssue({ code: "custom", message: "truncated must match truncated_inputs" });
   const modules = value.module_extractors.map((item) => item.module.replaceAll("\\", "/"));
   if (new Set(modules).size !== modules.length) ctx.addIssue({ code: "custom", message: "module extractor assignments must be unique" });
@@ -141,6 +165,53 @@ export function calculateDraftDigest(dir: string, profile: DocumentProfile): str
   return hash.digest("hex");
 }
 
+/** Byte-level commitment to the normalized included source inventory. */
+export function calculateSourceSnapshot(
+  sourceRoot: string,
+  includedPaths: string[],
+  excludedPaths: Array<{ path: string; reason: string }>,
+  source: { source_kind: SourceSnapshot["source_kind"]; base_commit?: string },
+): SourceSnapshot {
+  const files = includedSourceFiles(sourceRoot, includedPaths, excludedPaths).map((file) => {
+    let bytes: Buffer | undefined;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const before = statSync(file);
+      const candidate = readFileSync(file);
+      const after = statSync(file);
+      if (before.size === after.size && before.mtimeMs === after.mtimeMs && before.ctimeMs === after.ctimeMs) {
+        bytes = candidate;
+        break;
+      }
+    }
+    if (!bytes) throw new Error(`source changed while snapshotting: ${file}`);
+    return {
+      path: relative(sourceRoot, file).replaceAll("\\", "/"),
+      bytes: bytes.byteLength,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+    };
+  });
+  const aggregate = createHash("sha256");
+  for (const file of files) aggregate.update(file.path).update("\0").update(String(file.bytes)).update("\0").update(file.sha256).update("\0");
+  return { algorithm: "sha256", ...source, digest: aggregate.digest("hex"), files };
+}
+
+export function sourceSnapshotMatches(sourceRoot: string, scope: ScopeManifest): boolean {
+  const expected = scope.source_snapshot;
+  if (!expected) return scope.provenance_version !== "2";
+  try {
+    const actual = calculateSourceSnapshot(sourceRoot, scope.included_paths, scope.excluded_paths, {
+      source_kind: expected.source_kind, base_commit: expected.base_commit,
+    });
+    return actual.algorithm === expected.algorithm
+      && actual.source_kind === expected.source_kind
+      && actual.base_commit === expected.base_commit
+      && actual.digest === expected.digest
+      && actual.files.length === expected.files.length
+      && actual.files.every((file, index) => file.path === expected.files[index]?.path
+        && file.bytes === expected.files[index]?.bytes && file.sha256 === expected.files[index]?.sha256);
+  } catch { return false; }
+}
+
 interface AuditLog {
   rows: Array<{ evidence?: string | string[]; action?: string; claim?: string; claim_id?: string; document?: string }>;
   malformed_lines: number[];
@@ -170,18 +241,41 @@ function auditCitations(evidence: string | string[] | undefined): CitationRange[
     .map(parseCitation).filter((value): value is CitationRange => value !== undefined);
 }
 
-function resolveGitHead(sourceRoot: string): string | undefined {
+function gitDirectory(sourceRoot: string): { gitDir: string; commonDir: string } | undefined {
+  const marker = join(sourceRoot, ".git");
+  if (!existsSync(marker)) return undefined;
+  let gitDir = marker;
   try {
-    const headPath = join(sourceRoot, ".git", "HEAD");
-    if (!existsSync(headPath)) return undefined;
+    const statsPath = realpathSync(marker);
+    if (!existsSync(join(statsPath, "HEAD"))) {
+      const match = /^gitdir:\s*(.+)$/im.exec(readFileSync(marker, "utf8"));
+      if (!match) return undefined;
+      gitDir = isAbsolute(match[1].trim()) ? match[1].trim() : resolve(dirname(marker), match[1].trim());
+    } else gitDir = statsPath;
+    let commonDir = gitDir;
+    const commonMarker = join(gitDir, "commondir");
+    if (existsSync(commonMarker)) {
+      const declared = readFileSync(commonMarker, "utf8").trim();
+      commonDir = isAbsolute(declared) ? declared : resolve(gitDir, declared);
+    }
+    return { gitDir, commonDir };
+  } catch { return undefined; }
+}
+
+export function resolveSourceGitHead(sourceRoot: string): string | undefined {
+  try {
+    const dirs = gitDirectory(sourceRoot);
+    if (!dirs) return undefined;
+    const headPath = join(dirs.gitDir, "HEAD");
     const head = readFileSync(headPath, "utf8").trim();
     const refMatch = /^ref:\s*(.+)$/.exec(head);
     if (!refMatch) return /^[0-9a-f]{40,64}$/i.test(head) ? head.toLowerCase() : undefined;
     const ref = refMatch[1].trim();
     if (ref.includes("..")) return undefined;
-    const refPath = join(sourceRoot, ".git", ...ref.split("/"));
+    const worktreeRefPath = join(dirs.gitDir, ...ref.split("/"));
+    const refPath = existsSync(worktreeRefPath) ? worktreeRefPath : join(dirs.commonDir, ...ref.split("/"));
     if (existsSync(refPath)) return readFileSync(refPath, "utf8").trim().toLowerCase();
-    const packedPath = join(sourceRoot, ".git", "packed-refs");
+    const packedPath = join(dirs.commonDir, "packed-refs");
     if (!existsSync(packedPath)) return undefined;
     for (const line of readFileSync(packedPath, "utf8").split(/\r?\n/)) {
       const packed = /^([0-9a-f]{40,64})\s+(.+)$/.exec(line.trim());
@@ -345,9 +439,17 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
     if (!declaresAnalyzedCommit)
       reasons.push({ code: "invalid_provenance", detail: `${file} does not declare analyzed_source_commit ${scope.analyzed_source_commit}` });
   }
-  const headCommit = resolveGitHead(params.source_root);
+  const headCommit = resolveSourceGitHead(params.source_root);
   if (headCommit !== undefined && headCommit !== scope.analyzed_source_commit.toLowerCase())
     reasons.push({ code: "invalid_provenance", detail: "analyzed_source_commit does not match the source tree HEAD" });
+  if (scope.provenance_version === "2") {
+    const snapshot = scope.source_snapshot;
+    const invalidGitBinding = snapshot?.source_kind === "git_worktree"
+      && (headCommit === undefined || snapshot.base_commit !== headCommit || scope.analyzed_source_commit.toLowerCase() !== headCommit);
+    const invalidNonGitBinding = snapshot?.source_kind === "non_git" && existsSync(join(params.source_root, ".git"));
+    if (!snapshot || invalidGitBinding || invalidNonGitBinding || !sourceSnapshotMatches(params.source_root, scope))
+      reasons.push({ code: "invalid_provenance", detail: "source snapshot or source-kind binding differs from the frozen byte inventory" });
+  }
   const actors = [scope.writer_actor_id, evidence.actor_id, coverage.actor_id, params.gatekeeper_actor_id];
   if (evidence.verdict !== "passed" || actors.some((actor) => !actor) || new Set(actors).size !== actors.length || evidence.draft_digest !== scope.draft_digest || coverage.draft_digest !== scope.draft_digest || calculateDraftDigest(params.dir, params.profile) !== scope.draft_digest)
     reasons.push({ code: "invalid_provenance", detail: "audits are not independent or do not address the frozen draft" });

@@ -5,9 +5,28 @@
   "description": "Frozen before the Writer runs. draft_digest is added once the draft exists and is required by evaluate_document_gate; every other field is fixed at freeze time.",
   "type": "object",
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "provenance_version": { "const": "2" } }, "required": ["provenance_version"] },
+      "then": { "required": ["source_snapshot"] }
+    },
+    {
+      "if": { "required": ["source_snapshot"] },
+      "then": { "properties": { "provenance_version": { "const": "2" } }, "required": ["provenance_version"] }
+    },
+    {
+      "if": { "properties": { "source_snapshot": { "properties": { "source_kind": { "const": "git_worktree" } }, "required": ["source_kind"] } }, "required": ["source_snapshot"] },
+      "then": { "properties": { "source_snapshot": { "required": ["base_commit"] } } }
+    },
+    {
+      "if": { "properties": { "source_snapshot": { "properties": { "source_kind": { "const": "non_git" } }, "required": ["source_kind"] } }, "required": ["source_snapshot"] },
+      "then": { "properties": { "source_snapshot": { "not": { "required": ["base_commit"] } } } }
+    }
+  ],
   "required": ["analyzed_source_commit", "included_paths", "excluded_paths", "file_counts", "truncated", "truncated_inputs", "module_extractors", "writer_actor_id"],
   "properties": {
     "analyzed_source_commit": { "type": "string", "minLength": 1 },
+    "provenance_version": { "enum": ["1", "2"], "description": "Version 2 requires a byte-level source_snapshot; omitted manifests retain legacy version-1 semantics." },
     "included_paths": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
     "excluded_paths": { "type": "array", "items": { "$ref": "#/$defs/exclusion" } },
     "file_counts": {
@@ -25,6 +44,28 @@
     "draft_digest": {
       "type": "string", "pattern": "^[a-f0-9]{64}$",
       "description": "SHA-256 of the frozen draft. Absent in the pre-Writer staged manifest; mandatory when the manifest is submitted to evaluate_document_gate."
+    },
+    "source_snapshot": {
+      "type": "object", "additionalProperties": false,
+      "required": ["algorithm", "source_kind", "digest", "files"],
+      "properties": {
+        "algorithm": { "const": "sha256" },
+        "source_kind": { "enum": ["git_worktree", "non_git"] },
+        "base_commit": { "type": "string", "pattern": "^[0-9a-f]{40,64}$" },
+        "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["path", "bytes", "sha256"],
+            "properties": {
+              "path": { "type": "string", "minLength": 1 },
+              "bytes": { "type": "integer", "minimum": 0 },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            }
+          }
+        }
+      },
+      "description": "Sorted POSIX-relative supported-source inventory. Each file hash is over raw bytes; digest hashes canonical path, byte count, and file hash records. Version 2 requires this object. git_worktree requires base_commit; non_git forbids it."
     }
   },
   "$defs": {
