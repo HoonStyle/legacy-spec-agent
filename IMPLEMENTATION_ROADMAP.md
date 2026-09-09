@@ -279,3 +279,34 @@ Every item is committed by functional boundary:
 - documentation records only behavior already implemented or explicitly marks future work;
 - every commit passes `git diff --check`, the relevant focused tests, and a TypeScript build;
 - the final branch passes `node scripts/sync-plugin-skill.mjs` and `cd connector && npm test`.
+
+## 2026-09-09 standalone reliability sequence
+
+The user explicitly authorized the standalone project plan in
+`DEVELOPMENT_PLAN.md` to proceed in order. This does not reopen the item-4 Stop
+decision: resolver expansion, cache/concurrency infrastructure, semantic
+backends, SDK installation, and the LSA-04 efficiency experiment remain stopped.
+
+The authorized implementation queue is limited to document-integrity work:
+
+1. **LSA-01:** correct the Coverage Sentinel contract so deterministic discovery
+   remains a required minimum while explicitly attributed independent-audit
+   additions can pass only after source-scope, location, type, ID, and evidence
+   validation. Past external gold and scores remain immutable; the changed
+   contract is versioned and re-evaluated separately.
+2. **LSA-02:** bind the gate to a byte-level source snapshot and correctly resolve
+   normal checkouts and linked worktrees. This is a provenance reliability fix,
+   not cache or resolver expansion.
+3. **LSA-03:** separate structural validation, semantic-audit attestation, and
+   execution-provenance assurance. Caller-supplied actor strings must not be
+   represented as host-certified independence.
+4. **LSA-05:** remains a decision document until a distribution format is chosen;
+   it does not authorize packaging or download behavior changes.
+
+Before LSA-01, the existing generated specification was checked from baseline
+`ecf88eda32182ccca352248c6dd0b20232309a31` to `242f1d5`. The repository-local
+manual fallback found 15 intact, 9 moved, 1 drifted, and 0 orphaned citations;
+`generated-spec/DRIFT_REPORT.md` records the result. The installed connector's
+automatic drift call could not resolve that repository baseline because it was
+bound to the plugin cache checkout, so that tool result is recorded as an
+environment limitation rather than as drift evidence.
