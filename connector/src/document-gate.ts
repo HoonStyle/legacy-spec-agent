@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { z } from "zod";
 import { CitationLineCache, citationsInMarkdown, formatCitation, parseCitation, type CitationRange } from "./citations.js";
 import { extractCoverageSurface, includedSourceFiles } from "./coverage-surface.js";
@@ -27,6 +27,8 @@ export interface ScopeManifest {
 
 export interface CoverageItem {
   category?: "registered_api" | "data_contract" | "environment" | "entrypoint" | "status_value" | "test_file" | "external_side_effect";
+  discovery?: "detected" | "independent_audit";
+  audit_note?: string;
   surface: string;
   found_at: string;
   expected_document_type: "API" | "DM" | "BR" | "TC" | "RSK";
@@ -38,6 +40,7 @@ function coverageKey(item: CoverageItem): string {
 }
 
 export interface CoverageAudit {
+  contract_version?: "1" | "2";
   expected_count: number;
   documented_count: number;
   covered_items: Array<CoverageItem & { document_id: string }>;
@@ -93,14 +96,26 @@ export const scopeManifestSchema = z.object({
   for (const module of modules) if (!includedModules.has(module)) ctx.addIssue({ code: "custom", message: `Extractor assignment does not match a frozen included path: ${module}` });
 });
 const coverageCategorySchema = z.enum(["registered_api", "data_contract", "environment", "entrypoint", "status_value", "test_file", "external_side_effect"]);
-const coverageItemSchema = z.object({ category: coverageCategorySchema.optional(), surface: z.string().min(1), found_at: z.string().min(1), expected_document_type: z.enum(["API", "DM", "BR", "TC", "RSK"]) }).strict();
+const coverageItemSchema = z.object({
+  category: coverageCategorySchema.optional(), discovery: z.enum(["detected", "independent_audit"]).optional(),
+  audit_note: z.string().trim().min(1).optional(), surface: z.string().min(1), found_at: z.string().min(1),
+  expected_document_type: z.enum(["API", "DM", "BR", "TC", "RSK"]),
+}).strict().superRefine((item, ctx) => {
+  if (item.discovery === "independent_audit" && !item.audit_note)
+    ctx.addIssue({ code: "custom", message: "independent_audit items require audit_note" });
+});
 export const coverageAuditSchema = z.object({
+  contract_version: z.enum(["1", "2"]).optional(),
   expected_count: z.number().int().nonnegative(), documented_count: z.number().int().nonnegative(),
   covered_items: z.array(coverageItemSchema.extend({ document_id: z.string().min(1) })),
   explained_omissions: z.array(coverageItemSchema.extend({ reason: z.string() })),
   unexplained_omissions: z.array(coverageItemSchema), truncated_inputs: z.array(truncationSchema),
   verdict: z.enum(["passed", "failed"]), actor_id: z.string().min(1), draft_digest: z.string().regex(/^[a-f0-9]{64}$/),
-}).strict();
+}).strict().superRefine((audit, ctx) => {
+  const items = [...audit.covered_items, ...audit.explained_omissions, ...audit.unexplained_omissions];
+  if (items.some((item) => item.discovery === "independent_audit") && audit.contract_version !== "2")
+    ctx.addIssue({ code: "custom", message: "independent_audit items require coverage contract_version 2" });
+});
 export const evidenceAuditSchema = z.object({ verdict: z.enum(["passed", "failed"]), actor_id: z.string().min(1), draft_digest: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 
 const REQUIRED: Record<DocumentProfile, string[]> = {
@@ -259,6 +274,7 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
     if (!match[2].startsWith(`${match[1]}-`)) reasons.push({ code: "invalid_id", detail: `type mismatch ${match[1]} -> ${match[2]}` });
 
   const coverage = params.coverage_audit;
+  const parsedCoverage = coverageAuditSchema.safeParse(coverage);
   const discovered = extractCoverageSurface(params.source_root, params.scope_manifest.included_paths, params.scope_manifest.excluded_paths);
   const discoveredSurface = new Set(discovered.map(coverageKey));
   const auditedSurface = new Set([...coverage.covered_items, ...coverage.explained_omissions, ...coverage.unexplained_omissions].map(coverageKey));
@@ -266,12 +282,29 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
   const allCoverageItems = [...coverage.covered_items, ...coverage.explained_omissions, ...coverage.unexplained_omissions];
   const itemKeys = allCoverageItems.map(coverageKey);
   const uniqueSurfaces = new Set(itemKeys);
-  const phantomAuditItems = allCoverageItems.filter((item) => !discoveredSurface.has(coverageKey(item)));
+  const phantomAuditItems = allCoverageItems.filter((item) => item.discovery !== "independent_audit" && !discoveredSurface.has(coverageKey(item)));
+  const includedFiles = new Set(includedSourceFiles(params.source_root, params.scope_manifest.included_paths, params.scope_manifest.excluded_paths)
+    .map((file) => relative(params.source_root, file).replaceAll("\\", "/")));
+  const expectedTypeByCategory: Record<NonNullable<CoverageItem["category"]>, CoverageItem["expected_document_type"]> = {
+    registered_api: "API", data_contract: "DM", environment: "DM", entrypoint: "BR",
+    status_value: "BR", test_file: "TC", external_side_effect: "RSK",
+  };
+  const invalidIndependentAuditItems = allCoverageItems.filter((item) => {
+    if (item.discovery !== "independent_audit") return false;
+    const location = parseCitation(item.found_at);
+    if (!location || !item.category || !item.audit_note?.trim()) return true;
+    if (coverage.contract_version !== "2" || discoveredSurface.has(coverageKey(item))) return true;
+    if (item.surface.slice(0, item.surface.indexOf(":")) !== item.category) return true;
+    if (expectedTypeByCategory[item.category] !== item.expected_document_type) return true;
+    if (!includedFiles.has(location.path.replaceAll("\\", "/"))) return true;
+    if (lineCache.check(params.source_root, location).verdict !== "valid") return true;
+    return params.scope_manifest.excluded_paths.some((excluded) => excluded.path.replaceAll("\\", "/") === item.found_at.replaceAll("\\", "/"));
+  });
   const invalidCoveredType = coverage.covered_items.some((item) => !item.document_id.startsWith(`${item.expected_document_type}-`));
   const invalidExplanation = coverage.explained_omissions.some((item) =>
     !item.reason.trim() || !params.scope_manifest.excluded_paths.some((excluded) => excluded.path === item.found_at && excluded.reason.trim()),
   );
-  if (coverage.verdict !== "passed" || coverage.unexplained_omissions.length > 0 || coverage.expected_count !== uniqueSurfaces.size || uniqueSurfaces.size !== itemKeys.length || coverage.documented_count !== coverage.covered_items.length || invalidCoveredType || invalidExplanation || missingFromAudit.length > 0 || phantomAuditItems.length > 0)
+  if (!parsedCoverage.success || coverage.verdict !== "passed" || coverage.unexplained_omissions.length > 0 || coverage.expected_count !== uniqueSurfaces.size || uniqueSurfaces.size !== itemKeys.length || coverage.documented_count !== coverage.covered_items.length || invalidCoveredType || invalidExplanation || missingFromAudit.length > 0 || phantomAuditItems.length > 0 || invalidIndependentAuditItems.length > 0)
     reasons.push({ code: "coverage_failed", detail: "coverage audit is failed or internally inconsistent" });
   const danglingCoverageIds = coverage.covered_items.filter((item) => !counts.has(item.document_id));
   if (danglingCoverageIds.length > 0)

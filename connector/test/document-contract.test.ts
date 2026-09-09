@@ -93,7 +93,8 @@ test("scope manifest and Coverage Sentinel schema are explicit", async () => {
   }
   for (const field of [
     "expected_count", "documented_count", "covered_items", "explained_omissions",
-    "unexplained_omissions", "truncated_inputs", "verdict", "found_at", "expected_document_type",
+    "contract_version", "unexplained_omissions", "truncated_inputs", "verdict", "found_at", "expected_document_type",
+    "discovery", "audit_note",
   ]) {
     assert.ok(roles.includes(`\"${field}\"`), `Coverage Sentinel schema is missing ${field}`);
   }

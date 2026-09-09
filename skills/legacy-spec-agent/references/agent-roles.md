@@ -75,9 +75,10 @@ Bias toward flagging ambiguity. A smaller grounded specification is better than 
 **Output schema:**
 ```json
 {
+  "contract_version": "2",
   "expected_count": 0,
   "documented_count": 0,
-  "covered_items": [{"category": "registered_api|data_contract|environment|entrypoint|status_value|test_file|external_side_effect", "surface": "<item>", "found_at": "path:line", "expected_document_type": "API|DM|BR|TC|RSK", "document_id": "API-*|DM-*|BR-*|TC-*|RSK-*"}],
+  "covered_items": [{"discovery": "detected|independent_audit", "audit_note": "<required for independent_audit>", "category": "registered_api|data_contract|environment|entrypoint|status_value|test_file|external_side_effect", "surface": "<item>", "found_at": "path:line", "expected_document_type": "API|DM|BR|TC|RSK", "document_id": "API-*|DM-*|BR-*|TC-*|RSK-*"}],
   "explained_omissions": [{"category": "<same category contract>", "surface": "<item>", "found_at": "path:line", "expected_document_type": "API|DM|BR|TC|RSK", "reason": "<scope/exclusion reason>"}],
   "unexplained_omissions": [{"category": "<same category contract>", "surface": "<item>", "found_at": "path:line", "expected_document_type": "API|DM|BR|TC|RSK"}],
   "truncated_inputs": [{"source": "<tool/scope>", "returned": 0, "total": 0, "omitted": 0}],
@@ -88,6 +89,18 @@ Bias toward flagging ambiguity. A smaller grounded specification is better than 
 ```
 
 Coverage identity is the tuple of the typed `document_id`, surface `category`, source path, and original `found_at` line or range. A covered item remains linked when at least one citation under that ID is in the same file and contains the complete `found_at` range; merely citing the same file is insufficient. For compatibility, `category` may be omitted by older callers and is then derived from the prefix of `surface`, but an explicitly supplied category must match the extractor output. Evidence soundness is separate: every factual line has one verified claim row, and that row records the full citation set on the claim (a string for one citation or a string array for multiple citations). For a claim with multiple citations, at least one must establish any claimed surface identity while the independent Evidence Auditor must attest that the complete set supports the whole claim.
+
+Coverage contract version 2 treats deterministic discovery as a required minimum,
+not as the maximum surface. Use `discovery: "independent_audit"` only for an
+additional item found by direct review that is absent from deterministic output,
+and record a non-empty `audit_note` explaining the finding. The gate validates
+that its complete `found_at` range exists in a supported file inside the frozen
+scope, is not excluded, that category and expected document type agree, and that
+the typed document ID contains matching source evidence. Omitting `discovery`
+retains the version-1 `detected` behavior. An audit containing an independent
+addition must explicitly declare `contract_version: "2"`; old records are not
+silently upgraded. The structural gate validates this attribution and linkage,
+not the semantic truth of the auditor's note.
 
 `expected_count` counts every enumerated surface item; `documented_count` counts items mapped to a correctly typed document ID. `verdict` is `failed` when any omission is unexplained or any truncation is absent from the manifest and deliverable coverage disclosures.
 

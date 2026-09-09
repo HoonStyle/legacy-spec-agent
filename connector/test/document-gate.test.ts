@@ -24,6 +24,28 @@ function isolatedComplete(): { params: DocumentGateParams; cleanup: () => void }
   return { params, cleanup: () => rmSync(temp, { recursive: true, force: true }) };
 }
 
+function isolatedIndependentAddition(): { params: DocumentGateParams; cleanup: () => void } {
+  const temp = mkdtempSync(join(tmpdir(), "document-gate-independent-"));
+  cpSync(join(fixtureRoot, "complete-or-explained"), temp, { recursive: true });
+  appendFileSync(join(temp, "src", "server.ts"), "postRouter.get('/posts', handler);\n");
+  const params: DocumentGateParams = {
+    root: repositoryRoot, source_root: temp, dir: join(temp, "output"), profile: "core",
+    ...JSON.parse(readFileSync(join(temp, "gate-input.json"), "utf8")),
+  };
+  params.coverage_audit.contract_version = "2";
+  params.coverage_audit.expected_count += 1;
+  params.coverage_audit.documented_count += 1;
+  params.coverage_audit.covered_items.push({
+    discovery: "independent_audit", audit_note: "Named router registration found by direct source review.",
+    category: "registered_api", surface: "registered_api:GET /posts", found_at: "src/server.ts:3",
+    expected_document_type: "API", document_id: "API-002",
+  });
+  appendFileSync(join(params.dir, "ARCHITECTURE.md"), "\n### API-002 GET /posts\nCLM-009: A named router registers the posts route. `src/server.ts:3`\n");
+  appendFileSync(join(params.dir, "audit_log.jsonl"), '{"action":"verified","claim_id":"CLM-009","evidence":"src/server.ts:3","document":"ARCHITECTURE.md"}\n');
+  refreshDigest(params);
+  return { params, cleanup: () => rmSync(temp, { recursive: true, force: true }) };
+}
+
 function refreshDigest(params: DocumentGateParams): void {
   const digest = calculateDraftDigest(params.dir, params.profile);
   params.scope_manifest.draft_digest = digest;
@@ -41,6 +63,40 @@ test("accurate citations cannot hide an undocumented registered interface", () =
 test("complete documentation or a frozen, explained exclusion is approved", () => {
   const result = evaluateDocumentGate(fixture("complete-or-explained"));
   assert.deepEqual(result, { verdict: "approved", citation_count: 8, audited_citation_count: 8, reasons: [] });
+});
+
+test("coverage contract v2 accepts a source-valid independent-audit addition beyond deterministic discovery", () => {
+  const { params, cleanup } = isolatedIndependentAddition();
+  try {
+    assert.ok(!extractCoverageSurface(params.source_root, params.scope_manifest.included_paths, params.scope_manifest.excluded_paths)
+      .some((item) => item.surface === "registered_api:GET /posts"));
+    assert.deepEqual(evaluateDocumentGate(params), { verdict: "approved", citation_count: 9, audited_citation_count: 9, reasons: [] });
+  } finally { cleanup(); }
+});
+
+test("independent-audit additions must preserve their v2 attribution and source contract", async (t) => {
+  const cases: Array<{ name: string; mutate: (params: DocumentGateParams) => void }> = [
+    { name: "contract version", mutate: (p) => { delete p.coverage_audit.contract_version; } },
+    { name: "audit note", mutate: (p) => { delete p.coverage_audit.covered_items.at(-1)!.audit_note; } },
+    { name: "included source path", mutate: (p) => { p.coverage_audit.covered_items.at(-1)!.found_at = "outside.ts:1"; } },
+    { name: "existing source line", mutate: (p) => { p.coverage_audit.covered_items.at(-1)!.found_at = "src/server.ts:999"; } },
+    { name: "category/type mapping", mutate: (p) => { p.coverage_audit.covered_items.at(-1)!.expected_document_type = "DM"; } },
+    { name: "surface/category mapping", mutate: (p) => { p.coverage_audit.covered_items.at(-1)!.category = "data_contract"; } },
+    { name: "detector result cannot be relabelled", mutate: (p) => {
+      const item = p.coverage_audit.covered_items[0];
+      item.discovery = "independent_audit";
+      item.audit_note = "mislabelled";
+    } },
+  ];
+  for (const item of cases) await t.test(item.name, () => {
+    const { params, cleanup } = isolatedIndependentAddition();
+    try {
+      item.mutate(params);
+      const result = evaluateDocumentGate(params);
+      assert.equal(result.verdict, "rejected");
+      assert.ok(result.reasons.some((reason) => reason.code === "coverage_failed"), JSON.stringify(result.reasons));
+    } finally { cleanup(); }
+  });
 });
 
 test("fenced code citations are ignored and parsing resumes for LF and CRLF documents", () => {
