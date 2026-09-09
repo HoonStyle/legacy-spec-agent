@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { basename, join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
-import { calculateDraftDigest, calculateSourceSnapshot, evaluateDocumentGate } from "../connector/dist/src/document-gate.js";
+import { calculateClaimAuditBindings, calculateClaimSetDigest, calculateDraftDigest, calculateSourceSnapshot, evaluateDocumentGate } from "../connector/dist/src/document-gate.js";
 import { extractCoverageSurface, includedSourceFiles } from "../connector/dist/src/coverage-surface.js";
 
 const casesRoot = resolve(process.argv[2] ?? "evals/document-quality/cases");
@@ -50,24 +50,29 @@ for (const name of caseNames) {
   writeFileSync(join(output, "ARCHITECTURE.md"), artifactBody("Architecture", commit, architectureSections, evidence));
   for (const [file, required] of Object.entries(standardDocuments))
     writeFileSync(join(output, file), artifactBody(file.replace(".md", ""), commit, required, evidence).replace("CLM-ARCH-001", `CLM-${file.replace(".md", "")}-001`));
-  const markdownBodies = ["SPEC.md", "ARCHITECTURE.md", ...Object.keys(standardDocuments)].map((file) => readFileSync(join(output, file), "utf8"));
-  const claimRows = markdownBodies.flatMap((body) => body.split(/\r?\n/).flatMap((line) => {
-    const claimId = /\b(CLM-[A-Za-z0-9_-]+)\b/.exec(line)?.[1];
-    return Array.from(line.matchAll(/`([^`]+:\d+(?:-\d+)?)`/g), (match) => ({ action: "verified", claim_id: claimId, evidence: match[1], document: "generated-baseline" }));
+  const digest = calculateDraftDigest(output, "standard");
+  const sourceSnapshot = calculateSourceSnapshot(root, ["."], [], { source_kind: "non_git" });
+  const auditRunId = `evidence-${name}-v2`;
+  const claimRows = calculateClaimAuditBindings(output, "standard").map((binding) => ({
+    action: "verified", claim_id: binding.claim_id,
+    evidence: binding.citations.length === 1 ? binding.citations[0] : binding.citations,
+    document: binding.document, claim_hash: binding.claim_hash, draft_digest: digest,
+    source_digest: sourceSnapshot.digest, audit_run_id: auditRunId,
   }));
   writeFileSync(join(output, "audit_log.jsonl"), claimRows.map((row) => JSON.stringify(row)).join("\n") + "\n");
-  const digest = calculateDraftDigest(output, "standard");
   const manifest = {
     provenance_version: "2",
     analyzed_source_commit: commit, included_paths: ["."], excluded_paths: [],
     file_counts: { supported: files.length, unsupported: 0, failed: 0, skipped: 0 },
     truncated: false, truncated_inputs: [], module_extractors: [{ module: ".", actor_id: `extractor-${name}` }],
     writer_actor_id: `writer-${name}`, draft_digest: digest,
-    source_snapshot: calculateSourceSnapshot(root, ["."], [], { source_kind: "non_git" }),
+    source_snapshot: sourceSnapshot,
   };
   const result = evaluateDocumentGate({
     root, source_root: root, dir: output, profile: "standard", scope_manifest: manifest,
-    evidence_audit: { verdict: "passed", actor_id: `auditor-${name}`, draft_digest: digest },
+    evidence_audit: { contract_version: "2", verdict: "passed", actor_id: `auditor-${name}`, draft_digest: digest,
+      claim_set_digest: calculateClaimSetDigest(output, "standard"), source_digest: sourceSnapshot.digest,
+      execution: { mode: "caller_attested", audit_run_id: auditRunId } },
     coverage_audit: { expected_count: covered.length, documented_count: covered.length, covered_items: covered, explained_omissions: [], unexplained_omissions: [], truncated_inputs: [], verdict: "passed", actor_id: `sentinel-${name}`, draft_digest: digest },
     gatekeeper_actor_id: `gatekeeper-${name}`,
   });

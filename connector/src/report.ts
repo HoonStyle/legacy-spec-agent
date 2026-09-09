@@ -259,7 +259,8 @@ function qualityTab(root: string, docs: DocTab[], audit: AuditEntry[]): string {
     `<div class="tablewrap"><table><thead><tr><th>document</th><th>citations</th><th>audit-covered</th><th>missing files</th><th>line mismatches</th></tr></thead>` +
     `<tbody>${rows}</tbody></table></div>` +
     `<h3>Remaining review caveat</h3>` +
-    `<p>Line-valid citations prove the target file and line exist. They do not prove that every natural-language claim is semantically supported; that remains a critic/reviewer responsibility.</p>`
+    `<p>Line-valid citations prove the target file and line exist. They do not prove that every natural-language claim is semantically supported; that remains a critic/reviewer responsibility.</p>` +
+    `<p>This Quality tab reports structural document evidence only. Semantic-audit status, execution provenance, and source-snapshot assurance are separate fields in the publication-gate result and cannot be inferred from actor strings or this page.</p>`
   );
 }
 

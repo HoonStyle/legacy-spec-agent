@@ -84,7 +84,7 @@ Mode A에는 두 프로파일이 있습니다. **기본값은 `standard`** 이�
 
 ## 커넥터 도구
 
-번들 커넥터는 열여섯 개 도구를 제공합니다. 커넥터 없이도 스킬은 동작하지만 LLM 출력에만 의존하게 되어 보장 수준은 낮아집니다.
+번들 커넥터는 열여덟 개 도구를 제공합니다. 커넥터 없이도 스킬은 동작하지만 LLM 출력에만 의존하게 되어 보장 수준은 낮아집니다.
 
 | 그룹 | 도구 | 용도 |
 | --- | --- | --- |
@@ -92,12 +92,13 @@ Mode A에는 두 프로파일이 있습니다. **기본값은 `standard`** 이�
 | 구조 | `index_symbols`, `build_call_graph` | 구문 수준 심볼 인덱스와 모듈 의존성 그래프 |
 | 추출 | `extract_data_model`, `extract_project_meta`, `extract_changelog` | typed model, 매니페스트, Git 기반 changelog |
 | 렌더링 | `emit_charts`, `render_report` | charts와 `REPORT.html` |
+| 출처 고정 | `snapshot_source_scope`, `snapshot_document_claims` | 의미 판단을 주장하지 않고 원본 바이트와 인용 claim binding 동결 |
 | 발행 | `evaluate_document_gate`, `publish_approved_documents` | Mode A 최종 게이트와 트랜잭션 발행 |
 | 툴체인 | `assess_language_toolchains`, `approve_toolchain_download`, `download_language_toolchain`, `get_toolchain_download_status`, `cancel_toolchain_download` | 누락 SDK 탐지, 명시적 동의 후에만 다운로드 |
 
 ### 발행 게이트
 
-`evaluate_document_gate`는 Mode A의 읽기 전용 최종 게이트입니다. Writer가 실행되기 전에 범위 매니페스트를 동결하고, 독립 증거 감사자(Independent Evidence Auditor)와 커버리지 센티널(Coverage Sentinel)이 동결된 초안을 감사하며, Gatekeeper만이 그 기록을 게이트에 제출합니다. 게이트는 동결된 코드 표면을 독립적으로 재열거하고 필수 문서/섹션, 인용 라인과 100% 감사 커버리지, ID, 누락, 절단 공개, 구문 그래프 라벨, 역할 독립성, 실제 SHA-256 초안 다이제스트를 검증한 뒤 결정적 사유 코드와 함께 `approved` 또는 `rejected`를 반환합니다. 산출물을 수정하지는 않습니다.
+`evaluate_document_gate`는 Mode A의 읽기 전용 최종 게이트입니다. Writer가 실행되기 전에 범위 매니페스트를 동결하고, 독립 증거 감사자(Independent Evidence Auditor)와 커버리지 센티널(Coverage Sentinel)이 동결된 초안을 감사하며, Gatekeeper만이 그 기록을 게이트에 제출합니다. 게이트는 동결된 코드 표면을 독립적으로 재열거하고 필수 문서/섹션, 인용 라인과 100% 감사 커버리지, ID, 누락, 절단 공개, 구문 그래프 라벨, 역할 식별자, 실제 초안·원본·claim binding을 검증한 뒤 결정적 사유 코드와 함께 `approved` 또는 `rejected`를 반환합니다. 산출물을 수정하지는 않습니다. 결과는 결정론적 `structural_validation`, 감사자의 판단인 `semantic_audit`, `execution_provenance`, `source_provenance`를 분리합니다. 서로 다른 actor 문자열이나 `caller_attested` 기록을 호스트가 인증한 실행으로 표시하지 않습니다.
 
 `publish_approved_documents`는 staging 초안에 같은 게이트를 적용하고 승인된 경우에만 목적지 디렉터리를 트랜잭션 방식으로 교체합니다. 거절된 초안은 기존 발행본을 건드리지 않습니다.
 

@@ -8,7 +8,7 @@ import { renderReport } from "./report.js";
 import { assessLanguageToolchains } from "./toolchains.js";
 import { ToolchainApprovalStore, ToolchainDownloadManager } from "./toolchain-downloads.js";
 import { indexSymbolsMulti, buildCallGraphMulti, extractDataModelMulti } from "./multilang.js";
-import { calculateSourceSnapshot, coverageAuditSchema, evaluateDocumentGate, evidenceAuditSchema, resolveSourceGitHead, scopeManifestSchema } from "./document-gate.js";
+import { calculateClaimAuditBindings, calculateClaimSetDigest, calculateSourceSnapshot, coverageAuditSchema, evaluateDocumentGate, evidenceAuditSchema, resolveSourceGitHead, scopeManifestSchema } from "./document-gate.js";
 import { gateAndPublish } from "./document-emission.js";
 import { resolveWithinRoot } from "./matching.js";
 import { homedir } from "node:os";
@@ -324,13 +324,29 @@ export function createServer(root: string, options: { cacheRoot?: string; fetchI
   );
 
   server.registerTool(
+    "snapshot_document_claims",
+    {
+      description:
+        "Create canonical structural bindings for cited CLM-* lines in a frozen draft. Returns each document, claim ID, normalized claim hash and citation set plus their aggregate digest. This supports evidence contract v2 but does not judge semantic truth or certify who ran an audit.",
+      inputSchema: {
+        deliverables_dir: z.string().describe("Frozen draft deliverables directory relative to connector root"),
+        profile: z.enum(["core", "standard"]),
+      },
+    },
+    async (params) => {
+      const dir = resolveWithinRoot(root, params.deliverables_dir);
+      return json({ claim_set_digest: calculateClaimSetDigest(dir, params.profile), bindings: calculateClaimAuditBindings(dir, params.profile) });
+    },
+  );
+
+  server.registerTool(
     "evaluate_document_gate",
     {
       description:
         "Read-only final publication gate for Mode A. Independently re-enumerates the frozen source surface and " +
         "validates required artifacts/sections, citation line validity and 100% audit coverage, IDs, omissions, " +
-        "truncation, syntax graph labels, role independence, and the actual SHA-256 draft digest. Returns approved " +
-        "or rejected with deterministic reason codes; it never edits deliverables.",
+        "truncation, syntax graph labels, role identifiers, and the actual draft/source/claim bindings. Returns approved " +
+        "or rejected with deterministic reason codes plus separate structural, semantic, execution, and source assurance; caller-attested audits are never labelled host-verified. It never edits deliverables.",
       inputSchema: {
         source_dir: z.string().optional().describe("Frozen source directory relative to connector root (default '.')"),
         deliverables_dir: z.string().describe("Draft deliverables directory relative to connector root"),

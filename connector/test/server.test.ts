@@ -27,6 +27,7 @@ const EXPECTED_TOOLS = [
   "extract_changelog",
   "emit_charts",
   "snapshot_source_scope",
+  "snapshot_document_claims",
   "evaluate_document_gate",
   "publish_approved_documents",
   "render_report",

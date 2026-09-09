@@ -66,6 +66,32 @@ The Writer produces the complete selected-profile draft from the frozen scope ma
 4. Check required sections and fields, profile membership, **Not found** search scopes, separation of external contracts, and prohibited inferences (including keys/cardinality/cascades and method-call semantics).
 5. Reject emission if any factual markdown claim lacks audit coverage, any ID reference is invalid, or any unsupported claim remains in a verified section.
 
+Evidence contract version 2 binds the semantic judgment to the exact structural
+input without claiming that the connector performed that judgment:
+
+```json
+{
+  "contract_version": "2",
+  "verdict": "passed|failed",
+  "actor_id": "<opaque auditor identity>",
+  "draft_digest": "<frozen draft SHA-256>",
+  "claim_set_digest": "<canonical cited-claim set SHA-256>",
+  "source_digest": "<version-2 source snapshot digest>",
+  "execution": {"mode": "caller_attested", "audit_run_id": "<opaque run ID>"}
+}
+```
+
+Every version-2 `audit_log.jsonl` row also records `document`, `claim_id`, the
+normalized `claim_hash`, the exact `evidence` citation set, `draft_digest`,
+`source_digest`, and the same `audit_run_id`. Use `snapshot_document_claims` to
+obtain the deterministic claim bindings, then make the semantic decision by
+reading the cited source. The gate rejects any stale or mixed binding. It reports
+four assurance fields separately: `structural_validation`, `semantic_audit`,
+`execution_provenance`, and `source_provenance`. `caller_attested` means the
+caller supplied the audit record; it is never host verification, even when actor
+strings differ. Version-1 evidence remains accepted with `legacy_unbound` and
+`unavailable` assurance labels and is never silently upgraded.
+
 Bias toward flagging ambiguity. A smaller grounded specification is better than plausible fiction.
 
 ## Phase 4 — Coverage Sentinel (separate subagent, mandatory)

@@ -11,7 +11,7 @@ export type DocumentGateReasonCode =
   | "unsupported_verified_claim" | "invalid_id" | "coverage_failed"
   | "undisclosed_truncation" | "syntax_dependency_as_call_graph"
   | "invalid_provenance" | "invalid_citation" | "invalid_manifest" | "invalid_audit_log"
-  | "claim_audit_incomplete";
+  | "claim_audit_incomplete" | "audit_contract_invalid" | "audit_binding_mismatch" | "semantic_audit_failed";
 
 export interface ScopeManifest {
   provenance_version?: "1" | "2";
@@ -63,9 +63,13 @@ export interface CoverageAudit {
 }
 
 export interface EvidenceAudit {
+  contract_version?: "1" | "2";
   verdict: "passed" | "failed";
   actor_id: string;
   draft_digest: string;
+  claim_set_digest?: string;
+  source_digest?: string;
+  execution?: { mode: "caller_attested"; audit_run_id: string };
 }
 
 export interface DocumentGateParams {
@@ -85,6 +89,12 @@ export interface DocumentGateResult {
   citation_count: number;
   audited_citation_count: number;
   reasons: DocumentGateReason[];
+  assurance?: {
+    structural_validation: { status: "passed" | "failed"; basis: "deterministic_gate" };
+    semantic_audit: { status: "passed" | "failed"; basis: "caller_attested" | "legacy_unbound"; claim_set_bound: boolean };
+    execution_provenance: { status: "caller_attested" | "unavailable"; host_verified: false; audit_run_id?: string };
+    source_provenance: { status: "byte_snapshot_verified" | "legacy_unbound" | "failed" };
+  };
 }
 
 const truncationSchema = z.object({ source: z.string().min(1), returned: z.number().int().nonnegative(), total: z.number().int().nonnegative(), omitted: z.number().int().nonnegative() })
@@ -140,7 +150,17 @@ export const coverageAuditSchema = z.object({
   if (items.some((item) => item.discovery === "independent_audit") && audit.contract_version !== "2")
     ctx.addIssue({ code: "custom", message: "independent_audit items require coverage contract_version 2" });
 });
-export const evidenceAuditSchema = z.object({ verdict: z.enum(["passed", "failed"]), actor_id: z.string().min(1), draft_digest: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
+export const evidenceAuditSchema = z.object({
+  contract_version: z.enum(["1", "2"]).optional(), verdict: z.enum(["passed", "failed"]), actor_id: z.string().min(1),
+  draft_digest: z.string().regex(/^[a-f0-9]{64}$/), claim_set_digest: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  source_digest: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  execution: z.object({ mode: z.literal("caller_attested"), audit_run_id: z.string().trim().min(1) }).strict().optional(),
+}).strict().superRefine((audit, ctx) => {
+  if (audit.contract_version === "2" && (!audit.claim_set_digest || !audit.source_digest || !audit.execution))
+    ctx.addIssue({ code: "custom", message: "evidence contract version 2 requires claim_set_digest, source_digest, and caller-attested execution" });
+  if (audit.contract_version !== "2" && (audit.claim_set_digest || audit.source_digest || audit.execution))
+    ctx.addIssue({ code: "custom", message: "bound evidence fields require evidence contract version 2" });
+});
 
 const REQUIRED: Record<DocumentProfile, string[]> = {
   core: ["SPEC.md", "ARCHITECTURE.md", "audit_log.jsonl"],
@@ -162,6 +182,42 @@ export function calculateDraftDigest(dir: string, profile: DocumentProfile): str
     hash.update(content);
     hash.update("\0");
   }
+  return hash.digest("hex");
+}
+
+export interface ClaimAuditBinding {
+  document: string;
+  claim_id: string;
+  claim_hash: string;
+  citations: string[];
+}
+
+/** Canonical structural bindings for every cited CLM-* factual line. */
+export function calculateClaimAuditBindings(dir: string, profile: DocumentProfile): ClaimAuditBinding[] {
+  const bindings: ClaimAuditBinding[] = [];
+  for (const document of REQUIRED[profile].filter((name) => name.endsWith(".md")).sort()) {
+    const path = join(dir, document);
+    if (!existsSync(path)) continue;
+    const grouped = new Map<string, { line: string; citations: Set<string> }>();
+    for (const item of citationsInMarkdown(readFileSync(path, "utf8"))) {
+      const ids = Array.from(item.line.matchAll(/\b(CLM-[A-Za-z0-9_-]+)\b/g), (match) => match[1]);
+      if (ids.length !== 1) continue;
+      const current = grouped.get(ids[0]) ?? { line: item.line, citations: new Set<string>() };
+      current.citations.add(formatCitation(item.citation));
+      grouped.set(ids[0], current);
+    }
+    for (const [claim_id, item] of grouped) bindings.push({
+      document, claim_id,
+      claim_hash: createHash("sha256").update(item.line.replace(/\s+/g, " ").trim()).digest("hex"),
+      citations: [...item.citations].sort(),
+    });
+  }
+  return bindings.sort((a, b) => a.document.localeCompare(b.document) || a.claim_id.localeCompare(b.claim_id));
+}
+
+export function calculateClaimSetDigest(dir: string, profile: DocumentProfile): string {
+  const hash = createHash("sha256");
+  for (const binding of calculateClaimAuditBindings(dir, profile)) hash.update(JSON.stringify(binding)).update("\0");
   return hash.digest("hex");
 }
 
@@ -213,7 +269,7 @@ export function sourceSnapshotMatches(sourceRoot: string, scope: ScopeManifest):
 }
 
 interface AuditLog {
-  rows: Array<{ evidence?: string | string[]; action?: string; claim?: string; claim_id?: string; document?: string }>;
+  rows: Array<{ evidence?: string | string[]; action?: string; claim?: string; claim_id?: string; document?: string; claim_hash?: string; draft_digest?: string; source_digest?: string; audit_run_id?: string }>;
   malformed_lines: number[];
 }
 
@@ -328,6 +384,8 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
     reasons.push({ code: "citation_audit_incomplete", detail: `${audited}/${citations.length}` });
   if (audit.rows.some((row) => row.action === "flagged"))
     reasons.push({ code: "unsupported_verified_claim", detail: "audit contains a flagged claim" });
+  if (params.evidence_audit.verdict !== "passed" || audit.rows.some((row) => row.action === "flagged"))
+    reasons.push({ code: "semantic_audit_failed", detail: "the semantic evidence audit did not pass" });
 
   const allMarkdown = [...markdown.values()].join("\n");
   const citedClaimLines = markdownCitations.map(({ line }) => line).filter((line, index, lines) => lines.indexOf(line) === index);
@@ -354,6 +412,31 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
     if (mismatchedEvidence) reasons.push({ code: "claim_audit_incomplete", detail: "claim audit evidence must match the citations on that claim line" });
   } else if (auditedClaims.length > 0) {
     reasons.push({ code: "claim_audit_incomplete", detail: "audit references claim IDs absent from the draft" });
+  }
+  const evidence = params.evidence_audit;
+  const parsedEvidence = evidenceAuditSchema.safeParse(evidence);
+  if (!parsedEvidence.success)
+    reasons.push({ code: "audit_contract_invalid", detail: parsedEvidence.error.issues.map((issue) => issue.message).join("; ") });
+  let claimSetBound = false;
+  if (evidence.contract_version === "2" && parsedEvidence.success) {
+    const sourceDigest = params.scope_manifest.source_snapshot?.digest;
+    const bindings = calculateClaimAuditBindings(params.dir, params.profile);
+    const expectedByClaim = new Map(bindings.map((binding) => [binding.claim_id, binding]));
+    const verifiedRows = audit.rows.filter((row) => row.action === "verified");
+    const rowsBound = verifiedRows.length === bindings.length && verifiedRows.every((row) => {
+      const expected = row.claim_id ? expectedByClaim.get(row.claim_id) : undefined;
+      if (!expected) return false;
+      const citations = auditCitations(row.evidence).map(formatCitation).sort();
+      return row.document === expected.document && row.claim_hash === expected.claim_hash
+        && citations.length === expected.citations.length && citations.every((citation, index) => citation === expected.citations[index])
+        && row.draft_digest === evidence.draft_digest && row.source_digest === evidence.source_digest
+        && row.audit_run_id === evidence.execution?.audit_run_id;
+    });
+    claimSetBound = params.scope_manifest.provenance_version === "2"
+      && evidence.claim_set_digest === calculateClaimSetDigest(params.dir, params.profile)
+      && evidence.source_digest === sourceDigest && rowsBound;
+    if (!claimSetBound)
+      reasons.push({ code: "audit_binding_mismatch", detail: "evidence audit rows do not match the frozen claim, citation, draft, source, and run bindings" });
   }
   const definitions = Array.from(allMarkdown.matchAll(/^\s*(?:#{1,6}\s+|[-*]\s+(?:\*\*)?)((?:BR|API|DM|TC|RSK|UV)-[A-Za-z0-9_-]+)\b/gm), (m) => m[1]);
   const counts = new Map<string, number>();
@@ -428,7 +511,7 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
   if (syntaxLabelled && undisclaimedCallGraphLine)
     reasons.push({ code: "syntax_dependency_as_call_graph", detail: "syntax module dependency is labelled as a call graph without the required negative disclaimer" });
 
-  const { scope_manifest: scope, evidence_audit: evidence } = params;
+  const { scope_manifest: scope } = params;
   const parsedManifest = scopeManifestSchema.safeParse(scope);
   if (!parsedManifest.success || scope.file_counts.supported !== includedSourceFiles(params.source_root, scope.included_paths, scope.excluded_paths).length)
     reasons.push({ code: "invalid_manifest", detail: parsedManifest.success ? "supported file count differs from included source inventory" : parsedManifest.error.issues.map((issue) => issue.message).join("; ") });
@@ -442,17 +525,31 @@ export function evaluateDocumentGate(params: DocumentGateParams): DocumentGateRe
   const headCommit = resolveSourceGitHead(params.source_root);
   if (headCommit !== undefined && headCommit !== scope.analyzed_source_commit.toLowerCase())
     reasons.push({ code: "invalid_provenance", detail: "analyzed_source_commit does not match the source tree HEAD" });
+  let sourceProvenanceValid = scope.provenance_version !== "2";
   if (scope.provenance_version === "2") {
     const snapshot = scope.source_snapshot;
     const invalidGitBinding = snapshot?.source_kind === "git_worktree"
       && (headCommit === undefined || snapshot.base_commit !== headCommit || scope.analyzed_source_commit.toLowerCase() !== headCommit);
     const invalidNonGitBinding = snapshot?.source_kind === "non_git" && existsSync(join(params.source_root, ".git"));
-    if (!snapshot || invalidGitBinding || invalidNonGitBinding || !sourceSnapshotMatches(params.source_root, scope))
+    sourceProvenanceValid = Boolean(snapshot) && !invalidGitBinding && !invalidNonGitBinding && sourceSnapshotMatches(params.source_root, scope);
+    if (!sourceProvenanceValid)
       reasons.push({ code: "invalid_provenance", detail: "source snapshot or source-kind binding differs from the frozen byte inventory" });
   }
   const actors = [scope.writer_actor_id, evidence.actor_id, coverage.actor_id, params.gatekeeper_actor_id];
-  if (evidence.verdict !== "passed" || actors.some((actor) => !actor) || new Set(actors).size !== actors.length || evidence.draft_digest !== scope.draft_digest || coverage.draft_digest !== scope.draft_digest || calculateDraftDigest(params.dir, params.profile) !== scope.draft_digest)
+  if (actors.some((actor) => !actor) || new Set(actors).size !== actors.length || evidence.draft_digest !== scope.draft_digest || coverage.draft_digest !== scope.draft_digest || calculateDraftDigest(params.dir, params.profile) !== scope.draft_digest)
     reasons.push({ code: "invalid_provenance", detail: "audits are not independent or do not address the frozen draft" });
 
-  return { verdict: reasons.length === 0 ? "approved" : "rejected", citation_count: citations.length, audited_citation_count: audited, reasons };
+  const semanticPassed = evidence.verdict === "passed" && !audit.rows.some((row) => row.action === "flagged");
+  const structuralPassed = reasons.every((reason) => reason.code === "semantic_audit_failed" || reason.code === "unsupported_verified_claim");
+  return {
+    verdict: reasons.length === 0 ? "approved" : "rejected", citation_count: citations.length, audited_citation_count: audited, reasons,
+    assurance: {
+      structural_validation: { status: structuralPassed ? "passed" : "failed", basis: "deterministic_gate" },
+      semantic_audit: { status: semanticPassed ? "passed" : "failed", basis: evidence.contract_version === "2" ? "caller_attested" : "legacy_unbound", claim_set_bound: evidence.contract_version === "2" && claimSetBound },
+      execution_provenance: evidence.contract_version === "2"
+        ? { status: "caller_attested", host_verified: false, audit_run_id: evidence.execution?.audit_run_id }
+        : { status: "unavailable", host_verified: false },
+      source_provenance: { status: scope.provenance_version === "2" ? (sourceProvenanceValid ? "byte_snapshot_verified" : "failed") : "legacy_unbound" },
+    },
+  };
 }

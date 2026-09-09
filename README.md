@@ -84,7 +84,7 @@ Takes an existing spec and the commit it was recorded against, compares every ci
 
 ## Connector tools
 
-The bundled connector exposes sixteen tools. Without the connector the skill still runs, LLM-only, with weaker guarantees.
+The bundled connector exposes eighteen tools. Without the connector the skill still runs, LLM-only, with weaker guarantees.
 
 | Group | Tools | Purpose |
 | --- | --- | --- |
@@ -92,12 +92,13 @@ The bundled connector exposes sixteen tools. Without the connector the skill sti
 | Structure | `index_symbols`, `build_call_graph` | Syntax-level symbol index and module dependency graph |
 | Extraction | `extract_data_model`, `extract_project_meta`, `extract_changelog` | Typed models, manifests, Git-derived changelog |
 | Rendering | `emit_charts`, `render_report` | Charts and `REPORT.html` |
+| Provenance | `snapshot_source_scope`, `snapshot_document_claims` | Freeze raw source bytes and cited-claim bindings without making semantic judgments |
 | Publication | `evaluate_document_gate`, `publish_approved_documents` | Final gate for Mode A and transactional publish |
 | Toolchains | `assess_language_toolchains`, `approve_toolchain_download`, `download_language_toolchain`, `get_toolchain_download_status`, `cancel_toolchain_download` | Detect missing SDKs and download them only after explicit consent |
 
 ### Publication gate
 
-`evaluate_document_gate` is the read-only final gate for Mode A. The scope manifest is frozen before the Writer runs, the Independent Evidence Auditor and Coverage Sentinel audit the frozen draft, and only the Gatekeeper submits those records to the gate. It independently re-enumerates the frozen code surface and validates required documents and sections, citation lines and 100% audit coverage, IDs, omissions, truncation disclosure, syntax graph labels, role independence, and the actual SHA-256 draft digest. It returns `approved` or `rejected` with deterministic reason codes and never edits deliverables.
+`evaluate_document_gate` is the read-only final gate for Mode A. The scope manifest is frozen before the Writer runs, the Independent Evidence Auditor and Coverage Sentinel audit the frozen draft, and only the Gatekeeper submits those records to the gate. It independently re-enumerates the frozen code surface and validates required documents and sections, citation lines and 100% audit coverage, IDs, omissions, truncation disclosure, syntax graph labels, role identifiers, and the actual draft/source/claim bindings. It returns `approved` or `rejected` with deterministic reason codes and never edits deliverables. Its assurance result keeps deterministic `structural_validation`, caller-judged `semantic_audit`, `execution_provenance`, and `source_provenance` separate. Distinct actor strings and `caller_attested` records are not reported as host-verified execution.
 
 `publish_approved_documents` applies the same gate to a staging draft and transactionally replaces the destination only after approval. A rejected draft leaves the prior publication untouched.
 

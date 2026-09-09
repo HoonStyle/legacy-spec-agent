@@ -63,6 +63,7 @@ test("renderReport: writes a tabbed page with stats, charts, and doc-bound diagr
     assert.ok(html.includes(`class="cite"`)); // citation styling applied
     assert.ok(html.includes(`badge verified`) && html.includes(`badge flagged`));
     assert.ok(html.includes("Generated documentation quality"));
+    assert.ok(html.includes("Semantic-audit status, execution provenance, and source-snapshot assurance are separate"));
     assert.ok(html.includes("audit coverage"));
     // doc-bound asset must not also appear as an overview card
     const diagCount = html.split(">DIAG1<").length - 1;

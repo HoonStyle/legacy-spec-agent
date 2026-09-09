@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { calculateDraftDigest, calculateSourceSnapshot, evaluateDocumentGate, resolveSourceGitHead, type DocumentGateParams } from "../src/document-gate.js";
+import { calculateClaimAuditBindings, calculateClaimSetDigest, calculateDraftDigest, calculateSourceSnapshot, evaluateDocumentGate, resolveSourceGitHead, type DocumentGateParams } from "../src/document-gate.js";
 import { extractCoverageSurface, includedSourceFiles } from "../src/coverage-surface.js";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -61,6 +61,29 @@ function isolatedSourceSnapshot(): { params: DocumentGateParams; cleanup: () => 
   return { params, cleanup: () => rmSync(temp, { recursive: true, force: true }) };
 }
 
+function isolatedEvidenceV2(): { params: DocumentGateParams; cleanup: () => void } {
+  const item = isolatedSourceSnapshot();
+  const { params } = item;
+  const auditRunId = "evidence-run-001";
+  params.evidence_audit = {
+    contract_version: "2", verdict: "passed", actor_id: params.evidence_audit.actor_id,
+    draft_digest: params.scope_manifest.draft_digest,
+    claim_set_digest: calculateClaimSetDigest(params.dir, params.profile),
+    source_digest: params.scope_manifest.source_snapshot!.digest,
+    execution: { mode: "caller_attested", audit_run_id: auditRunId },
+  };
+  const bindings = new Map(calculateClaimAuditBindings(params.dir, params.profile).map((binding) => [binding.claim_id, binding]));
+  const auditPath = join(params.dir, "audit_log.jsonl");
+  const rows = readFileSync(auditPath, "utf8").trim().split(/\r?\n/).map((line) => {
+    const row = JSON.parse(line);
+    const binding = bindings.get(row.claim_id)!;
+    return { ...row, document: binding.document, claim_hash: binding.claim_hash,
+      draft_digest: params.evidence_audit.draft_digest, source_digest: params.evidence_audit.source_digest, audit_run_id: auditRunId };
+  });
+  writeFileSync(auditPath, `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`);
+  return item;
+}
+
 function refreshDigest(params: DocumentGateParams): void {
   const digest = calculateDraftDigest(params.dir, params.profile);
   params.scope_manifest.draft_digest = digest;
@@ -77,7 +100,8 @@ test("accurate citations cannot hide an undocumented registered interface", () =
 
 test("complete documentation or a frozen, explained exclusion is approved", () => {
   const result = evaluateDocumentGate(fixture("complete-or-explained"));
-  assert.deepEqual(result, { verdict: "approved", citation_count: 8, audited_citation_count: 8, reasons: [] });
+  assert.deepEqual({ verdict: result.verdict, citation_count: result.citation_count, audited_citation_count: result.audited_citation_count, reasons: result.reasons }, { verdict: "approved", citation_count: 8, audited_citation_count: 8, reasons: [] });
+  assert.deepEqual(result.assurance?.execution_provenance, { status: "unavailable", host_verified: false });
 });
 
 test("coverage contract v2 accepts a source-valid independent-audit addition beyond deterministic discovery", () => {
@@ -85,7 +109,8 @@ test("coverage contract v2 accepts a source-valid independent-audit addition bey
   try {
     assert.ok(!extractCoverageSurface(params.source_root, params.scope_manifest.included_paths, params.scope_manifest.excluded_paths)
       .some((item) => item.surface === "registered_api:GET /posts"));
-    assert.deepEqual(evaluateDocumentGate(params), { verdict: "approved", citation_count: 9, audited_citation_count: 9, reasons: [] });
+    const result = evaluateDocumentGate(params);
+    assert.deepEqual({ verdict: result.verdict, citation_count: result.citation_count, audited_citation_count: result.audited_citation_count, reasons: result.reasons }, { verdict: "approved", citation_count: 9, audited_citation_count: 9, reasons: [] });
   } finally { cleanup(); }
 });
 
@@ -146,6 +171,60 @@ test("source provenance v2 fails closed on a dishonest or unreadable Git declara
   } finally { cleanup(); }
 });
 
+test("evidence contract v2 reports structural, semantic, and execution assurance separately", () => {
+  const { params, cleanup } = isolatedEvidenceV2();
+  try {
+    const result = evaluateDocumentGate(params);
+    assert.equal(result.verdict, "approved");
+    assert.deepEqual(result.assurance, {
+      structural_validation: { status: "passed", basis: "deterministic_gate" },
+      semantic_audit: { status: "passed", basis: "caller_attested", claim_set_bound: true },
+      execution_provenance: { status: "caller_attested", host_verified: false, audit_run_id: "evidence-run-001" },
+      source_provenance: { status: "byte_snapshot_verified" },
+    });
+  } finally { cleanup(); }
+});
+
+test("evidence contract v2 rejects stale claim/run bindings and caller-invented host verification", async (t) => {
+  const cases: Array<{ name: string; mutate: (params: DocumentGateParams) => void; reason: string }> = [
+    { name: "claim hash", reason: "audit_binding_mismatch", mutate: (p) => {
+      const path = join(p.dir, "audit_log.jsonl");
+      writeFileSync(path, `${readFileSync(path, "utf8").replace(/"claim_hash":"[a-f0-9]{64}"/, `"claim_hash":"${"0".repeat(64)}"`)}`);
+    } },
+    { name: "audit run", reason: "audit_binding_mismatch", mutate: (p) => {
+      const path = join(p.dir, "audit_log.jsonl");
+      writeFileSync(path, readFileSync(path, "utf8").replace('"audit_run_id":"evidence-run-001"', '"audit_run_id":"other-run"'));
+    } },
+    { name: "source digest", reason: "audit_binding_mismatch", mutate: (p) => { p.evidence_audit.source_digest = "0".repeat(64); } },
+    { name: "missing binding", reason: "audit_contract_invalid", mutate: (p) => { delete p.evidence_audit.claim_set_digest; } },
+    { name: "host verified assertion", reason: "audit_contract_invalid", mutate: (p) => {
+      (p.evidence_audit.execution as unknown as Record<string, unknown>).host_verified = true;
+    } },
+  ];
+  for (const item of cases) await t.test(item.name, () => {
+    const { params, cleanup } = isolatedEvidenceV2();
+    try {
+      item.mutate(params);
+      const result = evaluateDocumentGate(params);
+      assert.equal(result.verdict, "rejected");
+      assert.ok(result.reasons.some((reason) => reason.code === item.reason), JSON.stringify(result.reasons));
+      assert.equal(result.assurance?.execution_provenance.host_verified, false);
+    } finally { cleanup(); }
+  });
+});
+
+test("a semantic audit failure does not masquerade as a structural validation failure", () => {
+  const { params, cleanup } = isolatedEvidenceV2();
+  try {
+    params.evidence_audit.verdict = "failed";
+    const result = evaluateDocumentGate(params);
+    assert.equal(result.verdict, "rejected");
+    assert.ok(result.reasons.some((reason) => reason.code === "semantic_audit_failed"));
+    assert.equal(result.assurance?.structural_validation.status, "passed");
+    assert.equal(result.assurance?.semantic_audit.status, "failed");
+  } finally { cleanup(); }
+});
+
 test("source snapshots detect included file additions and deletions and hash raw bytes", () => {
   const root = mkdtempSync(join(tmpdir(), "source-snapshot-한글-"));
   try {
@@ -189,7 +268,6 @@ test("Git HEAD resolution supports normal checkouts and linked worktree metadata
 
 test("fenced code citations are ignored and parsing resumes for LF and CRLF documents", () => {
   const fixtureMarkdown = readFileSync(join(fixtureRoot, "fenced-citations.md"), "utf8");
-  const expected = { verdict: "approved", citation_count: 13, audited_citation_count: 13, reasons: [] };
   for (const lineEnding of ["\n", "\r\n"]) {
     const { params, cleanup } = isolatedComplete();
     try {
@@ -204,7 +282,8 @@ test("fenced code citations are ignored and parsing resumes for LF and CRLF docu
         { action: "verified", claim_id: "CLM-105", evidence: "src/server.ts:1", document: "ARCHITECTURE.md" },
       ].map((row) => JSON.stringify(row)).join(lineEnding) + lineEnding);
       refreshDigest(params);
-      assert.deepEqual(evaluateDocumentGate(params), expected);
+      const result = evaluateDocumentGate(params);
+      assert.deepEqual({ verdict: result.verdict, citation_count: result.citation_count, audited_citation_count: result.audited_citation_count, reasons: result.reasons }, { verdict: "approved", citation_count: 13, audited_citation_count: 13, reasons: [] });
     } finally { cleanup(); }
   }
 });
@@ -264,7 +343,8 @@ test("surface paths the citation grammar cannot parse keep their literal coverag
     const architecture = join(params.dir, "ARCHITECTURE.md");
     appendFileSync(architecture, `\n## API-002 — lookupKo\n\nExported from \`${foundAt}\`.\n`);
     refreshDigest(params);
-    assert.deepEqual(evaluateDocumentGate(params), { verdict: "approved", citation_count: 8, audited_citation_count: 8, reasons: [] });
+    const result = evaluateDocumentGate(params);
+    assert.deepEqual({ verdict: result.verdict, citation_count: result.citation_count, audited_citation_count: result.audited_citation_count, reasons: result.reasons }, { verdict: "approved", citation_count: 8, audited_citation_count: 8, reasons: [] });
 
     writeFileSync(architecture, readFileSync(architecture, "utf8").replace(`\`${foundAt}\``, "the unicode service module"));
     refreshDigest(params);
