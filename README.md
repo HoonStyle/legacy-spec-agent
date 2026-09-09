@@ -62,7 +62,7 @@ Mode A has two profiles. **`standard` is the default.** Use the reduced **`core`
 Rules that apply to every document:
 
 - A required document or section is never left empty and never padded with guesses. If the concept does not exist in the repository, the output states the search scope and **Not found**. Contracts the repository does not define stay in **Unverified**.
-- Charts and `REPORT.html` are generated when the connector's chart and report tools are available. Their absence must be disclosed otherwise.
+- Charts and `REPORT.html` are generated when the connector's chart and report tools are available. Multilingual labels are preserved with collision-free diagram IDs, and the report is emitted as BOM-marked UTF-8; invalidly encoded inputs fail explicitly instead of producing mojibake. Their absence must be disclosed otherwise.
 - Architecture output from `build_call_graph` is labeled `graph_type: module_dependency` and `resolution: syntax`. It is syntax-only module and import analysis, not a method call graph and not compiler, runtime, or dynamic-dispatch resolution.
 - `CHANGELOG.md` is optional on request when Git history is available. There is deliberately no ADR, PRD, or user manual, because source code cannot prove design or business intent.
 

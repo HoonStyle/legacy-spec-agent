@@ -62,7 +62,7 @@ Mode A에는 두 프로파일이 있습니다. **기본값은 `standard`** 이�
 모든 문서에 적용되는 규칙:
 
 - 필수 문서나 섹션을 비워 두거나 추측으로 채우지 않습니다. 저장소에 해당 개념이 없으면 검색 범위와 **발견되지 않음(Not found)** 을 기록하고, 저장소가 정의하지 않은 외부 계약은 **Unverified**로 분리합니다.
-- charts와 `REPORT.html`은 커넥터의 chart/report 도구가 있을 때 생성합니다. 도구가 없으면 생성하지 못한 조건을 명시합니다.
+- charts와 `REPORT.html`은 커넥터의 chart/report 도구가 있을 때 생성합니다. 다국어 라벨은 충돌 없는 diagram ID와 함께 원문을 보존하고, 보고서는 UTF-8 BOM으로 출력합니다. 잘못 인코딩된 입력은 깨진 문서를 만들지 않고 명확히 실패합니다. 도구가 없으면 생성하지 못한 조건을 명시합니다.
 - `build_call_graph` 기반 architecture 결과에는 `graph_type: module_dependency`, `resolution: syntax`를 표시합니다. syntax-only module/import 분석이며, 실제 method call graph나 compiler/runtime/dynamic-dispatch 해석이 아닙니다.
 - `CHANGELOG.md`는 Git 이력이 있고 사용자가 요청한 경우에만 선택적으로 생성합니다. ADR, PRD, 사용자 매뉴얼은 소스 코드로 설계·사업 의도를 입증할 수 없어 생성하지 않습니다.
 

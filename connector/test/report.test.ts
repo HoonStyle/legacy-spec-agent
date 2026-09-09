@@ -81,6 +81,31 @@ test("renderReport: deterministic — same inputs, same bytes", () => {
   });
 });
 
+test("renderReport preserves multilingual text as BOM-marked UTF-8", () => {
+  withDeliverables((root) => {
+    writeFileSync(join(root, "SPEC.md"), "# 한국어 日本語 中文 — café\n\n본문과 emoji 🚀\n", "utf8");
+    const result = renderReport(root, { title: "문서 대시보드 — 報告", language: "ko" });
+    const bytes = readFileSync(result.path);
+    assert.deepEqual([...bytes.subarray(0, 3)], [0xef, 0xbb, 0xbf]);
+    const html = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    assert.match(html, /<html lang="ko">/);
+    assert.match(html, /<meta charset="utf-8">/);
+    assert.match(html, /문서 대시보드 — 報告/);
+    assert.match(html, /한국어 日本語 中文 — café/);
+    assert.match(html, /본문과 emoji 🚀/);
+    assert.equal(html.includes("�"), false);
+    assert.equal(result.bytes, bytes.byteLength);
+  });
+});
+
+test("renderReport rejects non-UTF-8 document bytes instead of emitting mojibake", () => {
+  const root = mkdtempSync(join(tmpdir(), "lsc-report-invalid-utf8-"));
+  try {
+    writeFileSync(join(root, "SPEC.md"), Buffer.from([0xc7, 0xd1, 0xb1, 0xdb]));
+    assert.throws(() => renderReport(root), /not valid UTF-8/);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
 test("renderReport: empty directory and escaping dir are rejected", () => {
   const root = mkdtempSync(join(tmpdir(), "lsc-report-empty-"));
   try {

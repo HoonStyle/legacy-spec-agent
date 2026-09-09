@@ -24,8 +24,10 @@ const C = {
   baseline: "#94a3b8", // de-emphasized comparison series
 };
 
-const FONT = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif";
+const FONT = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', 'Noto Sans CJK KR', 'Noto Sans KR', 'Noto Sans CJK JP', 'Yu Gothic UI', 'Microsoft YaHei UI', 'Malgun Gothic', 'Segoe UI Emoji', sans-serif";
 const MONO = "ui-monospace, 'SF Mono', Menlo, Consolas, monospace";
+
+const xmlText = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 export interface Chart {
   format: "svg" | "mermaid";
@@ -83,7 +85,7 @@ function text(
   const { size = 13, color = C.ink, weight = 400, anchor = "start", mono = false, spacing } = opts;
   const ls = spacing ? ` letter-spacing="${spacing}"` : "";
   const num = mono ? ` font-variant-numeric="tabular-nums"` : "";
-  return `<text x="${x}" y="${y}" font-family="${mono ? MONO : FONT}" font-size="${size}" font-weight="${weight}" fill="${color}" text-anchor="${anchor}"${ls}${num}>${s}</text>`;
+  return `<text x="${x}" y="${y}" font-family="${mono ? MONO : FONT}" font-size="${size}" font-weight="${weight}" fill="${color}" text-anchor="${anchor}"${ls}${num}>${xmlText(s)}</text>`;
 }
 
 /** A fully-rounded light track showing a bar's full extent. */
@@ -325,7 +327,12 @@ export interface ArchitectureParams {
 }
 
 function mermaidId(path: string): string {
-  return path.replace(/[^A-Za-z0-9_]/g, "_");
+  const ascii = path.replace(/[^A-Za-z0-9_]/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
+  return /[^\x00-\x7f]/.test(path) ? `${ascii || "node"}_${hashId(path)}` : ascii || `node_${hashId(path)}`;
+}
+
+function mermaidLabel(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/[\r\n]+/g, " ");
 }
 
 function pkgOf(path: string): string {
@@ -338,7 +345,7 @@ export function architectureChart(params: ArchitectureParams): Chart {
   const lines: string[] = [`flowchart ${dir}`];
   const declared = new Set<string>();
   const nodeDecl = (path: string, external: boolean) =>
-    external ? `${mermaidId(path)}[("${path}")]` : `${mermaidId(path)}["${path}"]`;
+    external ? `${mermaidId(path)}[("${mermaidLabel(path)}")]` : `${mermaidId(path)}["${mermaidLabel(path)}"]`;
 
   const internal = new Set<string>();
   for (const e of params.edges) {
@@ -351,7 +358,7 @@ export function architectureChart(params: ArchitectureParams): Chart {
     const byPkg = new Map<string, string[]>();
     for (const p of [...internal].sort()) (byPkg.get(pkgOf(p)) ?? byPkg.set(pkgOf(p), []).get(pkgOf(p))!).push(p);
     for (const [pkg, paths] of [...byPkg.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-      lines.push(`  subgraph ${mermaidId(pkg)}["${pkg}"]`);
+      lines.push(`  subgraph ${mermaidId(pkg)}["${mermaidLabel(pkg)}"]`);
       for (const p of paths) {
         lines.push(`    ${nodeDecl(p, false)}`);
         declared.add(mermaidId(p));
@@ -392,25 +399,31 @@ export interface ErdParams {
 /** erDiagram identifiers/types must be single alnum/underscore tokens. */
 function erdToken(s: string): string {
   const t = s.replace(/[^A-Za-z0-9_]/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
-  return t.length > 0 ? t : "unknown";
+  return /[^\x00-\x7f]/.test(s) ? `${t || "entity"}_${hashId(s)}` : t || `entity_${hashId(s)}`;
 }
 
 export function erdChart(params: ErdParams): Chart {
   const lines: string[] = ["erDiagram"];
   for (const e of params.entities) {
     const name = erdToken(e.name);
+    const declaration = /[^\x00-\x7f]/.test(e.name) ? `${name}["${mermaidLabel(e.name)}"]` : name;
     if (e.fields && e.fields.length > 0) {
-      lines.push(`  ${name} {`);
-      for (const f of e.fields) lines.push(`    ${erdToken(f.type)} ${erdToken(f.name)}`);
+      lines.push(`  ${declaration} {`);
+      for (const f of e.fields) {
+        const unicodeLabel = /[^\x00-\x7f]/.test(`${f.type}${f.name}`) ? ` "${mermaidLabel(`${f.type} ${f.name}`)}"` : "";
+        lines.push(`    ${erdToken(f.type)} ${erdToken(f.name)}${unicodeLabel}`);
+      }
       lines.push(`  }`);
     } else {
-      lines.push(`  ${name} {`);
+      lines.push(`  ${declaration} {`);
       lines.push(`  }`);
     }
   }
   for (const r of params.relations ?? []) {
     const card = r.cardinality === "many" ? "||--o{" : "||--o|";
-    lines.push(`  ${erdToken(r.from)} ${card} ${erdToken(r.to)} : ${erdToken(r.field ?? "has")}`);
+    const relation = r.field ?? "has";
+    const relationLabel = /[^\x00-\x7f]/.test(relation) ? `"${mermaidLabel(relation)}"` : erdToken(relation);
+    lines.push(`  ${erdToken(r.from)} ${card} ${erdToken(r.to)} : ${relationLabel}`);
   }
   return {
     format: "mermaid",

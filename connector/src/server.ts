@@ -403,6 +403,7 @@ export function createServer(root: string, options: { cacheRoot?: string; fetchI
       inputSchema: {
         dir: z.string().optional().describe("Deliverables directory relative to the connector root (default '.')"),
         title: z.string().optional().describe("Page title (default 'Reconstructed spec — report')"),
+        language: z.string().regex(/^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$|^und$/).optional().describe("BCP-47 page language tag (default 'und')"),
       },
     },
     async (params) => json(renderReport(root, params)),

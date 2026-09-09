@@ -30,6 +30,15 @@ const DOCS: Array<{ file: string; label: string }> = [
 
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const escAttr = (s: string) => esc(s).replace(/"/g, "&quot;");
+
+function readUtf8File(path: string): string {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(readFileSync(path));
+  } catch {
+    throw new Error(`report input is not valid UTF-8: ${path}`);
+  }
+}
 
 function inline(s: string): string {
   return s
@@ -112,7 +121,7 @@ export function mdToHtml(md: string, diagrams: string[] = []): { html: string; m
 /** charts/DOC.<n>.(svg|png) → embeddable HTML, or undefined when absent. */
 function diagramAsset(chartsDir: string, docBase: string, n: number): string | undefined {
   const svg = join(chartsDir, `${docBase}.${n}.svg`);
-  if (existsSync(svg)) return readFileSync(svg, "utf8").replace(/<\?xml[^>]*\?>/, "");
+  if (existsSync(svg)) return readUtf8File(svg).replace(/<\?xml[^>]*\?>/, "");
   const png = join(chartsDir, `${docBase}.${n}.png`);
   if (existsSync(png)) {
     return `<img alt="${docBase} diagram ${n}" src="data:image/png;base64,${readFileSync(png).toString("base64")}">`;
@@ -121,7 +130,7 @@ function diagramAsset(chartsDir: string, docBase: string, n: number): string | u
 }
 
 const CSS = `
-*{box-sizing:border-box}body{margin:0;background:#eef1f5;color:#0f172a;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI','Apple SD Gothic Neo','Malgun Gothic',sans-serif;line-height:1.65;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}body{margin:0;background:#eef1f5;color:#0f172a;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI','Noto Sans CJK KR','Noto Sans KR','Noto Sans CJK JP','Yu Gothic UI','Microsoft YaHei UI','Apple SD Gothic Neo','Malgun Gothic','Segoe UI Emoji',sans-serif;line-height:1.65;-webkit-font-smoothing:antialiased}
 .wrap{max-width:980px;margin:0 auto;padding:0 22px}header{padding:38px 0 14px}
 h1{font-size:clamp(22px,4vw,32px);margin:0 0 6px;letter-spacing:-.01em}.sub{color:#64748b;font-size:14px;margin:0}
 nav{position:sticky;top:0;background:#fffc;backdrop-filter:blur(8px);border-bottom:1px solid #dfe5ec;z-index:9;margin-top:14px}
@@ -159,6 +168,8 @@ export interface ReportParams {
   /** Directory (relative to the connector root) holding the deliverables. Default ".". */
   dir?: string;
   title?: string;
+  /** BCP-47 language tag for shaping/accessibility; defaults to und (undetermined). */
+  language?: string;
 }
 
 export interface ReportResult {
@@ -187,7 +198,7 @@ interface DocTab {
 
 function readAudit(path: string): AuditEntry[] {
   if (!existsSync(path)) return [];
-  return readFileSync(path, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l));
+  return readUtf8File(path).trim().split(/\r?\n/).filter(Boolean).map((l) => JSON.parse(l));
 }
 
 interface DocCitation {
@@ -271,6 +282,8 @@ export function renderReport(root: string, params: ReportParams = {}): ReportRes
   }
   const chartsDir = join(base, "charts");
   const title = params.title ?? "Reconstructed spec — report";
+  const language = params.language ?? "und";
+  if (!/^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$|^und$/.test(language)) throw new Error(`invalid report language tag: ${language}`);
 
   let mermaidFallbacks = 0;
   const tabs: Array<{ id: string; label: string; html: string }> = [];
@@ -294,7 +307,7 @@ export function renderReport(root: string, params: ReportParams = {}): ReportRes
     for (const f of files) {
       if (/^\w[\w-]*\.\d+\.(svg|png)$/.test(f)) continue; // doc-bound diagrams appear inside their tab
       if (f.endsWith(".svg")) {
-        cards.push(`<div class="card">${readFileSync(join(chartsDir, f), "utf8").replace(/<\?xml[^>]*\?>/, "")}</div>`);
+        cards.push(`<div class="card">${readUtf8File(join(chartsDir, f)).replace(/<\?xml[^>]*\?>/, "")}</div>`);
         chartsEmbedded++;
       } else if (f.endsWith(".png")) {
         cards.push(
@@ -319,8 +332,8 @@ export function renderReport(root: string, params: ReportParams = {}): ReportRes
       diagrams.push(asset);
       chartsEmbedded++;
     }
-    const { html, mermaidFallbacks: mf } = mdToHtml(readFileSync(p, "utf8"), diagrams);
-    const markdown = readFileSync(p, "utf8");
+    const markdown = readUtf8File(p);
+    const { html, mermaidFallbacks: mf } = mdToHtml(markdown, diagrams);
     mermaidFallbacks += mf;
     const tab = { id: docBase.toLowerCase(), label: doc.label, file: doc.file, markdown, html };
     docTabs.push(tab);
@@ -352,7 +365,7 @@ export function renderReport(root: string, params: ReportParams = {}): ReportRes
   if (tabs.length === 0) throw new Error("nothing to report: no known deliverables found in the directory");
 
   const page =
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
+    `<!doctype html><html lang="${escAttr(language)}"><head><meta charset="utf-8"><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<title>${esc(title)}</title><style>${CSS}</style></head><body>` +
     `<header class="wrap"><h1>${esc(title)}</h1><p class="sub">Generated by legacy-spec-agent · every claim cites its source</p></header>` +
     `<nav><div class="tabs" role="tablist">${tabs
@@ -365,10 +378,11 @@ export function renderReport(root: string, params: ReportParams = {}): ReportRes
     `<script>${JS}</script></body></html>`;
 
   const outPath = join(base, "REPORT.html");
-  writeFileSync(outPath, page);
+  const output = Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(page, "utf8")]);
+  writeFileSync(outPath, output);
   return {
     path: outPath,
-    bytes: Buffer.byteLength(page),
+    bytes: output.byteLength,
     tabs: tabs.map((t) => t.label),
     charts_embedded: chartsEmbedded,
     mermaid_fallbacks: mermaidFallbacks,

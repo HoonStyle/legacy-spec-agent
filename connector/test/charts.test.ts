@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { coverageChart, driftChart, benchmarkChart, architectureChart, emitChart } from "../src/charts.js";
+import { coverageChart, driftChart, benchmarkChart, architectureChart, erdChart, emitChart } from "../src/charts.js";
 
 test("coverageChart: hero %, both segments, counts in legend, alt text", () => {
   const c = coverageChart({ verified: 42, unverified: 7 });
@@ -81,6 +81,36 @@ test("architectureChart: weight labels and package clustering", () => {
   // a node is declared once (inside its subgraph), not re-declared on the edge
   const decls = clustered.content.match(/core_config_loader_py\["core\/config_loader\.py"\]/g) ?? [];
   assert.equal(decls.length, 1);
+});
+
+test("Unicode architecture and ERD labels remain readable and receive collision-free IDs", () => {
+  const architecture = architectureChart({
+    edges: [
+      { from: "서비스/사용자.ts", to: "서비스/주문.ts" },
+      { from: "日本語/利用者.ts", to: "中文/订单.ts" },
+    ],
+    cluster: true,
+  });
+  for (const label of ["서비스", "사용자.ts", "주문.ts", "日本語", "利用者.ts", "中文", "订单.ts"])
+    assert.ok(architecture.content.includes(label), label);
+  const ids = [...architecture.content.matchAll(/\b((?:node|ts)_[a-z0-9]+)\[/g)].map((match) => match[1]);
+  assert.equal(new Set(ids).size, ids.length);
+
+  const erd = erdChart({
+    entities: [{ name: "사용자", fields: [{ name: "이름", type: "문자열" }] }, { name: "利用者" }],
+    relations: [{ from: "사용자", to: "利用者", field: "연결" }],
+  });
+  assert.ok(erd.content.includes('["사용자"]'));
+  assert.ok(erd.content.includes('["利用者"]'));
+  assert.ok(erd.content.includes('"문자열 이름"'));
+  assert.ok(erd.content.includes(': "연결"'));
+  assert.ok(!erd.content.includes("unknown"));
+});
+
+test("SVG text preserves Unicode while escaping XML metacharacters", () => {
+  const chart = coverageChart({ verified: 1, unverified: 0, title: "검증 & 확인 <완료>" });
+  assert.ok(chart.content.includes("검증 &amp; 확인 &lt;완료&gt;"));
+  assert.ok(chart.alt.includes("검증 & 확인 <완료>"));
 });
 
 test("emitChart dispatcher routes by kind", () => {
