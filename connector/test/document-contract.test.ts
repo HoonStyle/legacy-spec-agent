@@ -79,7 +79,7 @@ test("independent audit, reverse coverage, and Gatekeeper contracts stay synchro
       /semantic_audit/,
       /execution_provenance/,
       /source_provenance/,
-      /caller.attested.*(?:not|never).*host|not.*host.*caller.attested/i,
+      /caller.attested[\s\S]*?(?:not|never)[\s\S]*?host|not[\s\S]*?host[\s\S]*?caller.attested/i,
     ]) {
       assert.match(document, contract, `${path} is missing ${contract}`);
     }

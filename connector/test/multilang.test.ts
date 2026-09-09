@@ -1,9 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { clearMultiLanguageCache, indexSymbolsMulti, buildCallGraphMulti, extractDataModelMulti } from "../src/multilang.js";
+import { symlinkOrSkip } from "./helpers/symlink.js";
 
 test("multilang WASM parsers index Python, TypeScript, Java, C#, and Go", async () => {
   const root = mkdtempSync(join(tmpdir(), "lsc-multilang-"));
@@ -349,12 +350,12 @@ test("multilang data model extracts typed C#, TypeScript, Java, and Go fields", 
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
-test("multilang parser rejects a subdirectory symlink that escapes the root", async () => {
+test("multilang parser rejects a subdirectory symlink that escapes the root", async (t) => {
   const root = mkdtempSync(join(tmpdir(), "lsc-multiroot-"));
   const outside = mkdtempSync(join(tmpdir(), "lsc-multioutside-"));
   writeFileSync(join(outside, "hidden.cs"), "class Hidden {}\n");
-  symlinkSync(outside, join(root, "escape"), "dir");
   try {
+    if (!symlinkOrSkip(t, outside, join(root, "escape"), "dir")) return;
     await assert.rejects(indexSymbolsMulti(root, { subdir: "escape" }), /escapes connector root through symlink/);
   } finally {
     rmSync(root, { recursive: true, force: true });

@@ -1,9 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { assessLanguageToolchains } from "../src/toolchains.js";
+import { symlinkOrSkip } from "./helpers/symlink.js";
 
 function fixture(): string {
   const root = mkdtempSync(join(tmpdir(), "lsc-toolchains-"));
@@ -118,11 +119,11 @@ test("assessLanguageToolchains: rejects subdirectories outside the connector roo
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
-test("assessLanguageToolchains: rejects a subdir symlink that escapes the root", () => {
+test("assessLanguageToolchains: rejects a subdir symlink that escapes the root", (t) => {
   const root = fixture();
   const outside = mkdtempSync(join(tmpdir(), "lsc-outside-"));
-  symlinkSync(outside, join(root, "linked"), "dir");
   try {
+    if (!symlinkOrSkip(t, outside, join(root, "linked"), "dir")) return;
     assert.throws(() => assessLanguageToolchains(root, { subdir: "linked" }), /symlink/);
   } finally {
     rmSync(root, { recursive: true, force: true });

@@ -5,12 +5,12 @@ import {
   mkdirSync,
   mkdtempSync,
   rmSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { clearMultiLanguageCache, indexSymbolsMulti } from "../src/multilang.js";
+import { symlinkOrSkip } from "./helpers/symlink.js";
 
 const FILES_PER_LANGUAGE = 400;
 const LANGUAGES = [
@@ -25,7 +25,7 @@ function maxRssBytes(): number {
   return process.resourceUsage().maxRSS * 1024;
 }
 
-function createCorpus(root: string): { sourceBytes: number; symbols: number; supportedFiles: number } {
+function createCorpus(root: string, t: { skip(message?: string): void }): { sourceBytes: number; symbols: number; supportedFiles: number } | undefined {
   let sourceBytes = 0;
   for (const language of LANGUAGES) {
     const directory = join(root, "src", language.directory);
@@ -48,7 +48,7 @@ function createCorpus(root: string): { sourceBytes: number; symbols: number; sup
   const malformed = "export class Malformed {\n ???\n";
   writeFileSync(join(root, "src", "malformed.ts"), malformed);
   sourceBytes += Buffer.byteLength(malformed);
-  symlinkSync(join(root, "src", "python", "file-0.py"), join(root, "src", "source-link.py"), "file");
+  if (!symlinkOrSkip(t, join(root, "src", "python", "file-0.py"), join(root, "src", "source-link.py"), "file")) return undefined;
 
   const unreadable = join(root, "obj", "unreadable.cs");
   writeFileSync(unreadable, "class UnreadableGenerated {}\n");
@@ -64,7 +64,8 @@ function createCorpus(root: string): { sourceBytes: number; symbols: number; sup
 test("large mixed repository stays bounded and excludes generated content", async (t) => {
   const root = mkdtempSync(join(tmpdir(), "lsc-large-corpus-"));
   try {
-    const expected = createCorpus(root);
+    const expected = createCorpus(root, t);
+    if (!expected) return;
     const started = process.hrtime.bigint();
     const result = await indexSymbolsMulti(root, { limit: 50 });
     const elapsedMs = Number(process.hrtime.bigint() - started) / 1_000_000;

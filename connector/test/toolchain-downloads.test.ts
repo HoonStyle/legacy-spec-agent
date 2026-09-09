@@ -1,10 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ToolchainApprovalStore, ToolchainDownloadManager } from "../src/toolchain-downloads.js";
+import { symlinkOrSkip } from "./helpers/symlink.js";
 
 const body = Buffer.from("verified toolchain artifact");
 const sha256 = createHash("sha256").update(body).digest("hex");
@@ -136,13 +137,13 @@ test("download manager fails closed when the declared artifact exceeds its size 
   } finally { await removeDir(cache); }
 });
 
-test("download manager rejects a managed-cache symlink escape before writing outside", async () => {
+test("download manager rejects a managed-cache symlink escape before writing outside", async (t) => {
   const cache = mkdtempSync(join(tmpdir(), "lsc-download-symlink-"));
   const outside = mkdtempSync(join(tmpdir(), "lsc-download-outside-"));
-  symlinkSync(outside, join(cache, "csharp"), "dir");
   const approvals = new ToolchainApprovalStore();
   const manager = new ToolchainDownloadManager(cache, approvals, response());
   try {
+    if (!symlinkOrSkip(t, outside, join(cache, "csharp"), "dir")) return;
     const token = approvals.issue({ language: "csharp", version: "8", url: "https://builds.dotnet.microsoft.com/sdk.tgz", sha256 }, true).consent_token;
     assert.throws(() => manager.start(token), /real directory|symlink/);
   } finally {

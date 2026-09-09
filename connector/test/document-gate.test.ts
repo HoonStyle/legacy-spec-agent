@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { appendFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { calculateClaimAuditBindings, calculateClaimSetDigest, calculateDraftDigest, calculateSourceSnapshot, evaluateDocumentGate, resolveSourceGitHead, type DocumentGateParams } from "../src/document-gate.js";
 import { extractCoverageSurface, includedSourceFiles } from "../src/coverage-surface.js";
+import { symlinkOrSkip } from "./helpers/symlink.js";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const fixtureRoot = join(repositoryRoot, "connector/test/fixtures/document-coverage");
@@ -456,7 +457,7 @@ test("coverage surface includes registrations, contracts, env, entrypoints, stat
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
-test("coverage surface honors frozen exclusions and never follows symlinks outside the root", () => {
+test("coverage surface honors frozen exclusions and never follows symlinks outside the root", (t) => {
   const root = mkdtempSync(join(tmpdir(), "coverage-surface-"));
   const outside = mkdtempSync(join(tmpdir(), "coverage-outside-"));
   try {
@@ -464,7 +465,7 @@ test("coverage surface honors frozen exclusions and never follows symlinks outsi
     writeFileSync(join(root, "src", "main.ts"), "export const keepMe = 1;\n");
     writeFileSync(join(root, "src", "node_modules", "dep", "index.ts"), "export const vendored = 1;\n");
     writeFileSync(join(outside, "secret.ts"), "export const escaped = 1;\n");
-    symlinkSync(outside, join(root, "src", "external"), "dir");
+    if (!symlinkOrSkip(t, outside, join(root, "src", "external"), "dir")) return;
     const excluded = [{ path: "src/node_modules", reason: "generated dependencies excluded by the frozen scope" }];
     const files = includedSourceFiles(root, ["src"], excluded);
     assert.deepEqual(files.map((file) => file.slice(root.length + 1).replaceAll("\\", "/")), ["src/main.ts"]);

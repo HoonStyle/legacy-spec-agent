@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,6 +7,7 @@ import test from "node:test";
 import { gateAndPublish } from "../src/document-emission.js";
 import { calculateSourceSnapshot } from "../src/document-gate.js";
 import type { DocumentGateParams } from "../src/document-gate.js";
+import { symlinkOrSkip } from "./helpers/symlink.js";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const fixtureRoot = join(repositoryRoot, "connector/test/fixtures/document-coverage/complete-or-explained");
@@ -82,13 +83,13 @@ test("an interrupted previous generation is recovered before publishing", () => 
   } finally { rmSync(item.root, { recursive: true, force: true }); }
 });
 
-test("root, overlapping, and symlink destinations are rejected", () => {
+test("root, overlapping, and symlink destinations are rejected", (t) => {
   const item = setup();
   const outside = mkdtempSync(join(tmpdir(), "document-emission-outside-"));
   try {
     assert.throws(() => gateAndPublish(item.params, item.root), /distinct descendants/);
     assert.throws(() => gateAndPublish(item.params, item.params.dir), /overlap/);
-    symlinkSync(outside, join(item.root, "escaped"), "dir");
+    if (!symlinkOrSkip(t, outside, join(item.root, "escaped"), "dir")) return;
     assert.throws(() => gateAndPublish(item.params, join(item.root, "escaped", "published")), /outside/);
   } finally {
     rmSync(item.root, { recursive: true, force: true });

@@ -180,3 +180,9 @@ npm test
 | LSA-03 | 구현·로컬 검증 완료 | 현재 브랜치의 LSA-03 기능 커밋 | claim/document/citation/draft/source/run binding, legacy 표시, 의미 실패 분리, 허위 host 인증 거부 회귀 통과. 합성 3건에서 구조·의미·실행·원본 상태 분리 및 3/3 승인 |
 | LSA-04 | 보류 — Stop 유지 | 없음 | 신규 실험 미실행 |
 | LSA-05 | 배포 결정 완료, 구현 미착수 | `DEPLOYMENT_DECISION.md` | versioned user cache 방식을 채택하고 부분적인 prebuilt `dist` 배포는 보류. 현재 in-place bootstrap은 migration 전까지 유지하며 설치 matrix는 미실행 |
+
+최종 로컬 회귀(2026-09-09)는 203건 중 189건 통과, 14건 skip,
+0건 실패다. skip에는 선택적 외부 `HOOKIFY_ROOT`/설치 smoke와 함께 현재
+Windows 호스트가 테스트용 심볼릭 링크 생성 권한을 주지 않아 명시적으로
+건너뛴 기존 보안 검사 6건이 포함된다. 해당 6건은 권한이 있는 CI에서는
+그대로 실행되며, EPERM 이외의 생성 오류는 실패로 유지한다.
