@@ -18,14 +18,40 @@
   <img alt="CI: Ubuntu · Windows" src="https://img.shields.io/badge/CI-Ubuntu%20%C2%B7%20Windows-0078D4">
 </p>
 
-[Claude Code](https://claude.com/claude-code)와 Codex / ChatGPT Work mode에서 쓰는 플러그인입니다. 스킬 하나와 번들 MCP 커넥터로 구성됩니다.
+소스 코드에서 인용 근거가 있는 명세를 생성하고, 코드 변경 후 그 인용이 유효한지 확인하는 도구입니다.
 
-Legacy Spec Agent는 문서가 없는 코드에 뒤늦게라도 명세서를 만들어 줍니다. 소스를 읽고 실제 동작을 파악한 뒤, 모든 주장에 `path:line` 인용이 붙은 명세 문서를 씁니다. 코드로 확인되지 않는 내용은 본문에 사실처럼 쓰지 않고 **Unverified** 섹션에 따로 모읍니다.
+Legacy Spec Agent는 공통 스킬과 TypeScript MCP 커넥터로 구성된 [Claude Code](https://claude.com/claude-code)·Codex 플러그인입니다. 주장은 `path:line`에 연결하고 근거 없는 해석은 **Unverified**로 분리합니다. 구문 분석과 인용 검증은 검토를 돕지만, 문서가 모든 동작을 담았음을 보장하지는 않습니다.
 
-인용은 장식이 아닙니다. 나중에 코드가 바뀌면 기록해 둔 인용을 하나씩 다시 확인해, 아직 유효한지, 위치만 옮겨졌는지, 내용이 달라졌는지, 인용 대상이 아예 사라졌는지를 보고합니다.
+**시작하기:** [설치](#설치) · [사용법](#사용법) · [산출물 예시](demo-hookify/) · [알려진 제약](#알려진-제약)
+
+## 사용법
+
+플러그인을 설치한 뒤 호스트에 스킬 사용을 요청합니다. 예시:
+
+```text
+이 저장소에 legacy-spec-agent Mode A, standard 프로파일을 적용해줘.
+먼저 소스 범위를 정하고, 인용 근거가 있는 명세를 작성해줘.
+지원하지 않거나 검증하지 못한 동작은 공개하고 대상 코드는 실행하지 마.
+```
+
+```text
+legacy-spec-agent Mode B로 기존 명세를 현재 소스와 대조해줘.
+인용 드리프트와 수정안을 보고하되 수정안을 자동 적용하지 마.
+```
+
+셸 명령이 아닌 호스트용 프롬프트 예시입니다. 기본 산출물 프로파일은 `standard`이며 `core`는 명시적으로 요청해야 합니다. 문서 구성은 [산출물](#산출물)을 참고하세요.
+
+## 알려진 제약
+
+- 구조 분석은 구문 수준이며 컴파일러가 해석한 메서드 호출 그래프가 아닙니다.
+- 인용 정확성과 내용의 완전성은 다릅니다. [외부 저장소 3개 대상 평가](evals/document-quality/external/SUMMARY.md)에서 486개 주장의 인용은 정확했지만 strict critical-surface recall은 1/75로 품질 기준을 충족하지 못했습니다.
+- 토큰 비용 절감 도구로 검증되지 않았습니다. 효율 목적 확장에 대한 end-to-end 리플레이 결정은 **Stop**으로 유지합니다. 자세한 내용은 [대형 저장소 지원](#대형-저장소-지원)을 참고하세요.
+- 다운로드는 명시적 동의가 필요하며, SDK 설치나 대상 코드 실행까지 허용하는 것은 아닙니다.
 
 ## 목차
 
+- [사용법](#사용법)
+- [알려진 제약](#알려진-제약)
 - [그냥 LLM한테 저장소 요약을 시키면 안 되나요?](#그냥-llm한테-저장소-요약을-시키면-안-되나요)
 - [산출물](#산출물)
 - [모드](#모드)
@@ -132,7 +158,20 @@ end-to-end 질문은 직접 측정했습니다. per-run provider 토큰 카운�
 
 ## 설치
 
-**Claude Code.** 따로 할 일이 없습니다. `.claude-plugin/` 매니페스트와 루트 `.mcp.json`이 그대로 동작합니다.
+먼저 저장소를 복제합니다.
+
+```bash
+git clone https://github.com/HoonStyle/legacy-spec-agent.git
+cd legacy-spec-agent
+```
+
+**Claude Code.** 분석할 프로젝트에서 Claude Code를 시작할 때 이 checkout을 로컬 플러그인으로 지정합니다.
+
+```bash
+claude --plugin-dir /absolute/path/to/legacy-spec-agent
+```
+
+`.claude-plugin/` 메타데이터와 번들 커넥터용 `.mcp.json`이 포함되어 있습니다. 커넥터에는 Node.js 20+가 필요하며 첫 실행 시 의존성을 가져올 수 있어야 합니다.
 
 **Codex / ChatGPT Work mode.** 이 checkout을 로컬 플러그인 마켓플레이스로 등록한 뒤 Plugins Directory에서 **Legacy Spec Agent**를 설치합니다.
 

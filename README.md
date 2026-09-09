@@ -18,14 +18,40 @@
   <img alt="CI: Ubuntu · Windows" src="https://img.shields.io/badge/CI-Ubuntu%20%C2%B7%20Windows-0078D4">
 </p>
 
-A plugin for [Claude Code](https://claude.com/claude-code) and Codex / ChatGPT Work mode: a skill plus a bundled MCP connector.
+Generate citation-backed specifications from source code, then check those citations when the code changes.
 
-Legacy Spec Agent writes the spec that undocumented code never had. It reads the source, works out what the code actually does, and produces spec documents in which every claim points at a `path:line`. Anything it cannot back with a line of code stays out of the main text and is listed under **Unverified** instead.
+Legacy Spec Agent is a [Claude Code](https://claude.com/claude-code) and Codex plugin with a shared skill and TypeScript MCP connector. Claims link to `path:line`; unsupported interpretations belong in **Unverified**. Syntax analysis and citation checks support review—they do not prove that a document captures every behavior.
 
-The citations are not decoration. When the code changes later, the agent re-checks each one and reports whether it still holds, moved, drifted, or lost its target.
+**Start here:** [Installation](#installation) · [Usage](#usage) · [Example artifacts](demo-hookify/) · [Known limitations](#known-limitations)
+
+## Usage
+
+After installing the plugin, ask the host to use the skill. Example prompts:
+
+```text
+Use legacy-spec-agent in Mode A with the standard profile for this repository.
+Scope the source first, write citation-backed specifications, and disclose
+unsupported or unverified behavior. Do not execute the target code.
+```
+
+```text
+Use legacy-spec-agent in Mode B to check the existing specification against
+the current source. Report citation drift and propose updates without applying them.
+```
+
+These are host prompts, not shell commands. `standard` is the default output profile; `core` must be requested explicitly. See [Outputs](#outputs) for the artifact contract.
+
+## Known limitations
+
+- Structural analysis is syntax-level, not a compiler-resolved method call graph.
+- Citation correctness does not establish completeness. The [three-repository evaluation](evals/document-quality/external/SUMMARY.md) recorded 486 accurate claims but strict critical-surface recall of 1/75; its quality gate was not met.
+- The connector is not a demonstrated token-cost optimization. The recorded end-to-end replay decision remains **Stop** for efficiency-motivated expansion; details are under [Large repository support](#large-repository-support).
+- Downloads require explicit consent and do not install SDKs or authorize target-code execution.
 
 ## Table of contents
 
+- [Usage](#usage)
+- [Known limitations](#known-limitations)
 - [Why not just ask an LLM to summarize the repo?](#why-not-just-ask-an-llm-to-summarize-the-repo)
 - [Outputs](#outputs)
 - [Modes](#modes)
@@ -132,7 +158,20 @@ Release blockers, resolver work, semantic backends, and the deliberately last SD
 
 ## Installation
 
-**Claude Code.** Nothing to do. The `.claude-plugin/` manifest and root `.mcp.json` work as-is.
+Clone the repository first:
+
+```bash
+git clone https://github.com/HoonStyle/legacy-spec-agent.git
+cd legacy-spec-agent
+```
+
+**Claude Code.** Load the checkout as a local plugin when starting Claude Code in the target project:
+
+```bash
+claude --plugin-dir /absolute/path/to/legacy-spec-agent
+```
+
+The checkout includes `.claude-plugin/` metadata and `.mcp.json` for the bundled connector. Use Node.js 20+ for the connector; first-run bootstrap requires access to its dependencies.
 
 **Codex / ChatGPT Work mode.** Register this checkout as a local plugin marketplace, then install **Legacy Spec Agent** from the Plugins Directory:
 
