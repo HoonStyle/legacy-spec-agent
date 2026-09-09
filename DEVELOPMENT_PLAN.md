@@ -179,4 +179,4 @@ npm test
 | LSA-02 | 구현·로컬 검증 완료 | 현재 브랜치의 LSA-02 기능 커밋 | raw-byte per-file/aggregate SHA-256, normal/linked worktree HEAD, non-Git 구분, 변경·추가·삭제·제외 파일, 발행 보존 회귀 통과. 임시 복제본의 합성 3건 v2 gate 3/3 승인 |
 | LSA-03 | 구현·로컬 검증 완료 | 현재 브랜치의 LSA-03 기능 커밋 | claim/document/citation/draft/source/run binding, legacy 표시, 의미 실패 분리, 허위 host 인증 거부 회귀 통과. 합성 3건에서 구조·의미·실행·원본 상태 분리 및 3/3 승인 |
 | LSA-04 | 보류 — Stop 유지 | 없음 | 신규 실험 미실행 |
-| LSA-05 | 후속 검토 | 없음 | 신규 배포 검증 미실행 |
+| LSA-05 | 배포 결정 완료, 구현 미착수 | `DEPLOYMENT_DECISION.md` | versioned user cache 방식을 채택하고 부분적인 prebuilt `dist` 배포는 보류. 현재 in-place bootstrap은 migration 전까지 유지하며 설치 matrix는 미실행 |
