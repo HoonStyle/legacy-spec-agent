@@ -1,5 +1,5 @@
 import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { basename, dirname, resolve, sep } from "node:path";
+import { basename, dirname, relative, resolve, sep } from "node:path";
 import { calculateDraftDigest, evaluateDocumentGate, sourceSnapshotMatches, type DocumentGateParams, type DocumentGateResult } from "./document-gate.js";
 
 export interface PublishResult { gate: DocumentGateResult; published: boolean; destination?: string }
@@ -15,16 +15,24 @@ function rejectSymlinks(path: string): void {
 function existingAncestor(path: string): string {
   let current = path;
   while (!existsSync(current)) current = dirname(current);
-  return realpathSync(current);
+  return current;
+}
+function canonicalPath(path: string): string {
+  const absolute = resolve(path);
+  const ancestor = existingAncestor(absolute);
+  return resolve(realpathSync(ancestor), relative(ancestor, absolute));
 }
 function safePaths(params: DocumentGateParams, destination: string): { root: string; staging: string; destination: string } {
+  const lexicalRoot = resolve(params.root);
+  const destinationAbs = resolve(destination);
   const root = realpathSync(params.root);
   const staging = realpathSync(params.dir);
-  const target = resolve(destination);
-  if (!inside(root, staging) || !inside(root, target)) throw new Error("staging and destination must be distinct descendants of the connector root");
+  const target = canonicalPath(destination);
+  const destinationIsLexicallyScoped = inside(lexicalRoot, destinationAbs) || inside(root, destinationAbs);
+  if (!inside(root, staging) || destinationAbs === lexicalRoot || target === root || !destinationIsLexicallyScoped)
+    throw new Error("staging and destination must be distinct descendants of the connector root");
+  if (!inside(root, target)) throw new Error("destination resolves outside the connector root");
   if (overlaps(staging, target) || overlaps(realpathSync(params.source_root), target)) throw new Error("destination must not overlap staging or source directories");
-  const ancestor = existingAncestor(target);
-  if (!inside(root, ancestor) && ancestor !== root) throw new Error("destination resolves outside the connector root");
   rejectSymlinks(staging);
   return { root, staging, destination: target };
 }

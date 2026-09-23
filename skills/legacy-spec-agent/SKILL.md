@@ -1,6 +1,6 @@
 ---
 name: legacy-spec-agent
-description: Reverse-engineer a specification from undocumented legacy code, and track drift between the code and that spec. Use this whenever the user wants to understand what an unfamiliar or undocumented codebase actually does, onboard onto legacy code, generate the missing spec/documentation from source, reconstruct business rules or architecture from code, or detect when code has diverged from its documented intent — even if they never say the word "spec" (e.g. "what does this repo actually do", "document this legacy system", "I inherited this codebase and there are no docs", "did anything break the original design").
+description: Reverse-engineer a grounded specification from undocumented legacy code, and track drift between code and that spec. Use for explicit requests to generate, refresh, publish, or drift-check legacy source-derived specifications/documentation, or to reconstruct business rules or architecture from code under this skill's evidence gate. For quick repository explanations, onboarding Q&A, or exploratory "what does this repo do" questions, answer with the host's normal evidence-based workflow unless the user asks to create formal LSA artifacts.
 ---
 
 # Legacy Spec Agent
@@ -26,7 +26,7 @@ If a `SPEC.md` produced by this skill exists in the target output location, defa
 
 ## Workflow (Mode A)
 
-Run the phases in order. Each phase maps to a role documented in `references/agent-roles.md` — read that file for the detailed extraction/critic prompts before Phase 1. Select the output profile during scoping: `standard` is the default; `core` requires an explicit user request. Profile selection changes which documents are emitted, never the evidence standard or Critic gate.
+Run the phases in order only after confirming that the user wants formal LSA artifacts rather than a quick repository explanation or exploratory Q&A. Each phase maps to a role documented in `references/agent-roles.md` — read that file for the detailed extraction/critic prompts before Phase 1. Select the output profile during scoping: `standard` is the default for formal generation; `core` requires an explicit user request. Profile selection changes which documents are emitted, never the evidence standard or Critic gate.
 
 The mandatory sequence is **Extract → Architect/Writer → draft freeze → independent Evidence Audit + Coverage Audit → correction → independent recheck → Gatekeeper → Emit**. Regardless of repository size, the Writer and the final Critic/Gatekeeper must be different subagents.
 
@@ -47,12 +47,13 @@ The mandatory sequence is **Extract → Architect/Writer → draft freeze → in
 - Use only an official distribution, pin the resolved version, require its published checksum, and download into the connector-managed cache rather than modifying the system toolchain. In non-interactive environments, default to no download unless the user supplied an explicit opt-in policy.
 
 **Scaling a large repo (connector present).** Deliverables grow with the codebase, so keep them bounded and honest:
-- Before pulling file-level detail, get a size read by calling `index_symbols` and `build_call_graph` with `granularity: "package"`. They return per-package counts and collapsed package-to-package edges.
+- Do not request a repository-wide index only because the connector exists. Choose the narrowest available `subdir` or package/module scope that matches the approved source scope, and reuse results from the same source snapshot instead of repeating broad calls.
+- Before pulling file-level detail in the approved scope, get a size read by calling `index_symbols` and `build_call_graph` with `granularity: "package"` for that scope. They return per-package counts and collapsed package-to-package edges.
 - A `truncated` field in a connector result means the output was capped. State the omitted count in the coverage line (no silent caps), then raise `limit` or narrow `subdir` deliberately.
 - When the module count is large, split `SPEC.md` and `INTERFACES.md` per package instead of emitting one unreadable file, and render the architecture at package granularity (or pass `cluster: true` to `emit_charts` so file nodes are grouped into subgraphs).
 
 ### Phase 1 — Extract (fan-out)
-If the `index_symbols` connector tool is available, call it first and hand each subagent its module's symbol list (names, line ranges, signatures) so subagents don't re-read files from scratch. Likewise, prefer `build_call_graph` over manual import-tracing in Phase 2.
+If the `index_symbols` connector tool is available, call it for the approved scope or module before file-level extraction and hand each worker its module's symbol list (names, line ranges, signatures) so workers don't re-read files from scratch. Do not use a whole-repository `index_symbols` call when a narrower scoped call satisfies the manifest. Likewise, prefer scoped `build_call_graph` over manual import-tracing in Phase 2.
 
 Before extraction, freeze `provenance_version: "2"`. Record a `source_snapshot`
 over every supported included file using sorted POSIX-relative paths, raw byte
@@ -66,7 +67,7 @@ not silently upgraded.
 
 For each module, extract what it *actually does*: entry points, business rules, inputs/outputs, side effects, external calls, and constraints. **Every extracted item carries a `path:line` citation.**
 
-- For a repo with more than a handful of modules, spawn one `general-purpose` subagent per module (or per cluster) via the Task tool and run them in parallel. Give each subagent the module path, the extraction contract from `references/agent-roles.md`, and the output schema.
+- For a repo with more than a handful of modules, use the host's available delegation mechanism, if any, to assign one independent worker per module (or per cluster) and run them in parallel. Give each worker the module path, the extraction contract from `references/agent-roles.md`, and the output schema. If the host cannot provide independent workers, disclose that limitation and do not pretend caller-provided names prove independence.
 - For a small repo, extract inline with Read/Grep.
 
 ### Phase 2 — Architect
@@ -124,11 +125,13 @@ Quality floor for generated output:
 ---
 
 ## Workflow (Mode B — Drift-Check)
-If the `detect_drift` connector tool is available, prefer it. Pass the SPEC's generation commit as `baseline_ref` (the commit in its `Source:` line — this must be a git ref; if the line only records a date, resolve the commit first or fall back to the manual steps) along with the citation list. The tool returns the intact/moved/drifted/orphaned classification deterministically; write the report from that. Entries that come back as `error` (non-git root, unreadable ref, malformed path) are unresolved, not drift: report them in their own section and never count them toward drift. Use the manual steps below only when the connector is absent.
+If the `detect_drift` connector tool is available, prefer it for citation text/location checks. Determine `baseline_ref` from the existing LSA provenance in this order: the manifest/source provenance used to generate the spec, the `Analyzed source commit:` metadata line, then a legacy `Source:` line only for older outputs. `baseline_ref` must be a Git ref; for non-Git or dirty byte-snapshot baselines, do not claim the current Git HEAD recreates the exact analyzed input, and report unresolved provenance if the original source snapshot cannot be restored. Do not infer a commit from a generation date.
+
+The tool returns deterministic citation-location signals (`intact`, `moved`, `drifted`, `orphaned`, or `error`) by searching for the cited baseline text in the current tree. These labels do not prove whether the natural-language claim's behavior or meaning is unchanged: an unchanged cited line can depend on changed constants, callees, configuration, or surrounding control flow, and formatting edits can move text without behavior drift. After using the tool, separately review the relevant source context and dependencies for each affected claim; when meaning cannot be confirmed, report it as unresolved/needs-review instead of semantic drift or semantic safety. Entries that come back as `error` (non-git root, unreadable ref, malformed path) are unresolved, not drift: report them in their own section and never count them toward drift. Use the manual steps below only when the connector is absent.
 
 1. Load the existing `SPEC.md` and its citations.
 2. For each claim, open the cited `path:line` in the *current* code.
-3. Classify: **intact** (code still supports the claim), **moved** (same behavior, new location — update citation), **drifted** (behavior changed — code no longer matches the stated rule), or **orphaned** (cited code deleted).
+3. Classify citation signals first: **intact** (baseline citation text still appears at the same location), **moved** (baseline citation text appears at a new location), **drifted** (baseline citation text is no longer found in the current file), or **orphaned** (cited file deleted). Then perform source-context review for the claim's semantic status; if behavior equivalence or change is not established, mark the claim **unresolved / needs-review** rather than overstating the deterministic signal.
 4. Emit `DRIFT_REPORT.md` (template below) and append every drift/moved/orphaned finding to `audit_log.jsonl`. Do not rewrite `SPEC.md` automatically — propose the diffs and let the user confirm.
 
 ---

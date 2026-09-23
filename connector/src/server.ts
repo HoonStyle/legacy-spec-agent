@@ -218,12 +218,18 @@ export function createServer(root: string, options: { cacheRoot?: string; fetchI
     "detect_drift",
     {
       description:
-        "Mode B: re-check baseline SPEC citations against the current working tree and classify each as " +
-        "intact | moved | drifted | orphaned. baseline_ref is the git ref the SPEC was generated at (recorded " +
-        "in its Source line); the cited line's content AT that ref is the drift probe, so no stored snippets " +
-        "are needed. Deterministic — the human still owns the SPEC.md merge (Hard rule 3).",
+        "Mode B: compare baseline SPEC citation text against the current working tree and return citation-location signals " +
+        "intact | moved | drifted | orphaned | error. baseline_ref is the git ref for the analyzed source, preferably " +
+        "from the manifest/source provenance or Analyzed source commit metadata; legacy Source lines are fallback only. " +
+        "The cited line's content at that ref is the drift probe, so no stored snippets are needed. These labels do not " +
+        "prove semantic behavior is unchanged or changed; callers must review source context before reporting claim meaning. " +
+        "Deterministic — the human still owns the SPEC.md merge (Hard rule 3).",
       inputSchema: {
-        baseline_ref: z.string().describe("Git ref the SPEC was generated at, e.g. the commit in its Source line"),
+        baseline_ref: z
+          .string()
+          .describe(
+            "Git ref for the SPEC's analyzed source, preferably from manifest/source provenance or Analyzed source commit; legacy Source lines are fallback only",
+          ),
         citations: z
           .array(
             z.object({

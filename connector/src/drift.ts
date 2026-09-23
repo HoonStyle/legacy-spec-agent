@@ -20,6 +20,7 @@ export interface DriftEntry {
   id?: string;
   path: string;
   line: number;
+  /** Citation text/location signal only; callers must review source context before making semantic claims. */
   verdict: DriftVerdict;
   /** Where the baseline content lives now (moved only). */
   new_line?: number;
@@ -33,6 +34,7 @@ export interface DriftEntry {
 
 export interface DriftResult {
   baseline_ref: string;
+  /** Counts citation text/location signals, not proven behavior-equivalence or behavior-change findings. */
   summary: { intact: number; moved: number; drifted: number; orphaned: number; error: number };
   results: DriftEntry[];
 }
